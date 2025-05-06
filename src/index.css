@@ -114,10 +114,10 @@
 
   .sidebar-item {
     @apply flex h-[40px] w-full flex-shrink-0 items-center gap-x-1 rounded-lg p-3 text-base text-slate-950 transition-colors hover:bg-gray-200 hover:text-slate-950 dark:text-slate-50 dark:hover:bg-gray-800;
+  }
 
-    &.active {
-      @apply bg-gray-300 font-medium text-slate-950 dark:bg-gray-800 dark:text-slate-50;
-    }
+  .sidebar-item.active {
+    @apply bg-gray-300 font-medium text-slate-950 dark:bg-gray-800 dark:text-slate-50;
   }
 
   .title {
