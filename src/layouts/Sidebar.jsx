@@ -4,7 +4,7 @@ import { navbarLinks } from "@/constants";
 import PropTypes from "prop-types";
 import React, { forwardRef } from "react";
 import { NavLink } from "react-router-dom";
-import { cn } from "../utils/cn";
+import { cn } from "@/lib/utils";
 
 export const Sidebar = forwardRef(({ collapsed }, ref) => {
   return (

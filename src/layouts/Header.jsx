@@ -62,7 +62,7 @@ export const Header = ({ collapsed, setCollapsed }) => {
           <PanelLeftClose className={collapsed ? "rotate-180 " : ""} />
         </Button>
         <Link to="/" className="hidden md:block text-sm font-semibold whitespace-nowrap cursor-pointer hover:text-gray-300">
-          iStreams ERP Solutions - CRM
+          iStreams ERP Solutions - DMS
         </Link>
       </div>
 

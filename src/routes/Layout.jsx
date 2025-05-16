@@ -1,12 +1,12 @@
 import { Outlet } from "react-router-dom";
 import { Header } from "../layouts/Header";
 import { Sidebar } from "../layouts/Sidebar";
-import { cn } from "../utils/cn";
 import { useMediaQuery } from "@uidotdev/usehooks";
 import { useEffect, useRef, useState } from "react";
 import { useClickOutside } from "../hooks/use-click-outside";
 import Footer from "@/layouts/Footer";
 import { Toaster } from "@/components/ui/toaster"
+import { cn } from "@/lib/utils";
 
 
 const Layout = () => {

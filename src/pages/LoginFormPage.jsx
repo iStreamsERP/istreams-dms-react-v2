@@ -16,7 +16,7 @@ import {
 import { doConnectionPublic, getServiceURL } from "../services/publicService";
 import { getNameFromEmail } from "../utils/emailHelpers";
 import { Checkbox } from "@/components/ui/checkbox";
-import Lottie from 'react-lottie';
+import Lottie from "react-lottie";
 import animationData from "@/lotties/crm-animation-lotties.json";
 
 const LoginFormPage = () => {
@@ -35,8 +35,8 @@ const LoginFormPage = () => {
     autoplay: true,
     animationData: animationData,
     rendererSettings: {
-      preserveAspectRatio: "xMidYMid slice"
-    }
+      preserveAspectRatio: "xMidYMid slice",
+    },
   };
 
   // Memoized login handler to prevent re-creation on each render.
@@ -112,6 +112,8 @@ const LoginFormPage = () => {
 
         const organization = await getDefaultCompanyName("", email, clientURL);
 
+        const isAdmin = true;
+
         const payload = {
           token: "dummy-token",
           email,
@@ -125,6 +127,7 @@ const LoginFormPage = () => {
               : "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTbBa24AAg4zVSuUsL4hJnMC9s3DguLgeQmZA&s",
 
           clientURL: clientURL,
+          isAdmin,
         };
 
         // Call login from context, passing rememberMe so AuthContext
@@ -159,29 +162,26 @@ const LoginFormPage = () => {
         </div>
 
         <div>
-          <Lottie
-            options={defaultOptions}
-            height={350}
-            width={400}
-          />
+          <Lottie options={defaultOptions} height={350} width={400} />
         </div>
 
         <div>
           <blockquote className="space-y-2">
             <p className="text-lg">
-              &ldquo;Manage your customers efficiently and streamline your business operations with our powerful CRM system.&rdquo;
+              &ldquo;Manage your customers efficiently and streamline your
+              business operations with our powerful CRM system.&rdquo;
             </p>
 
-            <footer className="text-sm text-gray-400">- iStreams ERP Solutions</footer>
+            <footer className="text-sm text-gray-400">
+              - iStreams ERP Solutions
+            </footer>
           </blockquote>
         </div>
       </div>
       <div className="flex flex-col justify-center lg:p-8 bg-slate-100 dark:bg-slate-950 px-6">
         <div className="mx-auto flex w-full flex-col justify-center gap-y-6 sm:w-[350px]">
           <div className="flex flex-col space-y-2 text-center">
-            <h1 className="text-2xl font-semibold tracking-tight ">
-              Login!
-            </h1>
+            <h1 className="text-2xl font-semibold tracking-tight ">Login!</h1>
             <p className="text-sm text-muted-foreground">
               Please enter log in details below
             </p>
@@ -189,15 +189,27 @@ const LoginFormPage = () => {
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="grid w-full items-center gap-4">
               <div className="flex flex-col space-y-1.5">
-                <Input name="email" id="email" placeholder="username@domain.com" value={email} onChange={(e) => setEmail(e.target.value)}
-                  required />
+                <Input
+                  name="email"
+                  id="email"
+                  placeholder="username@domain.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
               </div>
 
               <div className="flex flex-col space-y-1.5">
                 <div className="flex gap-2 relative">
-                  <Input name="email" id="email" placeholder="*******" type={showPassword ? "text" : "password"} value={password}
+                  <Input
+                    name="email"
+                    id="email"
+                    placeholder="*******"
+                    type={showPassword ? "text" : "password"}
+                    value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    required />
+                    required
+                  />
                   <span
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 cursor-pointer"
                     onClick={() => setShowPassword((prev) => !prev)}
@@ -224,7 +236,12 @@ const LoginFormPage = () => {
               </div>
 
               <div className="flex items-center space-x-2">
-                <Link to="/forgot-password" className="text-sm font-medium leading-none hover:underline">Forgot Password?</Link>
+                <Link
+                  to="/forgot-password"
+                  className="text-sm font-medium leading-none hover:underline"
+                >
+                  Forgot Password?
+                </Link>
               </div>
             </div>
 
@@ -246,21 +263,27 @@ const LoginFormPage = () => {
             </Button>
             <div className="flex items-center text-xs uppercase">
               <Separator className="flex-1" />
-              <span className="px-2 whitespace-nowrap text-gray-400">Or continue with</span>
+              <span className="px-2 whitespace-nowrap text-gray-400">
+                Or continue with
+              </span>
               <Separator className="flex-1" />
             </div>
             <Button variant="outline" className="w-full">
               <MailOpen /> Login with Email
             </Button>
 
-            <p className="text-xs text-gray-400 text-center">Don't have an account?
-              <Link to="/signup" className="text-blue-500"> Sign Up</Link>
+            <p className="text-xs text-gray-400 text-center">
+              Don't have an account?
+              <Link to="/signup" className="text-blue-500">
+                {" "}
+                Sign Up
+              </Link>
             </p>
           </form>
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default LoginFormPage
+export default LoginFormPage;

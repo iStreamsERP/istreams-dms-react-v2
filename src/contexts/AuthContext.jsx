@@ -19,6 +19,7 @@ const defaultUserData = {
   currentUserName: null,
   currentUserEmpNo: null,
   currentUserImageData: "null",
+  currency: "",
 };
 
 export const AuthProvider = ({ children }) => {
@@ -36,7 +37,8 @@ export const AuthProvider = ({ children }) => {
   // auth only stores token and email for authentication
   const [auth, setAuth] = useState(() => {
     try {
-      const stored = localStorage.getItem("auth") || sessionStorage.getItem("auth");
+      const stored =
+        localStorage.getItem("auth") || sessionStorage.getItem("auth");
       return stored ? JSON.parse(stored) : { token: null, email: null };
     } catch (err) {
       console.error("Error parsing stored auth:", err);
@@ -58,7 +60,11 @@ export const AuthProvider = ({ children }) => {
   // Memoized login function: expects data to have token, email, and other user details
   const login = useCallback((data, rememberMe = false) => {
     // Set minimal authentication data
-    const authData = { token: data.token, email: data.email };
+    const authData = {
+      token: data.token,
+      email: data.email,
+      isAdmin: data.isAdmin,
+    };
     setAuth(authData);
     const storage = rememberMe ? localStorage : sessionStorage;
     storage.setItem("auth", JSON.stringify(authData));
@@ -78,8 +84,8 @@ export const AuthProvider = ({ children }) => {
     setAuth({ token: null, email: null });
     setUserData(defaultUserData);
     localStorage.removeItem("auth");
-    sessionStorage.removeItem("auth");
     localStorage.removeItem("userData");
+    sessionStorage.removeItem("auth");
   }, []);
 
   return (

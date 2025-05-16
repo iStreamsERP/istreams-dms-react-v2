@@ -1,9 +1,12 @@
 import { createSoapEnvelope, parseDataModelResponse } from "../utils/soapUtils";
 import { doConnection } from "./connectionService";
-import { deleteDataModelServicePayload, getDataModelFromQueryServicePayload, getDataModelPayload, saveDataServicePayload } from "./payloadBuilders";
 import soapClient from "./soapClient";
 
-export const getDataModelService = async (payload, loginUserName, dynamicClientUrl) => {
+export const getDataModelService = async (
+  payload,
+  loginUserName,
+  dynamicClientUrl
+) => {
   const doConnectionResponse = await doConnection(
     loginUserName,
     dynamicClientUrl
@@ -30,7 +33,11 @@ export const getDataModelService = async (payload, loginUserName, dynamicClientU
   return parsedResponse;
 };
 
-export const getDataModelFromQueryService = async (payload, loginUserName, dynamicClientUrl) => {
+export const getDataModelFromQueryService = async (
+  payload,
+  loginUserName,
+  dynamicClientUrl
+) => {
   const doConnectionResponse = await doConnection(
     loginUserName,
     dynamicClientUrl
@@ -72,10 +79,7 @@ export const saveDataService = async (
   }
 
   const SOAP_ACTION = "http://tempuri.org/DataModel_SaveData";
-  const soapBody = createSoapEnvelope(
-    "DataModel_SaveData",
-    payload
-  );
+  const soapBody = createSoapEnvelope("DataModel_SaveData", payload);
 
   const soapResponse = await soapClient(
     dynamicClientUrl,
@@ -105,10 +109,7 @@ export const deleteDataModelService = async (
   }
 
   const SOAP_ACTION = "http://tempuri.org/DataModel_DeleteData";
-  const soapBody = createSoapEnvelope(
-    "DataModel_DeleteData",
-    payload
-  );
+  const soapBody = createSoapEnvelope("DataModel_DeleteData", payload);
 
   const soapResponse = await soapClient(
     dynamicClientUrl,

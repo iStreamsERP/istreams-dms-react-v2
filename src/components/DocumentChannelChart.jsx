@@ -1,0 +1,81 @@
+import { useEffect, useState } from "react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import { useAuth } from "../contexts/AuthContext";
+import { getDashboardChannelSummary } from "../services/dashboardService";
+
+const DocumentChannelChart = ({ daysCount = 30 }) => {
+  const [channelData, setChannelData] = useState([]);
+  const { userData, auth } = useAuth();
+
+  const COLORS = ["#6366F1", "#8B5CF6", "#EC4899", "#10B981", "#F59E0B"];
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const payload = {
+          NoOfDays: daysCount,
+          ForTheUser: `${auth.isAdmin ? "" : userData.currentUserName}`,
+        };
+
+        const data = await getDashboardChannelSummary(
+          payload,
+          userData.currentUserLogin,
+          userData.clientURL
+        );
+
+        const formattedData = data.map((item) => ({
+          Name:
+            item.CHANNEL_SOURCE === " "
+              ? userData.organization
+              : item.CHANNEL_SOURCE,
+          Counts: Number(item.total_count) || 0,
+        }));
+        setChannelData(formattedData);
+      } catch (error) {
+        console.error("Error fetching channel summary:", error);
+      }
+    };
+
+    if (daysCount != null) {
+      fetchData();
+    }
+  }, [daysCount]);
+
+  return (
+    <div style={{ width: "100%", height: 300 }}>
+      <ResponsiveContainer>
+        <BarChart data={channelData}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#4B5563" />
+          <XAxis dataKey="Name" stroke="#9CA3AF" fontSize={14} />
+          <YAxis stroke="#9CA3AF" fontSize={14} />
+          <Tooltip
+            contentStyle={{
+              backgroundColor: "rgba(31, 41, 55, 0.8)",
+              borderColor: "#4B5563",
+            }}
+            itemStyle={{ fontSize: 14, color: "#E5E7EB" }}
+          />
+          <Bar dataKey={"Counts"} fill="#8884d8">
+            {channelData.map((entry, index) => (
+              <Cell
+                key={`cell-${index}`}
+                fill={COLORS[index % COLORS.length]}
+              />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+};
+
+export default DocumentChannelChart;

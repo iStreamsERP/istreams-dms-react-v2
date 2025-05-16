@@ -48,12 +48,10 @@ export const getDefaultCompanyName = async (
 };
 
 export const getCategoriesSummary = async (
-  noOfDays,
+  payload,
   loginUserName,
   dynamicClientUrl
 ) => {
-  const payload = getCategoriesSummaryPayload(noOfDays);
-
   const doConnectionResponse = await doConnection(
     loginUserName,
     dynamicClientUrl
@@ -171,11 +169,10 @@ export const updateDmsVerifiedBy = async (
 };
 
 export const updateDmsAssignedTo = async (
-  data,
+  payload,
   loginUserName,
   dynamicClientUrl
 ) => {
-  const payload = updateDmsAssignedToPayload(data);
 
   // Authenticate via doConnection using the chosen dynamicClientUrl.
   const doConnectionResponse = await doConnection(
@@ -297,12 +294,10 @@ export const getDocMasterList = async (
 };
 
 export const deleteDMSMaster = async (
-  parameter,
+  payload,
   loginUserName,
   dynamicClientUrl
 ) => {
-  const payload = deleteDMSMasterPayload(parameter);
-
   const doConnectionResponse = await doConnection(
     loginUserName,
     dynamicClientUrl

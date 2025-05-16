@@ -38,12 +38,10 @@ export const getAllDmsActiveUser = async (
 };
 
 export const getDashboardOverallSummary = async (
-  noOfDays,
+  payload,
   loginUserName,
   dynamicClientUrl
 ) => {
-  const payload = getDashboardOverallSummaryPayload(noOfDays);
-
   const doConnectionResponse = await doConnection(
     loginUserName,
     dynamicClientUrl
@@ -71,11 +69,10 @@ export const getDashboardOverallSummary = async (
 };
 
 export const getDashboardChannelSummary = async (
-  noOfDays,
+  payload,
   loginUserName,
   dynamicClientUrl
 ) => {
-  const payload = getDashboardChannelSummaryPayload(noOfDays);
 
   const doConnectionResponse = await doConnection(
     loginUserName,
