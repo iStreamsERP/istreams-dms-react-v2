@@ -19,6 +19,7 @@ const DocumentUpload = ({
   onUploadSuccess,
 }) => {
   const { userData } = useAuth();
+  
   const [existingDocs, setExistingDocs] = useState([]);
   const [isLoadingDocs, setIsLoadingDocs] = useState(false);
   const [fetchError, setFetchError] = useState("");
@@ -38,9 +39,9 @@ const DocumentUpload = ({
         // Fetch existing documents
         const docsResponse = await getDataModelService(
           {
-            dataModelName: "synmview_dms_details_all",
-            whereCondition: `REF_SEQ_NO = ${selectedDocument.REF_SEQ_NO}`,
-            orderby: "",
+            DataModelName: "synmview_dms_details_all",
+            WhereCondition: `REF_SEQ_NO = ${selectedDocument.REF_SEQ_NO}`,
+            Orderby: "",
           },
           selectedDocument.USER_NAME,
           userData.clientURL
@@ -52,6 +53,9 @@ const DocumentUpload = ({
           : docsResponse?.Data || [];
 
         setExistingDocs(receivedDocs);
+
+        console.log(receivedDocs);
+        
       } catch (err) {
         console.error("Fetch existing docs error:", err);
         setFetchError("Failed to load existing documents");
@@ -116,11 +120,11 @@ const DocumentUpload = ({
 
   const refreshDocuments = async () => {
     try {
-      const response = await getDataModel(
+      const response = await getDataModelService(
         {
-          dataModelName: "SYNM_DMS_DETAILS",
-          whereCondition: `REF_SEQ_NO = ${selectedDocument.REF_SEQ_NO}`,
-          orderby: "",
+          DataModelName: "SYNM_DMS_DETAILS",
+          WhereCondition: `REF_SEQ_NO = ${selectedDocument.REF_SEQ_NO}`,
+          Orderby: "",
         },
         userData.currentUserLogin,
         userData.clientURL
@@ -154,11 +158,11 @@ const DocumentUpload = ({
   // Download & view documents
   const handleViewDocs = async (selectedDocs) => {
     try {
-      const response = await getDataModel(
+      const response = await getDataModelService(
         {
-          dataModelName: "SYNM_DMS_DETAILS",
-          whereCondition: `REF_SEQ_NO = ${selectedDocs.REF_SEQ_NO} AND SERIAL_NO = ${selectedDocs.SERIAL_NO}`,
-          orderby: "",
+          DataModelName: "SYNM_DMS_DETAILS",
+          WhereCondition: `REF_SEQ_NO = ${selectedDocs.REF_SEQ_NO} AND SERIAL_NO = ${selectedDocs.SERIAL_NO}`,
+          Orderby: "",
         },
         userData.currentUserLogin,
         userData.clientURL

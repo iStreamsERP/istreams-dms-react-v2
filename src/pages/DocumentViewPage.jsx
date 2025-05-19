@@ -265,6 +265,12 @@ export default function DocumentViewPage() {
                         {doc.NO_OF_DOCUMENTS} File(s)
                       </span>
                     </div>
+                     <p className="text-sm font-medium text-start w-full">
+                      Category :{' '}
+                      <span className="text-gray-500">
+                        {doc.DOC_RELATED_CATEGORY}
+                      </span>
+                    </p>
                     <div className="flex items-start justify-between gap-2 w-full">
                       <div className="flex-1">
                         <div className="flex flex-wrap items-center justify-between gap-1 mb-3">

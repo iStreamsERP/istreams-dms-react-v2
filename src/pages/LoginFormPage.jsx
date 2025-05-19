@@ -167,10 +167,11 @@ const LoginFormPage = () => {
 
         <div>
           <blockquote className="space-y-2">
-            <p className="text-lg">
-              &ldquo;Manage your customers efficiently and streamline your
-              business operations with our powerful CRM system.&rdquo;
-            </p>
+           <p className="text-lg">
+  &ldquo;Manage your documents efficiently and streamline your
+  business operations with our powerful Document Management System.&rdquo;
+</p>
+
 
             <footer className="text-sm text-gray-400">
               - iStreams ERP Solutions

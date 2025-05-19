@@ -37,6 +37,7 @@ export function CategoryForm({ mode, selectedItem }) {
     CATEGORY_NAME: "",
     DISPLAY_NAME: "",
     MODULE_NAME: "",
+    INCLUDE_CUSTOM_COLUMNS: "",
     IS_DEFAULT_COLUMN: "",
     ATTACHMENT_LIMIT_IN_KB: "",
     PATH_FOR_LAN: "",
@@ -152,6 +153,16 @@ export function CategoryForm({ mode, selectedItem }) {
               id="DISPLAY_NAME"
               name="DISPLAY_NAME"
               value={formData.DISPLAY_NAME}
+              onChange={handleInputChange}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="INCLUDE_CUSTOM_COLUMNS">Include Custom Column</Label>
+            <Input
+              id="INCLUDE_CUSTOM_COLUMNS"
+              name="INCLUDE_CUSTOM_COLUMNS"
+              value={formData.INCLUDE_CUSTOM_COLUMNS}
               onChange={handleInputChange}
             />
           </div>
