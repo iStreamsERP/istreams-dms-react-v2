@@ -89,22 +89,22 @@ const MyTeamPage = () => {
   });
 
   return (
-    <div className="grid grid-cols-1 gap-4">
+    <div className="grid grid-cols-2  md:grid-cols-2 gap-4">
       <Input
         ref={searchInputRef}
         type="text"
-        className="grow"
+        className="w-full md:col-span-1"
         placeholder="Global Search... (Ctrl+K)"
         value={globalFilter}
         onChange={(e) => setGlobalFilter(e.target.value)}
       />
 
       {loading ? (
-        <div className="flex justify-center items-start">
+        <div className="md:col-span-2 flex justify-center items-start">
           <BarLoader color="#36d399" height={2} width="100%" />
         </div>
       ) : usersData.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {filteredUsersData.map((user, index) => (
             <TeamCard key={index} user={user} />
           ))}

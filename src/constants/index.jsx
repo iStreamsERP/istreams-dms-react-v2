@@ -79,7 +79,7 @@ export const navbarLinks = [
     title: "Forms",
     links: [
        {
-        label: "Category Form",
+        label: "Categories",
         icon: FileText,
         path: "/category-form",
       },
@@ -92,6 +92,11 @@ export const navbarLinks = [
         label: "Category Access",
         icon: ShieldUser,
         path: "/category-access",
+      },
+      {
+        label: "Access Rights",
+        icon: ShieldUser,
+        path: "/access-rights",
       },
     ],
   },

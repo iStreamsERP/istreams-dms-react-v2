@@ -80,12 +80,12 @@ export default function TeamDashboard() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 gap-4">
             {usersData.slice(0, 2).map((user, index) => (
               <TeamCard key={index} user={user} />
             ))}
           </div>
-          <div className="mt-4 text-right">
+          <div className="text-right">
             <Link
               to="/my-team"
               className="inline-flex items-center gap-x-1 text-sm font-semibold rounded-lg border border-transparent text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-500 dark:hover:text-blue-600"

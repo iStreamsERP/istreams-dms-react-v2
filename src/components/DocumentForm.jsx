@@ -1,17 +1,11 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { getDataModelService } from "@/services/dataModelService";
-import { SelectPortal } from "@radix-ui/react-select";
+import {
+  getDataModelFromQueryService,
+  getDataModelService,
+} from "@/services/dataModelService";
+import { getFileIcon } from "@/utils/getFileIcon";
 import {
   CalendarDays,
   CircleCheckBig,
@@ -22,9 +16,11 @@ import {
   Hash,
   Link,
   Loader,
+  Loader2,
   LocateFixed,
   MessageSquare,
   UserRound,
+  View,
   X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -63,6 +59,8 @@ const DocumentForm = ({
     REF_TASK_ID: 0,
   };
 
+  const modalRefReject = useRef(null);
+
   const [formData, setFormData] = useState(initialFormState);
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -72,7 +70,9 @@ const DocumentForm = ({
   const [existingDocs, setExistingDocs] = useState([]);
   const [isReadOnly, setIsReadOnly] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
-  const modalRefReject = useRef(null);
+
+  const [dynamicFields, setDynamicFields] = useState([]);
+  const [isLoadingDynamicFields, setIsLoadingDynamicFields] = useState(false);
 
   useEffect(() => {
     if (docMode === "view" || docMode === "verify") {
@@ -87,11 +87,12 @@ const DocumentForm = ({
       const convertedExpiryDate = convertServiceDate(
         selectedDocument.EXPIRY_DATE
       );
-      setFormData({
+      setFormData((prev) => ({
         ...initialFormState,
         ...selectedDocument,
+        ...prev,
         EXPIRY_DATE: convertedExpiryDate,
-      });
+      }));
     }
   }, [selectedDocument, userData.currentUserName]);
 
@@ -132,9 +133,9 @@ const DocumentForm = ({
       try {
         const response = await getDataModelService(
           {
-            dataModelName: "SYNM_DMS_MASTER",
-            whereCondition: "",
-            orderby: "",
+            DataModelName: "SYNM_DMS_MASTER",
+            WhereCondition: "",
+            Orderby: "",
           },
           userData.currentUserLogin,
           userData.clientURL
@@ -158,9 +159,9 @@ const DocumentForm = ({
         // Fetch existing documents
         const docsResponse = await getDataModelService(
           {
-            dataModelName: "SYNM_DMS_DETAILS",
-            whereCondition: `REF_SEQ_NO = ${selectedDocument.REF_SEQ_NO}`,
-            orderby: "",
+            DataModelName: "SYNM_DMS_DETAILS",
+            WhereCondition: `REF_SEQ_NO = ${selectedDocument.REF_SEQ_NO}`,
+            Orderby: "",
           },
           userData.currentUserLogin,
           userData.clientURL
@@ -183,6 +184,106 @@ const DocumentForm = ({
     fetchData();
   }, [selectedDocument?.REF_SEQ_NO, userData.currentUserLogin]);
 
+  useEffect(() => {
+    const loadInitialDynamicFields = async () => {
+      setIsLoadingDynamicFields(true);
+      if (selectedDocument?.DOC_RELATED_CATEGORY) {
+        try {
+          const payload = {
+            SQLQuery: `SELECT INCLUDE_CUSTOM_COLUMNS FROM SYNM_DMS_DOC_CATEGORIES WHERE CATEGORY_NAME = '${selectedDocument.DOC_RELATED_CATEGORY}'`,
+          };
+          const response = await getDataModelFromQueryService(
+            payload,
+            userData.currentUserLogin,
+            userData.clientURL
+          );
+
+          const raw = Array.isArray(response) ? response : response?.Data || [];
+          const commaText = raw[0]?.INCLUDE_CUSTOM_COLUMNS || "";
+
+          const fields = commaText
+            .split(",")
+            .map((col) => col.trim())
+            .filter((col) => col !== "")
+            .map((col) => ({
+              COLUMN_NAME: col,
+              COLUMN_LABEL: col
+                .replace(/_/g, " ")
+                .replace(/\b\w/g, (c) => c.toUpperCase()),
+              INPUT_TYPE: "text",
+              REQUIRED: true,
+            }));
+
+          setDynamicFields(fields);
+
+          setFormData((prev) => ({
+            ...prev,
+            ...dynamicFields.reduce(
+              (acc, field) => ({
+                ...acc,
+                [field.COLUMN_NAME]: selectedDocument[field.COLUMN_NAME] || "",
+              }),
+              {}
+            ),
+          }));
+        } catch (error) {
+          console.error("Error loading initial dynamic fields:", error);
+          setDynamicFields([]);
+        } finally {
+          setIsLoadingDynamicFields(false);
+        }
+      }
+    };
+    loadInitialDynamicFields();
+  }, [selectedDocument?.DOC_RELATED_CATEGORY]);
+
+  const handleCategoryChange = async (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    setErrors((prev) => ({ ...prev, [name]: "" }));
+
+    try {
+      const payload = {
+        SQLQuery: `SELECT INCLUDE_CUSTOM_COLUMNS FROM SYNM_DMS_DOC_CATEGORIES WHERE CATEGORY_NAME = '${value}'`,
+      };
+      const response = await getDataModelFromQueryService(
+        payload,
+        userData.currentUserLogin,
+        userData.clientURL
+      );
+
+      const raw = Array.isArray(response) ? response : response?.Data || [];
+      const commaText = raw[0]?.INCLUDE_CUSTOM_COLUMNS || "";
+
+      const fields = commaText
+        .split(",")
+        .map((col) => col.trim())
+        .filter((col) => col !== "")
+        .map((col) => ({
+          COLUMN_NAME: col,
+          COLUMN_LABEL: col
+            .replace(/_/g, " ")
+            .replace(/\b\w/g, (c) => c.toUpperCase()),
+          INPUT_TYPE: "text",
+          REQUIRED: true,
+        }));
+
+      setDynamicFields(fields);
+
+      setFormData((prev) => ({
+        ...prev,
+        // Preserve existing dynamic field values that are being replaced
+        ...fields.reduce((acc, field) => {
+          acc[field.COLUMN_NAME] = prev[field.COLUMN_NAME] || "";
+          return acc;
+        }, {}),
+      }));
+    } catch (error) {
+      console.error("Error fetching category-specific fields:", error);
+      setDynamicFields([]);
+    }
+  };
+
   // Validate required fields
   const validateForm = () => {
     const newErrors = {};
@@ -194,6 +295,12 @@ const DocumentForm = ({
       newErrors.DOC_RELATED_TO = "Related To is required";
     if (!formData.DOC_RELATED_CATEGORY.trim())
       newErrors.DOC_RELATED_CATEGORY = "Related Category is required";
+
+    dynamicFields.forEach((field) => {
+      if (field.REQUIRED && !formData[field.COLUMN_NAME]?.trim()) {
+        newErrors[field.COLUMN_NAME] = `${field.COLUMN_LABEL} is required`;
+      }
+    });
     return newErrors;
   };
 
@@ -207,9 +314,9 @@ const DocumentForm = ({
     try {
       const response = await getDataModelService(
         {
-          dataModelName: "SYNM_DMS_DETAILS",
-          whereCondition: `REF_SEQ_NO = ${selectedDocs.REF_SEQ_NO} AND SERIAL_NO = ${selectedDocs.SERIAL_NO}`,
-          orderby: "",
+          DataModelName: "SYNM_DMS_DETAILS",
+          WhereCondition: `REF_SEQ_NO = ${selectedDocs.REF_SEQ_NO} AND SERIAL_NO = ${selectedDocs.SERIAL_NO}`,
+          Orderby: "",
         },
         userData.currentUserLogin,
         userData.clientURL
@@ -322,6 +429,7 @@ const DocumentForm = ({
       return; // Do not submit if there are errors
     }
     setIsSubmitting(true);
+
     try {
       const response = await createAndSaveDMSMaster(
         formData,
@@ -504,7 +612,7 @@ const DocumentForm = ({
                       <select
                         name="DOC_RELATED_CATEGORY"
                         value={formData.DOC_RELATED_CATEGORY}
-                        onChange={handleChange}
+                        onChange={handleCategoryChange}
                         disabled={isReadOnly}
                         className="w-full rounded-md border border-gray-300 p-2 text-sm
             focus:ring-2 focus:ring-blue-500 focus:border-blue-500
@@ -541,6 +649,34 @@ const DocumentForm = ({
                         </p>
                       )}
                     </div>
+
+                    {isLoadingDynamicFields ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      dynamicFields.map((field) => (
+                        <div key={field.COLUMN_NAME} className="space-y-2">
+                          <div className="flex items-center gap-2 text-sm">
+                            <FileText className="h-4 w-4 text-gray-600" />
+                            <Label htmlFor={field.COLUMN_NAME}>
+                              {field.COLUMN_LABEL}
+                              {field.REQUIRED && (
+                                <span className="text-red-500 ml-1">*</span>
+                              )}
+                            </Label>
+                          </div>
+                          <Input
+                            type={field.INPUT_TYPE}
+                            name={field.COLUMN_NAME}
+                            id={field.COLUMN_NAME}
+                            placeholder={`Enter ${field.COLUMN_LABEL}`}
+                            value={formData[field.COLUMN_NAME] || ""}
+                            onChange={handleChange}
+                            readOnly={isReadOnly}
+                            required={field.REQUIRED}
+                          />
+                        </div>
+                      ))
+                    )}
 
                     {/* Expiry Date */}
                     <div className="space-y-2">
@@ -594,6 +730,19 @@ const DocumentForm = ({
                       />
                     </div>
                   </div>
+
+                  {!docMode && (
+                    <div className="mt-4 flex justify-end">
+                      <Button type="submit" disabled={isSubmitting}>
+                        {formData.REF_SEQ_NO === -1
+                          ? "Create Document"
+                          : "Save Changes"}
+                        {isSubmitting && (
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                        )}
+                      </Button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Right Side - Activity Section */}
@@ -693,20 +842,58 @@ const DocumentForm = ({
                     )}
                   </div>
                 </div>
-              </div>
 
-              {!docMode && (
-                <div className="mt-4 flex justify-center">
-                  <Button type="submit" disabled={isSubmitting}>
-                    {formData.REF_SEQ_NO === -1
-                      ? "Create Document"
-                      : "Save Changes"}
-                    {isSubmitting && (
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                    )}
-                  </Button>
-                </div>
-              )}
+                {docMode === "view" || docMode === "verify" ? (
+                  isLoadingDocs ? (
+                    <p>Loading documents...</p>
+                  ) : existingDocs.length > 0 ? (
+                    <div className="col-span-3">
+                      <div className="divider my-1"></div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                        {existingDocs.map((doc) => (
+                          <div
+                            key={`${doc.REF_SEQ_NO}-${doc.SERIAL_NO}`}
+                            className="cust-card-group p-4"
+                          >
+                            <div>
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                {/* Left Section - Icon + Text */}
+                                <div className="flex items-start gap-2 min-w-0">
+                                  <img
+                                    src={getFileIcon(doc.DOC_EXT)}
+                                    alt="Document type"
+                                    className="w-8 h-8 flex-shrink-0"
+                                  />
+                                  <div className="flex-1 min-w-0">
+                                    <h5 className="text-md font-medium md:truncate break-words">
+                                      {doc.DOC_NAME.length > 24
+                                        ? doc.DOC_NAME.substring(0, 23) + "..."
+                                        : doc.DOC_NAME}
+                                    </h5>
+                                    <div className="text-xs text-gray-400">
+                                      <span>Type: {doc.DOC_EXT}</span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <Button onClick={() => handleViewDocs(doc)}>
+                                  View
+                                  <View size={14} />
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="col-span-3 text-xs text-center text-gray-500">
+                      <div className="divider my-1"></div>
+                      No documents found for this reference no
+                    </div>
+                  )
+                ) : null}
+              </div>
             </form>
           </div>
         </div>

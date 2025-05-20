@@ -1,19 +1,20 @@
-import React, { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import LoadingSpinner from "../components/common/LoadingSpinner";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { ChevronRight } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
+import { BarLoader } from "react-spinners";
 import DashboardFilter from "../components/DashboardFilter";
 import { useAuth } from "../contexts/AuthContext";
 import { getCategoriesSummary } from "../services/dmsService";
-import { ChevronRight, SearchIcon } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { BarLoader } from "react-spinners";
 
 const CategoryViewPage = () => {
+  const { userData, auth } = useAuth();
+  const searchInputRef = useRef(null);
+
   const [categories, setCategories] = useState([]);
   const [filterDays, setFilterDays] = useState("365");
   const [loading, setLoading] = useState(true);
-  const { userData, auth } = useAuth();
   const [globalFilter, setGlobalFilter] = useState("");
 
   useEffect(() => {
@@ -41,6 +42,17 @@ const CategoryViewPage = () => {
     fetchData();
   }, [filterDays]);
 
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   const filteredCategories = categories.filter((category) => {
     const search = globalFilter.toLowerCase();
     return category.DOC_RELATED_CATEGORY.toLowerCase().includes(search);
@@ -52,9 +64,10 @@ const CategoryViewPage = () => {
       <div className="flex flex-col md:flex-row md:justify-between items-stretch gap-2">
         {/* Search */}
         <Input
+        ref={searchInputRef}
           type="text"
           className="grow"
-          placeholder="Global Search..."
+          placeholder="Global Search... (Ctrl+K)"
           value={globalFilter}
           onChange={(e) => setGlobalFilter(e.target.value)}
         />
@@ -79,7 +92,7 @@ const CategoryViewPage = () => {
             >
               <CardContent className="p-2">
                 <div className="text-center">
-                  <div className="flex flex-col flex-col-reverse items-center">
+                  <div className="flex flex-col-reverse items-center">
                     <h1 className="text-sm font-bold">
                       ({category.total_count})
                     </h1>

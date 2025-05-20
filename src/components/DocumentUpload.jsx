@@ -1,4 +1,4 @@
-import { Trash2, View, X } from "lucide-react";
+import { Eye, Trash2, View, X, XIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { useAuth } from "../contexts/AuthContext";
@@ -19,7 +19,7 @@ const DocumentUpload = ({
   onUploadSuccess,
 }) => {
   const { userData } = useAuth();
-  
+
   const [existingDocs, setExistingDocs] = useState([]);
   const [isLoadingDocs, setIsLoadingDocs] = useState(false);
   const [fetchError, setFetchError] = useState("");
@@ -55,7 +55,6 @@ const DocumentUpload = ({
         setExistingDocs(receivedDocs);
 
         console.log(receivedDocs);
-        
       } catch (err) {
         console.error("Fetch existing docs error:", err);
         setFetchError("Failed to load existing documents");
@@ -318,48 +317,51 @@ const DocumentUpload = ({
   };
 
   return (
-    <dialog
+  <dialog
       ref={modalRefUpload}
       id="document-upload-form"
       name="document-upload-form"
-      className="p-4 rounded-lg w-[90%] max-w-4xl"
+      className="p-4 w-full rounded-xl  max-w-4xl   bg-white shadow-xl dark:bg-gray-800 text-gray-900 dark:text-gray-100 "
     >
-      <div className="modal-box w-11/12 max-w-5xl">
+      <div className="modal-box  max-w-5xl ">
         <div className="flex items-center justify-between gap-2 mb-6">
-          <div className="flex items-center justify-between gap-2 w-full text-lg">
+          <div className="flex items-center justify-between gap-2 w-full text-sm">
             <span className="flex items-center gap-2  font-semibold">
-              Reference No:
-              <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm">
+              Reference No :
+              <span className="bg-purple-100 text-purple-800 px-2  rounded-full text-sm">
                 {selectedDocument?.REF_SEQ_NO}
               </span>
             </span>
             <span className="flex items-center gap-2 font-semibold">
-              <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm">
+              <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs">
                 {selectedDocument?.DOCUMENT_DESCRIPTION} | {existingDocs.length}{" "}
                 files
               </span>
             </span>
           </div>
-          <Button onClick={() => modalRefUpload.current?.close()}>
-            <X />
-          </Button>
+          <button
+            className="btn btn-sm btn-circle hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full btn-ghost"
+            onClick={() => modalRefUpload.current?.close()}
+          >
+            <X className="h-3 w-3" />
+          </button>
         </div>
-
+ 
         {fetchError && (
           <div className="alert alert-error mb-1">
             <span>{fetchError}</span>
           </div>
         )}
-
-        <div className="rounded-lg p-6 mb-2 bg-base-200">
+ 
+        <div className=" bg-gray-100 dark:bg-gray-700 rounded-lg p-8 text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
           <div {...getRootProps()} className="text-center cursor-pointer">
             <input {...getInputProps()} />
-            <p className="text-gray-500">
+            <p className="text-gray-500 dark:text-gray-400 text-sm">
               Drag & drop files or click to select
             </p>
           </div>
         </div>
-
+ 
         {isLoadingDocs ? (
           <LoadingSpinner />
         ) : existingDocs.length > 0 ? (
@@ -370,48 +372,51 @@ const DocumentUpload = ({
                   key={`${doc.REF_SEQ_NO}-${doc.SERIAL_NO}`}
                   className="flex items-center rounded"
                 >
-                  <div className="card card-compact bg-neutral text-neutral-content w-72">
-                    <div className="card-body">
-                      <div className="flex items-start justify-between gap-1">
-                        <div className="flex items-start gap-1">
-                          <img
-                            src={getFileIcon(doc.DOC_EXT)}
-                            alt="Document type"
-                            className="w-8 h-8"
-                          />
-                          <div className="flex-1">
-                            <h5 className="text-md font-medium truncate">
+                  <div className="card bg-white dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600 border border-gray-200 rounded-2xl mt-3 shadow-sm w-72 hover:shadow-md transition-shadow">
+                    <div className="card-body p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-3 flex-1 min-w-0">
+                          <div className="flex-shrink-0 p-2 bg-gray-50 rounded-lg border border-gray-100 dark:bg-gray-700 dark:border-gray-600">
+                            <img
+                              src={getFileIcon(doc.DOC_EXT)}
+                              alt="Document type"
+                              className="w-6 h-6"
+                            />
+                          </div>
+                          <div className="flex-1 min-w-0 overflow-hidden">
+                            <h5 className="text-sm font-semibold text-gray-800 dark:text-gray-300 truncate">
                               {doc.DOC_NAME.length > 24
                                 ? doc.DOC_NAME.substring(0, 24) + "..."
                                 : doc.DOC_NAME}
                             </h5>
-                            <div className="text-xs flex items-end gap-2">
-                              <span className="text-gray-500">
-                                Type: {doc.DOC_EXT}
+                            <div className="text-xs flex items-center gap-2 mt-1">
+                              <span className="text-gray-500 dark:text-gray-400">
+                                {doc.DOC_EXT.toUpperCase()}
                               </span>
-                              {doc.IS_PRIMARY_DOCUMENT === "T" ? (
-                                <span className="badge badge-primary badge-xs">
+                              {doc.IS_PRIMARY_DOCUMENT === "T" && (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
                                   Primary
                                 </span>
-                              ) : null}
+                              )}
                             </div>
                           </div>
                         </div>
-
-                        <div className="flex items-center gap-2">
-                          <Button
-                            icon={<View size={18} />}
+ 
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <button
                             onClick={() => handleViewDocs(doc)}
-                            tooltip="View"
-                            variant="ghost"
-                          />
-                          <Button
-                            icon={<Trash2 size={18} />}
+                            className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors dark:hover:bg-gray-700 dark:hover:text-blue-400"
+                            title="View"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </button>
+                          <button
                             onClick={() => handleDelete(doc)}
-                            tooltip="Delete"
-                            variant="error"
-                            className="text-red-600"
-                          />
+                            className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors dark:hover:bg-gray-700 dark:hover:text-red-400"
+                            title="Delete"
+                          >
+                            <XIcon className="h-4 w-4" />
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -421,41 +426,41 @@ const DocumentUpload = ({
             </div>
           </div>
         ) : (
-          <div className="text-xs text-center text-gray-500">
+          <div className="text-xs text-center text-gray-500 mt-2 border-b border-gray-200 dark:border-gray-700  p-1 mb-5">
             No documents found for this reference
           </div>
         )}
-
+ 
         <div className="divider my-1"></div>
-
+ 
         {files.length > 0 && (
           <div>
             <div className="flex flex-wrap">
               {files.map((file, index) => (
-                <div key={index} className="flex items-center p-2 rounded mb-2">
-                  <div className="card card-compact bg-neutral text-neutral-content w-72">
-                    <div className="card-body">
-                      <div className="flex items-start justify-between gap-1">
-                        <div className="flex items-center gap-1">
+                <div key={index} className="flex items-center  m-1 p-2 mb-2">
+                  <div className="card card-compact bg-neutral  text-neutral-content w-72">
+                    <div className="card-body p-3 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-3">
                           <img
                             src={getFileIcon(file.docExtension)}
                             alt={file.name}
-                            className="w-8 h-8 object-cover rounded"
+                            className="w-8 h-8 object-contain rounded"
                           />
-                          <div className="flex flex-col items-start">
-                            <span className="text-md font-medium truncate">
+                          <div className="flex flex-col items-start min-w-0">
+                            <span className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate max-w-[180px]">
                               {file.name.length > 24
                                 ? file.name.substring(0, 24) + "..."
                                 : file.name}
                             </span>
-                            <span className="text-xs text-gray-500">
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
                               {file.size}
                             </span>
                           </div>
                         </div>
-
+ 
                         <button
-                          className="btn btn-circle btn-ghost btn-xs"
+                          className="btn btn-sm btn-circle hover:bg-gray-100 dark:hover:bg-gray-700 p-1.5 rounded-full btn-ghost text-gray-500 dark:text-gray-400 transition-colors"
                           onClick={() =>
                             setFiles((f) => f.filter((_, i) => i !== index))
                           }
@@ -463,20 +468,31 @@ const DocumentUpload = ({
                           <X className="h-4 w-4" />
                         </button>
                       </div>
-
-                      <div className="mt-2">
-                        <label className="label cursor-pointer p-0">
-                          <span className="label-text text-xs">
+ 
+                      <div className="mt-3 flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-700">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <div className="relative">
+                            <input
+                              type="radio"
+                              name="primaryDoc"
+                              checked={file.isPrimaryDocument}
+                              onChange={() => handleSetPrimary(index)}
+                              className="sr-only peer"
+                            />
+                            <div className="w-5 h-5 rounded-full border-2 border-gray-300 dark:border-gray-600 peer-checked:border-blue-500 flex items-center justify-center transition-all">
+                              <div className="w-2.5 h-2.5 rounded-full bg-blue-500 scale-0 peer-checked:scale-100 transition-transform"></div>
+                            </div>
+                          </div>
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                             Primary Document
                           </span>
-                          <input
-                            type="radio"
-                            name="primaryDoc"
-                            checked={file.isPrimaryDocument}
-                            onChange={() => handleSetPrimary(index)}
-                            className="radio radio-primary radio-sm"
-                          />
                         </label>
+ 
+                        {file.isPrimaryDocument && (
+                          <span className="px-2 py-1 text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full">
+                            Selected
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -485,7 +501,7 @@ const DocumentUpload = ({
             </div>
           </div>
         )}
-
+ 
         <div className="modal-action">
           <div className="flex justify-end gap-3 w-full">
             <Button
@@ -508,6 +524,7 @@ const DocumentUpload = ({
         </div>
       </div>
     </dialog>
+ 
   );
 };
 

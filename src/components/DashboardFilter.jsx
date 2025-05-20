@@ -1,5 +1,6 @@
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Button } from "@/components/ui/button";
 import { useState } from "react";
+
 
 const DashboardFilter = ({ onFilterChange }) => {
   const [selectedFilter, setSelectedFilter] = useState("365");
@@ -11,31 +12,25 @@ const DashboardFilter = ({ onFilterChange }) => {
     { label: "Past 90 Days", value: "90" },
   ];
 
-  const handleChange = (value) => {
+  const handleClick = (value) => {
+    if (value === selectedFilter) return;      // no operation if same clicked
     setSelectedFilter(value);
     onFilterChange(value);
   };
 
   return (
-    <ToggleGroup
-      type="single"
-      value={selectedFilter}
-      onValueChange={handleChange}
-      className="gap-1"
-    >
-      {filterOptions.map((option) => (
-        <ToggleGroupItem
-          key={option.value}
-          value={option.value}
-          aria-label={option.label}
-          variant="outline"
+    <div className="flex gap-2">
+      {filterOptions.map((opt) => (
+        <Button
+          key={opt.value}
+          variant={opt.value === selectedFilter ? "default" : "outline"}
           size="sm"
-          className="min-w-[80px] data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+          onClick={() => handleClick(opt.value)}
         >
-          {option.label}
-        </ToggleGroupItem>
+          {opt.label}
+        </Button>
       ))}
-    </ToggleGroup>
+    </div>
   );
 };
 

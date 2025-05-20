@@ -55,8 +55,6 @@ export default function DocumentViewPage() {
   });
 
   useEffect(() => {
-    console.log(location.state?.categoryName);
-
     if (location.state?.categoryName) {
       setGlobalFilter(location.state.categoryName);
     }
@@ -226,8 +224,8 @@ export default function DocumentViewPage() {
           />
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-            {filteredDocs.map((doc) => (
-              <Card className="col-span-2 md:col-span-2 lg:col-span-1">
+            {filteredDocs.map((doc, index) => (
+              <Card key={index} className="col-span-2 md:col-span-2 lg:col-span-1">
                 <CardContent key={doc.REF_SEQ_NO} className="p-4">
                   <div
                     className={`flex items-start gap-2 ${

@@ -26,10 +26,23 @@ import {
 } from "@/services/dataModelService";
 import { convertDataModelToStringData } from "@/utils/dataModelConverter";
 import { useEffect, useState } from "react";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@radix-ui/react-popover";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-export function CategoryForm({ mode, selectedItem }) {
-  console.log(mode, selectedItem);
-
+export function CategoryForm({ mode, selectedItem,onSuccess  }) {
   const { userData } = useAuth();
   const { toast } = useToast();
 
@@ -37,15 +50,28 @@ export function CategoryForm({ mode, selectedItem }) {
     CATEGORY_NAME: "",
     DISPLAY_NAME: "",
     MODULE_NAME: "",
-    INCLUDE_CUSTOM_COLUMNS: "",
+    INCLUDE_CUSTOM_COLUMNS: [],
     IS_DEFAULT_COLUMN: "",
     ATTACHMENT_LIMIT_IN_KB: "",
     PATH_FOR_LAN: "",
     PATH_FOR_REMOTE: "",
     IS_FILE_STORAGE: "",
   };
+  
   const [formData, setFormData] = useState(initialFormData);
   const [modules, setModules] = useState([]);
+  const [customColumnOptions, setCustomColumnOptions] = useState([
+    { INCLUDE_CUSTOM_COLUMNS: "X_VENDOR_ID" },
+    { INCLUDE_CUSTOM_COLUMNS: "X_VENDOR_NAME" },
+    { INCLUDE_CUSTOM_COLUMNS: "X_VENDOR_INVOICE_SNO" },
+    { INCLUDE_CUSTOM_COLUMNS: "X_VENDOR_INVOICE_NO" },
+    { INCLUDE_CUSTOM_COLUMNS: "X_VENDOR_INVOICE_DATE" },
+    { INCLUDE_CUSTOM_COLUMNS: "X_DELIVERY_NOTE_NO" },
+    { INCLUDE_CUSTOM_COLUMNS: "X_DELIVERY_DATE" },
+    { INCLUDE_CUSTOM_COLUMNS: "X_PURCHASE_ORDER_REFNO" },
+  ]);
+
+  const [openCustomColumnOptions, setOpenCustomColumnOptions] = useState(false);
 
   const handleInputChange = (event) => {
     const { name, value } = event.target;
@@ -58,7 +84,8 @@ export function CategoryForm({ mode, selectedItem }) {
 
   useEffect(() => {
     fetchModules();
-  }, []);
+    if (mode === "edit") fetchCategory();
+  }, [mode]);
 
   const fetchModules = async () => {
     const payload = {
@@ -73,10 +100,6 @@ export function CategoryForm({ mode, selectedItem }) {
     setModules(response || []);
   };
 
-  useEffect(() => {
-    if (mode === "edit") fetchCategory();
-  }, []);
-
   const fetchCategory = async () => {
     const payload = {
       DataModelName: "SYNM_DMS_DOC_CATEGORIES",
@@ -90,7 +113,15 @@ export function CategoryForm({ mode, selectedItem }) {
       userData.clientURL
     );
 
-    setFormData(response[0]);
+    const data = response?.[0] || {};
+
+    setFormData((prev) => ({
+      ...prev,
+      ...data,
+      INCLUDE_CUSTOM_COLUMNS: data.INCLUDE_CUSTOM_COLUMNS
+        ? data.INCLUDE_CUSTOM_COLUMNS.split(",").map((item) => item.trim())
+        : [],
+    }));
   };
 
   const handleSave = async (e) => {
@@ -116,7 +147,7 @@ export function CategoryForm({ mode, selectedItem }) {
         title: "Success",
         description: response,
       });
-
+onSuccess()
       setFormData(initialFormData);
     } catch (error) {
       toast({
@@ -158,13 +189,101 @@ export function CategoryForm({ mode, selectedItem }) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="INCLUDE_CUSTOM_COLUMNS">Include Custom Column</Label>
-            <Input
-              id="INCLUDE_CUSTOM_COLUMNS"
-              name="INCLUDE_CUSTOM_COLUMNS"
-              value={formData.INCLUDE_CUSTOM_COLUMNS}
-              onChange={handleInputChange}
-            />
+            <Label htmlFor="INCLUDE_CUSTOM_COLUMNS">
+              Include Custom Column
+            </Label>
+
+            <Popover
+              open={openCustomColumnOptions}
+              onOpenChange={setOpenCustomColumnOptions}
+            >
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={openCustomColumnOptions}
+                  className="w-full justify-between text-left gap-2 min-h-10 font-normal flex items-center h-auto py-2"
+                >
+                  {/* Display summary of selected values */}
+                  <div className="flex flex-wrap gap-1 flex-1 overflow-hidden">
+                    {formData.INCLUDE_CUSTOM_COLUMNS.length > 0 ? (
+                      formData.INCLUDE_CUSTOM_COLUMNS.map((value) => (
+                        <span
+                          key={value}
+                          className="bg-accent text-accent-foreground px-2 py-1 rounded-md text-sm truncate"
+                        >
+                          {value}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-muted-foreground">
+                        Select custom columns
+                      </span>
+                    )}
+                  </div>
+                  <ChevronsUpDown className="opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                <Command className="w-full justify-start">
+                  <CommandInput
+                    placeholder="Search custom columns..."
+                    className="h-9"
+                  />
+                  <CommandList>
+                    <CommandEmpty>No custom columns found.</CommandEmpty>
+                    <CommandGroup>
+                      {customColumnOptions.map((item, index) => (
+                        <CommandItem
+                          key={index}
+                          value={item.INCLUDE_CUSTOM_COLUMNS}
+                          onSelect={(currentValue) => {
+                            // Update the state array: add if not present, remove if already present
+                            setFormData((prev) => {
+                              const currentSelections =
+                                prev.INCLUDE_CUSTOM_COLUMNS || [];
+                              if (currentSelections.includes(currentValue)) {
+                                // Remove the item if it's already selected
+                                return {
+                                  ...prev,
+                                  INCLUDE_CUSTOM_COLUMNS:
+                                    currentSelections.filter(
+                                      (val) => val !== currentValue
+                                    ),
+                                };
+                              } else {
+                                // Otherwise add the new selection
+                                return {
+                                  ...prev,
+                                  INCLUDE_CUSTOM_COLUMNS: [
+                                    ...currentSelections,
+                                    currentValue,
+                                  ],
+                                };
+                              }
+                            });
+                            setOpenCustomColumnOptions(false);
+                          }}
+                        >
+                          {item.INCLUDE_CUSTOM_COLUMNS}
+                          <Check
+                            className={cn(
+                              "ml-auto",
+                              // Use a condition to check if the current item is included in the array
+                              formData.INCLUDE_CUSTOM_COLUMNS.includes(
+                                item.INCLUDE_CUSTOM_COLUMNS
+                              )
+                                ? "opacity-100"
+                                : "opacity-0"
+                            )}
+                          />
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
 
           <div className="space-y-2">

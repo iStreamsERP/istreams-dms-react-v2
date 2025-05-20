@@ -48,7 +48,7 @@ export default function DashboardPage() {
         <CardHeader>
           <CardTitle>Channel Performance</CardTitle>
         </CardHeader>
-        <CardContent className="pl-2">
+        <CardContent className="pl-6">
           <ChannelPerformance daysCount={filterDays} />
         </CardContent>
       </Card>
@@ -57,7 +57,7 @@ export default function DashboardPage() {
         <CardHeader>
           <CardTitle>Documents by channel</CardTitle>
         </CardHeader>
-        <CardContent className="pl-2">
+        <CardContent className="pl-6">
           <DocumentChannelChart daysCount={filterDays} />
         </CardContent>
       </Card>
@@ -66,7 +66,7 @@ export default function DashboardPage() {
         <CardHeader>
           <CardTitle>Daily Reports</CardTitle>
         </CardHeader>
-        <CardContent className="pl-2">
+        <CardContent className="pl-6">
           <DailyReports />
         </CardContent>
       </Card>
@@ -75,7 +75,7 @@ export default function DashboardPage() {
         <CardHeader>
           <CardTitle>My Team</CardTitle>
         </CardHeader>
-        <CardContent className="pl-2">
+        <CardContent className="pl-6">
           <TeamDashboard />
         </CardContent>
       </Card>
@@ -84,7 +84,7 @@ export default function DashboardPage() {
         <CardHeader>
           <CardTitle>AI-Powered Insights</CardTitle>
         </CardHeader>
-        <CardContent className="pl-2">
+        <CardContent className="pl-6">
           <AIPoweredInsights />
         </CardContent>
       </Card>

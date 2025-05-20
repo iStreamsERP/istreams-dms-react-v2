@@ -14,9 +14,10 @@ import TaskView from "./pages/TaskView";
 import TimeSheetPage from "./pages/TimeSheetPage";
 import Layout from "./routes/Layout";
 import ProtectedRoute from "./routes/ProtectedRoute";
-import CategoryFormPage from "./pages/CategoryFormPage";
+import CategoryListPage from "./pages/CategoryListPage";
 import UserRole from "./pages/UserRole";
 import CategoryAccessPage from "./pages/CategoryAccessPage";
+import AccessRights from "./pages/AccessRights";
 
 const App = () => {
   const router = createBrowserRouter([
@@ -49,9 +50,10 @@ const App = () => {
             { path: "task-view", element: <TaskView /> },
             { path: "time-sheet", element: <TimeSheetPage /> },
             { path: "task", element: <TaskPage /> },
-            { path: "category-form", element: <CategoryFormPage /> },
+            { path: "category-form", element: <CategoryListPage /> },
             { path: "user-role", element: <UserRole /> },
             { path: "category-access", element: <CategoryAccessPage /> },
+            { path: "access-rights", element: <AccessRights /> },
           ],
         },
       ],

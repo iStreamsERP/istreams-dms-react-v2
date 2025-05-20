@@ -46,7 +46,7 @@ import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { CategoryForm } from "@/components/dialog/categoryForm";
 import { Button } from "@/components/ui/button";
 
-const CategoryFormPage = () => {
+const CategoryListPage = () => {
   const { userData } = useAuth();
   const { toast } = useToast();
 
@@ -171,6 +171,13 @@ const CategoryFormPage = () => {
       ),
     },
     {
+      accessorKey: "INCLUDE_CUSTOM_COLUMNS",
+      header: "Custom Columns",
+      cell: ({ row }) => (
+        <div className="capitalize">{row.getValue("INCLUDE_CUSTOM_COLUMNS") || "-"}</div>
+      ),
+    },
+    {
       accessorKey: "action",
       header: () => <div>Action</div>,
       id: "actions",
@@ -188,12 +195,12 @@ const CategoryFormPage = () => {
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              {/* <DropdownMenuItem
+              <DropdownMenuItem
                 onClick={() => handleEdit(item)}
                 className="flex items-center gap-1"
               >
                 <Pencil /> Edit
-              </DropdownMenuItem> */}
+              </DropdownMenuItem>
               <DropdownMenuItem
                 className="text-red-600 flex items-center gap-1"
                 onClick={() => handleDelete(item)}
@@ -392,4 +399,4 @@ const CategoryFormPage = () => {
   );
 };
 
-export default CategoryFormPage;
+export default CategoryListPage;
