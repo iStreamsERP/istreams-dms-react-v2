@@ -11,7 +11,7 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle
+  DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,7 +41,7 @@ import {
 import { Check, ChevronsUpDown } from "lucide-react";
 import { useEffect, useState } from "react";
 
-export function CategoryForm({ mode, selectedItem,onSuccess  }) {
+export function CategoryForm({ mode, selectedItem, onSuccess }) {
   const { userData } = useAuth();
   const { toast } = useToast();
 
@@ -56,7 +56,7 @@ export function CategoryForm({ mode, selectedItem,onSuccess  }) {
     PATH_FOR_REMOTE: "",
     IS_FILE_STORAGE: "",
   };
-  
+
   const [formData, setFormData] = useState(initialFormData);
   const [modules, setModules] = useState([]);
   const [customColumnOptions, setCustomColumnOptions] = useState([
@@ -68,6 +68,12 @@ export function CategoryForm({ mode, selectedItem,onSuccess  }) {
     { INCLUDE_CUSTOM_COLUMNS: "X_DELIVERY_NOTE_NO" },
     { INCLUDE_CUSTOM_COLUMNS: "X_DELIVERY_DATE" },
     { INCLUDE_CUSTOM_COLUMNS: "X_PURCHASE_ORDER_REFNO" },
+    { INCLUDE_CUSTOM_COLUMNS: "X_CLIENT_ID" },
+    { INCLUDE_CUSTOM_COLUMNS: "X_CLIENT_NAME" },
+    { INCLUDE_CUSTOM_COLUMNS: "X_CLIENT_INVOICE_SNO" },
+    { INCLUDE_CUSTOM_COLUMNS: "X_CLIENT_PO_NO" },
+    { INCLUDE_CUSTOM_COLUMNS: "X_CLIENT_PO_DATE" },
+    { INCLUDE_CUSTOM_COLUMNS: "X_CLIENT_TENDER_REF" },
   ]);
 
   const [openCustomColumnOptions, setOpenCustomColumnOptions] = useState(false);
@@ -82,8 +88,13 @@ export function CategoryForm({ mode, selectedItem,onSuccess  }) {
   };
 
   useEffect(() => {
-    fetchModules();
-    if (mode === "edit") fetchCategory();
+    const init = async () => {
+      await fetchModules();
+      if (mode === "edit") {
+        await fetchCategory();
+      }
+    };
+    init();
   }, [mode]);
 
   const fetchModules = async () => {
@@ -146,7 +157,7 @@ export function CategoryForm({ mode, selectedItem,onSuccess  }) {
         title: "Success",
         description: response,
       });
-onSuccess()
+      onSuccess();
       setFormData(initialFormData);
     } catch (error) {
       toast({

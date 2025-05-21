@@ -1,11 +1,13 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
 import {
   getDataModelFromQueryService,
   getDataModelService,
   saveDataService,
 } from "@/services/dataModelService";
+import { convertDataModelToStringData } from "@/utils/dataModelConverter";
 import { getFileIcon } from "@/utils/getFileIcon";
 import {
   CalendarDays,
@@ -24,18 +26,13 @@ import {
   View,
   X,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
-import {
-  createAndSaveDMSMaster,
-  updateDmsVerifiedBy,
-} from "../services/dmsService";
+import { updateDmsVerifiedBy } from "../services/dmsService";
 import staticCategoryData from "../staticCategoryData";
 import { convertServiceDate } from "../utils/dateUtils";
 import RejectModal from "./RejectModal";
 import { Button } from "./ui/button";
-import { convertDataModelToStringData } from "@/utils/dataModelConverter";
-import { useToast } from "@/hooks/use-toast";
 
 const DocumentForm = ({
   modalRefForm,
@@ -77,6 +74,9 @@ const DocumentForm = ({
 
   const [dynamicFields, setDynamicFields] = useState([]);
   const [isLoadingDynamicFields, setIsLoadingDynamicFields] = useState(false);
+
+  const [vendorData, setVendorData] = useState([]);
+  const [clientData, setClientData] = useState([]);
 
   useEffect(() => {
     if (docMode === "view" || docMode === "verify") {
@@ -196,7 +196,7 @@ const DocumentForm = ({
           const payload = {
             SQLQuery: `SELECT INCLUDE_CUSTOM_COLUMNS FROM SYNM_DMS_DOC_CATEGORIES WHERE CATEGORY_NAME = '${selectedDocument.DOC_RELATED_CATEGORY}'`,
           };
-          
+
           const response = await getDataModelFromQueryService(
             payload,
             userData.currentUserLogin,
@@ -241,6 +241,66 @@ const DocumentForm = ({
     loadInitialDynamicFields();
   }, [selectedDocument?.DOC_RELATED_CATEGORY]);
 
+  const fetchVendorData = useCallback(async () => {
+    try {
+      const payload = {
+        SQLQuery: `SELECT VENDOR_ID, VENDOR_NAME FROM VENDOR_MASTER`,
+      };
+
+      const response = await getDataModelFromQueryService(
+        payload,
+        userData.currentUserLogin,
+        userData.clientURL
+      );
+
+      setVendorData(response || []);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error,
+        variant: "destructive",
+      });
+    }
+  }, [userData.currentUserLogin, userData.clientURL, toast]);
+
+  const fetchClientData = useCallback(async () => {
+    try {
+      const payload = {
+        SQLQuery: `SELECT CLIENT_ID, CLIENT_NAME FROM CLIENT_MASTER`,
+      };
+
+      const response = await getDataModelFromQueryService(
+        payload,
+        userData.currentUserLogin,
+        userData.clientURL
+      );
+
+      setClientData(response || []);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error,
+        variant: "destructive",
+      });
+    }
+  }, [userData.currentUserLogin, userData.clientURL, toast]);
+
+  useEffect(() => {
+    const hasVendorField = dynamicFields.some(
+      (f) =>
+        f.COLUMN_NAME === "X_VENDOR_ID" || f.COLUMN_NAME === "X_VENDOR_NAME"
+    );
+    const hasClientField = dynamicFields.some(
+      (f) =>
+        f.COLUMN_NAME === "X_CLIENT_ID" || f.COLUMN_NAME === "X_CLIENT_NAME"
+    );
+
+    if (hasVendorField) fetchVendorData();
+    if (hasClientField) fetchClientData();
+  }, [dynamicFields, fetchVendorData, fetchClientData]);
+
+  console.log(vendorData, clientData);
+
   const handleCategoryChange = async (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -263,14 +323,20 @@ const DocumentForm = ({
         .split(",")
         .map((col) => col.trim())
         .filter((col) => col !== "")
-        .map((col) => ({
-          COLUMN_NAME: col,
-          COLUMN_LABEL: col
-            .replace(/_/g, " ")
-            .replace(/\b\w/g, (c) => c.toUpperCase()),
-          INPUT_TYPE: "text",
-          REQUIRED: true,
-        }));
+        .map((col) => {
+          const cleanCol = col.replace(/^X_/, ""); // Remove 'X_' prefix
+          const label = cleanCol
+            .toLowerCase() // Convert everything to lowercase
+            .replace(/_/g, " ") // Replace underscores with spaces
+            .replace(/\b\w/g, (c) => c.toUpperCase()); // Capitalize first letter of each word
+
+          return {
+            COLUMN_NAME: col,
+            COLUMN_LABEL: label,
+            INPUT_TYPE: "text",
+            REQUIRED: true,
+          };
+        });
 
       setDynamicFields(fields);
 
@@ -435,29 +501,35 @@ const DocumentForm = ({
     setIsSubmitting(true);
 
     try {
-      const convertedDataModel = convertDataModelToStringData("synm_dms_master", formData);
-console.log(convertedDataModel);
+      const convertedDataModel = convertDataModelToStringData(
+        "synm_dms_master",
+        formData
+      );
 
       const payload = {
         UserName: userData.currentUserLogin,
         DModelData: convertedDataModel,
-      }
+      };
 
-      const response = await saveDataService(payload, userData.currentUserLogin, userData.clientURL);
+      const response = await saveDataService(
+        payload,
+        userData.currentUserLogin,
+        userData.clientURL
+      );
 
       if (response) {
         // Reset form but retain the next reference number
-          toast({
-        title: "Success",
-        description: response,
-      });
+        toast({
+          title: "Success",
+          description: response,
+        });
         setFormData(initialFormState);
         modalRefForm.current?.close();
       } else {
         console.error("Failed to submit data. Please try again.");
       }
     } catch (error) {
-       toast({
+      toast({
         title: "Error",
         description: error.message,
         variant: "destructive",
@@ -670,29 +742,169 @@ console.log(convertedDataModel);
                     {isLoadingDynamicFields ? (
                       <Loader2 className="h-5 w-5 animate-spin" />
                     ) : (
-                      dynamicFields.map((field) => (
-                        <div key={field.COLUMN_NAME} className="space-y-2">
-                          <div className="flex items-center gap-2 text-sm">
-                            <FileText className="h-4 w-4 text-gray-600" />
-                            <Label htmlFor={field.COLUMN_NAME}>
-                              {field.COLUMN_LABEL}
-                              {field.REQUIRED && (
-                                <span className="text-red-500 ml-1">*</span>
-                              )}
-                            </Label>
-                          </div>
-                          <Input
-                            type={field.INPUT_TYPE}
-                            name={field.COLUMN_NAME}
-                            id={field.COLUMN_NAME}
-                            placeholder={`Enter ${field.COLUMN_LABEL}`}
-                            value={formData[field.COLUMN_NAME] || ""}
-                            onChange={handleChange}
-                            readOnly={isReadOnly}
-                            required={field.REQUIRED}
-                          />
-                        </div>
-                      ))
+                      dynamicFields.map((field) => {
+                        if (field.COLUMN_NAME === "X_VENDOR_ID") {
+                          return (
+                            <div key={field.COLUMN_NAME} className="space-y-2">
+                              <div className="flex items-center gap-2 text-sm">
+                                <FileText className="h-4 w-4 text-gray-600" />
+                                <Label htmlFor={field.COLUMN_NAME}>
+                                  {field.COLUMN_LABEL}
+                                  {field.REQUIRED && (
+                                    <span className="text-red-500 ml-1">*</span>
+                                  )}
+                                </Label>
+                              </div>
+                              <select
+                                name={field.COLUMN_NAME}
+                                id={field.COLUMN_NAME}
+                                value={formData[field.COLUMN_NAME] || ""}
+                                onChange={handleChange}
+                                disabled={isReadOnly}
+                                className="w-full rounded-md border border-gray-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+                              >
+                                <option value="">
+                                  Select {field.COLUMN_LABEL}
+                                </option>
+                                {vendorData.map((vendor) => (
+                                  <option
+                                    key={vendor.VENDOR_ID}
+                                    value={field.VENDOR_ID}
+                                  >
+                                    {vendor.VENDOR_ID}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          );
+                        } else if (field.COLUMN_NAME === "X_VENDOR_NAME") {
+                          return (
+                            <div key={field.COLUMN_NAME} className="space-y-2">
+                              <div className="flex items-center gap-2 text-sm">
+                                <FileText className="h-4 w-4 text-gray-600" />
+                                <Label htmlFor={field.COLUMN_NAME}>
+                                  {field.COLUMN_LABEL}
+                                  {field.REQUIRED && (
+                                    <span className="text-red-500 ml-1">*</span>
+                                  )}
+                                </Label>
+                              </div>
+                              <select
+                                name={field.COLUMN_NAME}
+                                id={field.COLUMN_NAME}
+                                value={formData[field.COLUMN_NAME] || ""}
+                                onChange={handleChange}
+                                disabled={isReadOnly}
+                                className="w-full rounded-md border border-gray-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+                              >
+                                <option value="">
+                                  Select {field.COLUMN_LABEL}
+                                </option>
+                                {vendorData.map((vendor) => (
+                                  <option
+                                    key={vendor.VENDOR_ID}
+                                    value={vendor.VENDOR_NAME}
+                                  >
+                                    {vendor.VENDOR_NAME}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          );
+                        } else if (field.COLUMN_NAME === "X_CLIENT_ID") {
+                          return (
+                            <div key={field.COLUMN_NAME} className="space-y-2">
+                              <div className="flex items-center gap-2 text-sm">
+                                <FileText className="h-4 w-4 text-gray-600" />
+                                <Label htmlFor={field.COLUMN_NAME}>
+                                  {field.COLUMN_LABEL}
+                                  {field.REQUIRED && (
+                                    <span className="text-red-500 ml-1">*</span>
+                                  )}
+                                </Label>
+                              </div>
+                              <select
+                                name={field.COLUMN_NAME}
+                                id={field.COLUMN_NAME}
+                                value={formData[field.COLUMN_NAME] || ""}
+                                onChange={handleChange}
+                                disabled={isReadOnly}
+                                className="w-full rounded-md border border-gray-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+                              >
+                                <option value="">
+                                  Select {field.COLUMN_LABEL}
+                                </option>
+                                {clientData.map((client) => (
+                                  <option
+                                    key={client.CLIENT_ID}
+                                    value={client.CLIENT_ID}
+                                  >
+                                    {client.CLIENT_ID}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          );
+                        } else if (field.COLUMN_NAME === "X_CLIENT_NAME") {
+                          return (
+                            <div key={field.COLUMN_NAME} className="space-y-2">
+                              <div className="flex items-center gap-2 text-sm">
+                                <FileText className="h-4 w-4 text-gray-600" />
+                                <Label htmlFor={field.COLUMN_NAME}>
+                                  {field.COLUMN_LABEL}
+                                  {field.REQUIRED && (
+                                    <span className="text-red-500 ml-1">*</span>
+                                  )}
+                                </Label>
+                              </div>
+                              <select
+                                name={field.COLUMN_NAME}
+                                id={field.COLUMN_NAME}
+                                value={formData[field.COLUMN_NAME] || ""}
+                                onChange={handleChange}
+                                disabled={isReadOnly}
+                                className="w-full rounded-md border border-gray-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+                              >
+                                <option value="">
+                                  Select {field.COLUMN_LABEL}
+                                </option>
+                                {clientData.map((client) => (
+                                  <option
+                                    key={client.CLIENT_NAME}
+                                    value={client.CLIENT_NAME}
+                                  >
+                                    {client.CLIENT_NAME}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          );
+                        } else {
+                          return (
+                            <div key={field.COLUMN_NAME} className="space-y-2">
+                              <div className="flex items-center gap-2 text-sm">
+                                <FileText className="h-4 w-4 text-gray-600" />
+                                <Label htmlFor={field.COLUMN_NAME}>
+                                  {field.COLUMN_LABEL}
+                                  {field.REQUIRED && (
+                                    <span className="text-red-500 ml-1">*</span>
+                                  )}
+                                </Label>
+                              </div>
+                              <Input
+                                type={field.INPUT_TYPE}
+                                name={field.COLUMN_NAME}
+                                id={field.COLUMN_NAME}
+                                placeholder={`Enter ${field.COLUMN_LABEL}`}
+                                value={formData[field.COLUMN_NAME] || ""}
+                                onChange={handleChange}
+                                readOnly={isReadOnly}
+                                required={field.REQUIRED}
+                              />
+                            </div>
+                          );
+                        }
+                      })
                     )}
 
                     {/* Expiry Date */}

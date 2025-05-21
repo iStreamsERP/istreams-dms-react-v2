@@ -94,164 +94,319 @@ const TaskPage = () => {
     }
 
     return (
-        <div className="space-y-6">
-            {/* Header & Filters */}
-            <div>
-                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-end flex-wrap gap-2">
-                    <select
-                        className="select select-bordered select-sm w-full md:w-40"
-                        value={location}
-                        onChange={(e) => setLocation(e.target.value)}
-                    >
-                        <option value="">All Locations</option>
-                        <option>Location A</option>
-                        <option>Location B</option>
-                    </select>
-
-                    <select
-                        className="select select-bordered select-sm w-full md:w-40"
-                        value={department}
-                        onChange={(e) => setDepartment(e.target.value)}
-                    >
-                        <option value="">All Departments</option>
-                        <option>Dept 1</option>
-                    </select>
-
-                    <select
-                        className="select select-bordered select-sm w-full md:w-40"
-                        value={year}
-                        onChange={(e) => setYear(e.target.value)}
-                    >
-                        <option value="">Year</option>
-                        <option>2023</option>
-                        <option>2024</option>
-                    </select>
-                </div>
-            </div>
-
-
-            {/* Cards and Charts */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <div className="space-y-4">
-                    {/* Total Tasks Card */}
-                    <div className="cust-card-group flex gap-4 items-center">
-                        <div className="p-3 bg-blue-100 rounded-full">
-                            <Briefcase className="h-6 w-6 text-blue-600" />
-                        </div>
-                        <div className="flex-1">
-                            <h2 className="text-xs font-semibold text-gray-500 uppercase">Total Tasks</h2>
-                            <div className="mt-1 flex items-baseline space-x-2">
-                                <span className="text-2xl font-bold text-gray-900">{completed.toLocaleString()}</span>
-                                <span className="text-sm text-gray-400">/ {total.toLocaleString()}</span>
-                            </div>
-                            <div className="mt-2 flex items-center space-x-2 text-xs">
-                                <div className="badge badge-success flex items-center">
-                                    <ArrowUp className="h-4 w-4" />
-                                    <span className="ml-1">+{delta}%</span>
-                                </div>
-                                <span className="text-gray-500">{deltaLabel}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Task Distribution Card */}
-                    <div className="cust-card-group">
-                        <h2 className="text-sm text-gray-500 mb-2">Task Distribution</h2>
-                        <div className="flex items-center space-x-4">
-                            <ResponsiveContainer width="50%" height={160}>
-                                <PieChart>
-                                    <Pie data={doughnutData} dataKey="value" nameKey="name" innerRadius={40} outerRadius={60}>
-                                        {doughnutData.map((entry, idx) => (
-                                            <Cell key={idx} fill={COLORS[idx]} />
-                                        ))}
-                                    </Pie>
-                                </PieChart>
-                            </ResponsiveContainer>
-                            <div className="w-1/2 text-xs space-y-2">
-                                {doughnutData.map((d, i) => (
-                                    <div key={d.name} className="flex items-center space-x-2">
-                                        <span className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[i] }} />
-                                        <span>{d.name}: {d.value}%</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Bar Chart Card */}
-                <div className="cust-card-group col-span-2">
-                    <h2 className="text-sm text-gray-500 mb-2">Tasks Completed</h2>
-                    <div className="w-full h-56">
-                        <ResponsiveContainer>
-                            <BarChart data={barData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="month" />
-                                <YAxis />
-                                <Tooltip />
-                                <Legend />
-                                {['Management', 'Service', 'Küche', 'Housekeeping'].map((key, idx) => (
-                                    <Bar key={key} dataKey={key} stackId="a" fill={COLORS[idx]} />
-                                ))}
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
-            </div>
-
-            {/* Tabs and Table */}
-            <div className="cust-card-group no-hover">
-                <div className="tabs tabs-boxed mb-4">
-                    {tabLabels.map((label, idx) => (
-                        <button
-                            key={idx}
-                            className={`tab ${activeTab === idx ? 'tab-active' : ''}`}
-                            onClick={() => setActiveTab(idx)}
-                        >
-                            {label}
-                        </button>
-                    ))}
-                </div>
-                <div className="overflow-x-auto">
-                    <table className="table w-full">
-                        <thead>
-                            <tr>
-                                <th>Date & Time</th>
-                                <th>Task</th>
-                                <th>Employee</th>
-                                <th>Type</th>
-                                <th>Status</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredTasks.map((r, i) => (
-                                <tr key={i}>
-                                    <td>{r.datetime}</td>
-                                    <td>
-                                        <div className="font-semibold">{r.name}</div>
-                                        <div className="text-xs text-gray-500">{r.desc}</div>
-                                    </td>
-                                    <td>
-                                        <div className="font-semibold">{r.employee}</div>
-                                        <div className="badge badge-outline badge-sm mt-1">{r.role}</div>
-                                    </td>
-                                    <td>{r.type}</td>
-                                    <td>
-                                        <span className={`badge badge-${r.status === 'Completed' ? 'success' : 'warning'} badge-sm`}>{r.status}</span>
-                                    </td>
-                                    <td>
-                                        <button className="btn btn-ghost btn-sm btn-circle">
-                                            <Trash2 />
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+      <div className="space-y-6">
+      <div className="bg-white dark:bg-gray-900 p-4 rounded-lg shadow-sm">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-end flex-wrap gap-3">
+          <select
+            className="select select-bordered select-sm text-gray-900 dark:text-gray-200 p-2 border border-gray-200 dark:border-gray-700 rounded-lg text-base bg-white dark:bg-gray-900 w-full md:w-48 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+          >
+            <option value="">All Locations</option>
+            <option>Location A</option>
+            <option>Location B</option>
+          </select>
+          <select
+            className="select select-bordered select-sm text-gray-900 dark:text-gray-200 p-2 border border-gray-200 dark:border-gray-700 rounded-lg text-base bg-white dark:bg-gray-900 w-full md:w-48 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            value={department}
+            onChange={(e) => setDepartment(e.target.value)}
+          >
+            <option value="">All Departments</option>
+            <option>Dept 1</option>
+          </select>
+          <select
+            className="select select-bordered select-sm text-gray-900 dark:text-gray-200 p-2 border border-gray-200 dark:border-gray-700 rounded-lg text-base bg-white dark:bg-gray-900 w-full md:w-48 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            value={year}
+            onChange={(e) => setYear(e.target.value)}
+          >
+            <option value="">Year</option>
+            <option>2023</option>
+            <option>2024</option>
+          </select>
         </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                Total Tasks
+              </p>
+              <div className="mt-2 flex items-baseline space-x-2">
+                <span className="text-3xl font-bold text-gray-900 dark:text-white">
+                  {completed.toLocaleString()}
+                </span>
+                <span className="text-lg text-gray-400">
+                  / {total.toLocaleString()}
+                </span>
+              </div>
+              <div className="mt-3 flex items-center space-x-2">
+                <span
+                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    delta >= 0
+                      ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                      : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+                  }`}
+                >
+                  {delta >= 0 ? (
+                    <ArrowUp className="-ml-0.5 mr-1 h-3 w-3" />
+                  ) : (
+                    <ArrowDown className="-ml-0.5 mr-1 h-3 w-3" />
+                  )}
+                  {delta}%
+                </span>
+                <span className="text-sm text-gray-500 dark:text-gray-400">
+                  {deltaLabel}
+                </span>
+              </div>
+            </div>
+            <div className="p-3 bg-blue-100 dark:bg-blue-900 rounded-full">
+              <Briefcase className="h-8 w-8 text-blue-600 dark:text-blue-300" />
+            </div>
+          </div>
+        </div>
+ 
+        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-6">
+          <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4">
+            Task Distribution
+          </h2>
+          <div className="flex items-center">
+            <div className="w-1/2 h-40">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={doughnutData}
+                    dataKey="value"
+                    nameKey="name"
+                    innerRadius={50}
+                    outerRadius={70}
+                    paddingAngle={2}
+                  >
+                    {doughnutData.map((entry, idx) => (
+                      <Cell key={idx} fill={COLORS[idx]} stroke="none" />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(value) => [`${value}%`, "Percentage"]}
+                    contentStyle={{
+                      backgroundColor: "rgba(12, 14, 16, 0.8)",
+                      border: "1px solid #e5e7eb",
+                      borderRadius: "0.5rem",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                      padding: "0.5rem",                      
+                    }}
+                    itemStyle={{ fontSize: "12px", color: "#e5e7eb" }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="w-1/2 pl-4 space-y-3">
+              {doughnutData.map((d, i) => (
+                <div key={d.name} className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <span
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: COLORS[i] }}
+                    />
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      {d.name}
+                    </span>
+                  </div>
+                  <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                    {d.value}%
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+ 
+      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            Tasks Completed
+          </h2>
+          <div className="flex space-x-4">
+            {["Management", "Service", "Küche", "Housekeeping"].map(
+              (key, idx) => (
+                <div key={key} className="flex items-center space-x-2">
+                  <span
+                    className="w-3 h-3 rounded-full"
+                    style={{ backgroundColor: COLORS[idx] }}
+                  />
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    {key}
+                  </span>
+                </div>
+              )
+            )}
+          </div>
+        </div>
+        <div className="w-full h-80">
+          {" "}
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={barData}
+              margin={{ top: 20, right: 20, left: 0, bottom: 20 }}
+              barSize={90} /* Increased bar size */
+              barGap={4} /* Adjusted gap between bars */
+              barCategoryGap={12} /* Adjusted gap between categories */
+            >
+              <CartesianGrid
+                strokeDasharray="3 3"
+                vertical={false}
+                stroke="#f0f0f0"
+              />
+              <XAxis
+                dataKey="month"
+                axisLine={false}
+                tickLine={false}
+                tick={{ fill: "#6b7280", fontSize: 12 }}
+              />
+              <YAxis
+                axisLine={false}
+                tickLine={false}
+                tick={{ fill: "#6b7280", fontSize: 12 }}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "rgba(12, 14, 16, 0.8)",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "0.5rem",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                  padding: "0.5rem",
+                }}
+                itemStyle={{
+                  fontSize: "20px",
+                }}
+              />
+              {["Management", "Service", "Küche", "Housekeeping"].map(
+                (key, idx) => (
+                  <Bar
+                    key={key}
+                    dataKey={key}
+                    stackId="a"
+                    fill={COLORS[idx]}
+                    radius={[4, 4, 0, 0]} /* Slightly larger radius */
+                  />
+                )
+              )}
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+ 
+      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm overflow-hidden">
+        <div className="border-b border-gray-200 dark:border-gray-700">
+          <nav className="flex -mb-px">
+            {tabLabels.map((label, idx) => (
+              <button
+                key={idx}
+                className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${
+                  activeTab === idx
+                    ? "border-blue-500 text-blue-600 dark:text-blue-400 dark:border-blue-400"
+                    : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
+                }`}
+                onClick={() => setActiveTab(idx)}
+              >
+                {label}
+              </button>
+            ))}
+          </nav>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-900">
+              <tr>
+                <th
+                  scope="col"
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+                >
+                  Date & Time
+                </th>
+                <th
+                  scope="col"
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+                >
+                  Task
+                </th>
+                <th
+                  scope="col"
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+                >
+                  Employee
+                </th>
+                <th
+                  scope="col"
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+                >
+                  Type
+                </th>
+                <th
+                  scope="col"
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+                >
+                  Status
+                </th>
+                <th
+                  scope="col"
+                  className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+                >
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+              {filteredTasks.map((r, i) => (
+                <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    {r.datetime}
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="text-sm font-medium text-gray-900 dark:text-white">
+                      {r.name}
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      {r.desc}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900 dark:text-white">
+                      {r.employee}
+                    </div>
+                    <div className="mt-1">
+                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
+                        {r.role}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    {r.type}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span
+                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        r.status === "Completed"
+                          ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                          : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+                      }`}
+                    >
+                      {r.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
     );
 };
 

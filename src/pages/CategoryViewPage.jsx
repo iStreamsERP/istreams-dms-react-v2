@@ -96,7 +96,7 @@ const CategoryViewPage = () => {
                     <h1 className="text-sm font-bold">
                       ({category.total_count})
                     </h1>
-                    <h6 className="text-lg">{category.DOC_RELATED_CATEGORY}</h6>
+                    <h6 className="text-sm">{category.DOC_RELATED_CATEGORY}</h6>
                   </div>
 
                   <div className="mt-2">

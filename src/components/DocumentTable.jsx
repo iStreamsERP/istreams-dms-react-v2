@@ -35,6 +35,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { deleteDMSMaster, getDocMasterList } from "../services/dmsService";
 import DocumentForm from "./DocumentForm";
 import DocumentUpload from "./DocumentUpload";
+import { Badge } from "./ui/badge";
 
 const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
   const { userData } = useAuth();
@@ -262,9 +263,9 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
           <div className="flex items-center justify-end gap-1">
             {info.getValue() > 0 ? (
               <>
-                <span className="badge badge-success text-xs font-medium">
+                <Badge className="bg-green-500 rounded-full text-[9px] font-extrabold">
                   {info.getValue()}
-                </span>
+                </Badge>
                 <button
                   className="btn btn-ghost btn-circle btn-sm"
                   onClick={() => handleOpenUpload(info.row.original)}

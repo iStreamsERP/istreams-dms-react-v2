@@ -79,12 +79,15 @@ const ChannelPerformance = ({ daysCount = 30 }) => {
               />
             ))}
           </Pie>
-          <Tooltip
-            contentStyle={{
-              backgroundColor: "rgba(31, 41, 55, 0.8)",
-              borderColor: "#4B5563",
-            }}
-            itemStyle={{ fontSize: 14, color: "#E5E7EB" }}
+         <Tooltip
+          contentStyle={{
+                backgroundColor: "rgba(12, 14, 16, 0.8)",
+                borderColor: "#4B5563",
+                borderRadius: "8px",
+                padding: "6px",
+                fontSize: "12px",
+              }}
+            itemStyle={{ fontSize: 12, color: "#E5E7EB" }}
           />
           <Legend
             wrapperStyle={{ fontSize: 14 }}
