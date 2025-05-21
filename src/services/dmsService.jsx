@@ -263,11 +263,10 @@ export const updateRejectDmsDetails = async (
 };
 
 export const getDocMasterList = async (
-  parameter,
+  payload,
   loginUserName,
   dynamicClientUrl
 ) => {
-  const payload = getDocMasterListPayloadPayload(parameter);
 
   const doConnectionResponse = await doConnection(
     loginUserName,

@@ -8,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
 import {
   flexRender,
   getCoreRowModel,
@@ -27,13 +28,7 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PacmanLoader } from "react-spinners";
 import { v4 as uuidv4 } from "uuid";
 import { useAuth } from "../contexts/AuthContext";
@@ -45,24 +40,26 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
   const { userData } = useAuth();
   const CURRENT_USER_LOGIN = userData.currentUserLogin;
 
+  const { toast } = useToast();
+  const modalRefForm = useRef(null);
+  const modalRefUpload = useRef(null);
+
   const [masterData, setMasterData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedDocument, setSelectedDocument] = useState(null);
-  const modalRefForm = useRef(null);
-  const modalRefUpload = useRef(null);
 
   const fetchDocsMasterList = useCallback(async () => {
     setLoading(true);
     try {
-      const docsMasterListPayload = {
-        whereCondition: "",
-        orderby: "REF_SEQ_NO DESC",
-        includeEmpImage: false,
+      const payload = {
+        WhereCondition: "",
+        Orderby: "REF_SEQ_NO DESC",
+        IncludeEmpImage: false,
       };
 
       const response = await getDocMasterList(
-        docsMasterListPayload,
+        payload,
         CURRENT_USER_LOGIN,
         userData.clientURL
       );
@@ -97,6 +94,7 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
       fetchDataRef.current = fetchDocsMasterList;
     }
   }, [fetchDataRef, fetchDocsMasterList]);
+
   const canCurrentUserEdit = (doc) => {
     if (doc?.USER_NAME !== userData.currentUserName)
       return "Access Denied: This document is created by another user.";
@@ -143,12 +141,12 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
         return;
 
       try {
-        const deleteDMSMasterPayload = {
-          userName: doc.USER_NAME,
-          refSeqNo: doc.REF_SEQ_NO,
+        const payload = {
+          USER_NAME: doc.USER_NAME,
+          REF_SEQ_NO: doc.REF_SEQ_NO,
         };
-        await deleteDMSMaster(
-          deleteDMSMasterPayload,
+        const response = await deleteDMSMaster(
+          payload,
           CURRENT_USER_LOGIN,
           userData.clientURL
         );
@@ -156,9 +154,17 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
         setMasterData((prevData) =>
           prevData.filter((item) => item.REF_SEQ_NO !== doc.REF_SEQ_NO)
         );
+
+        toast({
+          variant: "destructive",
+          title: "Document deleted successfully.",
+          description: response,
+        });
       } catch (error) {
-        console.error("Deletion error:", error);
-        alert("Failed to delete the document. Please try again.");
+        toast({
+          variant: "destructive",
+          title: error?.message || "Unknown error occurred.",
+        });
       }
     },
     [CURRENT_USER_LOGIN]
@@ -355,7 +361,7 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
             {loading ? (
               <tr>
                 <td colSpan="12" className="text-center py-4">
-                 <PacmanLoader color="#6366f1" />
+                  <PacmanLoader color="#6366f1" />
                 </td>
               </tr>
             ) : error ? (
@@ -386,7 +392,10 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
               ))
             ) : (
               <tr>
-                <td colSpan="12" className="text-sm text-center py-4 text-gray-500">
+                <td
+                  colSpan="12"
+                  className="text-sm text-center py-4 text-gray-500"
+                >
                   No data found
                 </td>
               </tr>

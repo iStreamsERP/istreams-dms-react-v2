@@ -54,7 +54,6 @@ const DocumentUpload = ({
 
         setExistingDocs(receivedDocs);
 
-        console.log(receivedDocs);
       } catch (err) {
         console.error("Fetch existing docs error:", err);
         setFetchError("Failed to load existing documents");

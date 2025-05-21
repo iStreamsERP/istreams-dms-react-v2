@@ -4,6 +4,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   getDataModelFromQueryService,
   getDataModelService,
+  saveDataService,
 } from "@/services/dataModelService";
 import { getFileIcon } from "@/utils/getFileIcon";
 import {
@@ -33,6 +34,8 @@ import staticCategoryData from "../staticCategoryData";
 import { convertServiceDate } from "../utils/dateUtils";
 import RejectModal from "./RejectModal";
 import { Button } from "./ui/button";
+import { convertDataModelToStringData } from "@/utils/dataModelConverter";
+import { useToast } from "@/hooks/use-toast";
 
 const DocumentForm = ({
   modalRefForm,
@@ -59,6 +62,7 @@ const DocumentForm = ({
     REF_TASK_ID: 0,
   };
 
+  const { toast } = useToast();
   const modalRefReject = useRef(null);
 
   const [formData, setFormData] = useState(initialFormState);
@@ -88,9 +92,9 @@ const DocumentForm = ({
         selectedDocument.EXPIRY_DATE
       );
       setFormData((prev) => ({
+        ...prev,
         ...initialFormState,
         ...selectedDocument,
-        ...prev,
         EXPIRY_DATE: convertedExpiryDate,
       }));
     }
@@ -186,12 +190,13 @@ const DocumentForm = ({
 
   useEffect(() => {
     const loadInitialDynamicFields = async () => {
-      setIsLoadingDynamicFields(true);
       if (selectedDocument?.DOC_RELATED_CATEGORY) {
         try {
+          setIsLoadingDynamicFields(true);
           const payload = {
             SQLQuery: `SELECT INCLUDE_CUSTOM_COLUMNS FROM SYNM_DMS_DOC_CATEGORIES WHERE CATEGORY_NAME = '${selectedDocument.DOC_RELATED_CATEGORY}'`,
           };
+          
           const response = await getDataModelFromQueryService(
             payload,
             userData.currentUserLogin,
@@ -200,7 +205,6 @@ const DocumentForm = ({
 
           const raw = Array.isArray(response) ? response : response?.Data || [];
           const commaText = raw[0]?.INCLUDE_CUSTOM_COLUMNS || "";
-
           const fields = commaText
             .split(",")
             .map((col) => col.trim())
@@ -431,20 +435,33 @@ const DocumentForm = ({
     setIsSubmitting(true);
 
     try {
-      const response = await createAndSaveDMSMaster(
-        formData,
-        userData.currentUserLogin,
-        userData.clientURL
-      );
+      const convertedDataModel = convertDataModelToStringData("synm_dms_master", formData);
+console.log(convertedDataModel);
+
+      const payload = {
+        UserName: userData.currentUserLogin,
+        DModelData: convertedDataModel,
+      }
+
+      const response = await saveDataService(payload, userData.currentUserLogin, userData.clientURL);
+
       if (response) {
         // Reset form but retain the next reference number
+          toast({
+        title: "Success",
+        description: response,
+      });
         setFormData(initialFormState);
         modalRefForm.current?.close();
       } else {
         console.error("Failed to submit data. Please try again.");
       }
     } catch (error) {
-      console.log(`An error occurred: ${error.message}`);
+       toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }

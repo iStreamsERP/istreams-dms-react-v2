@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { FileSearch } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import DocumentForm from "../components/DocumentForm";
 import TaskForm from "../components/TaskForm";
@@ -178,7 +178,10 @@ export default function DocumentViewPage() {
         userData.currentUserLogin,
         userData.clientURL
       );
-      setAssignedUsers((prev) => ({ ...prev, [doc.REF_SEQ_NO]: selectedUserName }));
+      setAssignedUsers((prev) => ({
+        ...prev,
+        [doc.REF_SEQ_NO]: selectedUserName,
+      }));
       setVerifyEnabled((prev) => ({ ...prev, [doc.REF_SEQ_NO]: true }));
     } catch (error) {
       console.error("Error assigning document to user:", error);
@@ -196,16 +199,18 @@ export default function DocumentViewPage() {
     setTaskData((prevTasks) => ({ ...prevTasks, newTask }));
   };
 
-  const filteredDocs = docsData.filter((doc) => {
-    const search = globalFilter.toLowerCase();
-    return (
-      doc.DOCUMENT_DESCRIPTION.toLowerCase().includes(search) ||
-      doc.DOCUMENT_NO.toLowerCase().includes(search) ||
-      doc.DOC_RELATED_TO.toLowerCase().includes(search) ||
-      doc.DOC_RELATED_CATEGORY.toLowerCase().includes(search) ||
-      doc.USER_NAME.toLowerCase().includes(search) ||
-      doc.REF_SEQ_NO.toString().toLowerCase().includes(search)
-    );
+  const filteredDocs = useMemo(() => {
+    return docsData.filter((doc) => {
+      const search = globalFilter.toLowerCase();
+      return (
+        doc.DOCUMENT_DESCRIPTION.toLowerCase().includes(search) ||
+        doc.DOCUMENT_NO.toLowerCase().includes(search) ||
+        doc.DOC_RELATED_TO.toLowerCase().includes(search) ||
+        doc.DOC_RELATED_CATEGORY.toLowerCase().includes(search) ||
+        doc.USER_NAME.toLowerCase().includes(search) ||
+        doc.REF_SEQ_NO.toString().toLowerCase().includes(search)
+      );
+    });
   });
 
   return (
@@ -225,7 +230,10 @@ export default function DocumentViewPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
             {filteredDocs.map((doc, index) => (
-              <Card key={index} className="col-span-2 md:col-span-2 lg:col-span-1">
+              <Card
+                key={index}
+                className="col-span-2 md:col-span-2 lg:col-span-1"
+              >
                 <CardContent key={doc.REF_SEQ_NO} className="p-4">
                   <div
                     className={`flex items-start gap-2 ${
@@ -263,8 +271,8 @@ export default function DocumentViewPage() {
                         {doc.NO_OF_DOCUMENTS} File(s)
                       </span>
                     </div>
-                     <p className="text-sm font-medium text-start w-full">
-                      Category :{' '}
+                    <p className="text-sm font-medium text-start w-full">
+                      Category :{" "}
                       <span className="text-gray-500">
                         {doc.DOC_RELATED_CATEGORY}
                       </span>
