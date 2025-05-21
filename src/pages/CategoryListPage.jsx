@@ -1,19 +1,6 @@
-import {
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-} from "@tanstack/react-table";
-import {
-  ArrowUpDown,
-  MoreHorizontal,
-  Pencil,
-  Plus,
-  Settings2,
-  Trash2,
-} from "lucide-react";
+import { CategoryForm } from "@/components/dialog/CategoryForm";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -38,13 +25,24 @@ import {
   deleteDataModelService,
   getDataModelService,
 } from "@/services/dataModelService";
+import {
+  flexRender,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
+import {
+  ArrowUpDown,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Settings2,
+  Trash2,
+} from "lucide-react";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { PacmanLoader } from "react-spinners";
-import axios from "axios";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import { CategoryForm } from "@/components/dialog/categoryForm";
-import { Button } from "@/components/ui/button";
 
 const CategoryListPage = () => {
   const { userData } = useAuth();
