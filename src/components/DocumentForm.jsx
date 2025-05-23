@@ -299,8 +299,6 @@ const DocumentForm = ({
     if (hasClientField) fetchClientData();
   }, [dynamicFields, fetchVendorData, fetchClientData]);
 
-  console.log(vendorData, clientData);
-
   const handleCategoryChange = async (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));

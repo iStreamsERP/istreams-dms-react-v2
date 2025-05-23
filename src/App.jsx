@@ -18,6 +18,8 @@ import CategoryListPage from "./pages/CategoryListPage";
 import UserRole from "./pages/UserRole";
 import CategoryAccessPage from "./pages/CategoryAccessPage";
 import AccessRights from "./pages/AccessRights";
+import UserRights from "./pages/UserRights";
+import InvoiceForm from "./pages/InvoiceForm";
 
 const App = () => {
   const router = createBrowserRouter([
@@ -54,6 +56,8 @@ const App = () => {
             { path: "user-role", element: <UserRole /> },
             { path: "category-access", element: <CategoryAccessPage /> },
             { path: "access-rights", element: <AccessRights /> },
+            { path: "user-rights", element: <UserRights /> },
+            { path: "invoice-form", element: <InvoiceForm /> },
           ],
         },
       ],

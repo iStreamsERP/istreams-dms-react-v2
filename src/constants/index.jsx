@@ -94,9 +94,19 @@ export const navbarLinks = [
         path: "/category-access",
       },
       {
+        label: "User Rights",
+        icon: ShieldUser,
+        path: "/user-rights",
+      },
+      {
         label: "Access Rights",
         icon: ShieldUser,
         path: "/access-rights",
+      },
+      {
+        label: "Invoice Form",
+        icon: ShieldUser,
+        path: "/invoice-form",
       },
     ],
   },
