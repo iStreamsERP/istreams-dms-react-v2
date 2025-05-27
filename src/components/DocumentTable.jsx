@@ -32,9 +32,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PacmanLoader } from "react-spinners";
 import { useAuth } from "../contexts/AuthContext";
 import { deleteDMSMaster, getDocMasterList } from "../services/dmsService";
-import DocumentForm from "./DocumentForm";
+import DocumentFormModal from "./dialog/DocumentFormModal";
 import DocumentUploadModal from "./dialog/DocumentUploadModal";
 import { Badge } from "./ui/badge";
+import { Button } from "./ui/button";
 
 const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
   const { userData } = useAuth();
@@ -186,13 +187,13 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
   const columns = useMemo(
     () => [
       {
-        header: "Ref No",
+        header: () => <p className="truncate w-full">Ref No</p>,
         size: 80,
         accessorKey: "REF_SEQ_NO",
         cell: (info) => info.getValue() || "-",
       },
       {
-        header: "Document Name",
+        header: () => <p className="truncate w-full">Document Name</p>,
         size: 300,
         accessorKey: "DOCUMENT_DESCRIPTION",
         cell: ({ row }) => (
@@ -209,7 +210,7 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
         ),
       },
       {
-        header: "Uploader",
+        header: () => <p className="truncate w-full">Uploader</p>,
         size: 150,
         accessorKey: "USER_NAME",
         cell: ({ row }) => (
@@ -223,7 +224,7 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
         ),
       },
       {
-        header: "Channel Source",
+        header: () => <p className="truncate w-full">Channel Source</p>,
         size: 100,
         accessorKey: "CHANNEL_SOURCE",
         cell: ({ row }) => (
@@ -239,13 +240,13 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
         ),
       },
       {
-        header: "Related to",
+        header: () => <p className="truncate w-full">Related to</p>,
         size: 100,
         accessorKey: "DOC_RELATED_TO",
         cell: (info) => info.getValue() || "-",
       },
       {
-        header: "Category",
+        header: () => <p className="truncate w-full">Category</p>,
         size: 200,
         accessorKey: "DOC_RELATED_CATEGORY",
         cell: ({ row }) => (
@@ -256,42 +257,60 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
       },
 
       {
-        header: "Status",
+        header: () => <p className="truncate w-full">Status</p>,
         size: 100,
         accessorKey: "DOCUMENT_STATUS",
         cell: (info) => (info.getValue() ? info.getValue() : <span>-</span>),
       },
       {
-        header: "Assigned to",
+        header: () => <p className="truncate w-full">Assigned to</p>,
         size: 100,
         accessorKey: "ASSIGNED_USER",
         cell: (info) => (info.getValue() ? info.getValue() : <span>-</span>),
       },
       {
-        header: "Docs",
+        header: () => (
+          <p className="text-xs font-semibold text-gray-600 text-right w-full">
+            Docs
+          </p>
+        ),
         accessorKey: "NO_OF_DOCUMENTS",
         size: 50,
-        cell: (info) => (
-          <div className="flex items-center justify-end gap-1">
-            {info.getValue() > 0 ? (
-              <>
-                <Badge className="bg-green-500 rounded-full text-[9px] font-extrabold">
-                  {info.getValue()}
-                </Badge>
-                <button onClick={() => handleOpenUpload(info.row.original)}>
+        cell: (info) => {
+          const value = info.getValue();
+          const rowData = info.row.original;
+
+          return (
+            <div className="flex items-center justify-end gap-1">
+              {value > 0 ? (
+                <button
+                  onClick={() => handleOpenUpload(rowData)}
+                  className="flex items-center gap-1"
+                  title="Upload/View Documents"
+                >
+                  <Badge className="bg-green-500 text-white rounded-full text-[10px] font-bold px-2 py-[2px]">
+                    {value}
+                  </Badge>
                   <FilePen className="h-4 w-4" />
                 </button>
-              </>
-            ) : (
-              <button onClick={() => handleOpenUpload(info.row.original)}>
-                <Upload className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-        ),
+              ) : (
+                <Button
+                  onClick={() => handleOpenUpload(rowData)}
+                  variant="ghost"
+                  size="icon"
+                  title="Upload Document"
+                  className="h-6 w-6"
+                >
+                  <Upload className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          );
+        },
       },
       {
-        header: "Action",
+        header: () => <p className="truncate w-full">Action</p>,
+        id: "actions",
         size: 50,
         cell: ({ row }) => {
           const doc = row.original;
@@ -370,7 +389,10 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
               </tr>
             ) : error ? (
               <tr>
-                <td colSpan="12" className="text-center text-sm text-red-500 py-4">
+                <td
+                  colSpan="12"
+                  className="text-center text-sm text-red-500 py-4"
+                >
                   Error: {error}
                 </td>
               </tr>
@@ -481,7 +503,7 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
         </div>
       </div>
 
-      <DocumentForm
+      <DocumentFormModal
         modalRefForm={modalRefForm}
         selectedDocument={selectedDocument}
         onUploadSuccess={fetchDocsMasterList}

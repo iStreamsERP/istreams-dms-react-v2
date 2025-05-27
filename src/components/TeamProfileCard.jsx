@@ -1,5 +1,4 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { Clock, Star } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toTitleCase } from "../utils/stringUtils";
 
@@ -13,7 +12,6 @@ function TeamProfileCard({ user }) {
     month_completed_tasks = 0,
     designation = "",
     image = "",
-    lastActive = "",
   } = user || {};
 
   // 2) Derive displayName, titles, percentages
@@ -67,7 +65,7 @@ function TeamProfileCard({ user }) {
             </div>
 
             <div className="text-center ml-auto">
-              <div className="relative w-16 h-16 mx-auto">
+              <div className="relative w-16 h-16 mx-auto rounded-full">
                 <svg viewBox="0 0 36 36" className="w-full h-full">
                   <circle
                     cx="18"
@@ -122,29 +120,9 @@ function TeamProfileCard({ user }) {
               style={{ width: `${progressPercent}%` }}
             />
           </div>
-          <p className="text-xs text-gray-500 text-right mb-4">
+          <p className="text-xs text-gray-500 text-right">
             {progressPercent}% Completed
           </p>
-
-          <div className="flex items-center justify-between text-xs text-gray-500">
-            <div className="flex items-center space-x-1">
-              <Clock size={12} />
-              <span>{lastActive || "—"}</span>
-            </div>
-            <div className="flex space-x-0.5">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Star
-                  key={i}
-                  size={12}
-                  className={
-                    i < Math.round(monthProgressPercent / 20)
-                      ? "text-yellow-400"
-                      : "text-gray-300"
-                  }
-                />
-              ))}
-            </div>
-          </div>
         </CardContent>
       </Card>
     </Link>

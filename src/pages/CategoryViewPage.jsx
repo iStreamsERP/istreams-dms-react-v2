@@ -7,6 +7,7 @@ import { BarLoader } from "react-spinners";
 import TimeRangeSelector from "../components/TimeRangeSelector";
 import { useAuth } from "../contexts/AuthContext";
 import { getCategoriesSummary } from "../services/dmsService";
+import GlobalSearchInput from "@/components/GlobalSearchInput";
 
 const CategoryViewPage = () => {
   const { userData, auth } = useAuth();
@@ -63,14 +64,8 @@ const CategoryViewPage = () => {
       {/* CONTROLS ROW */}
       <div className="flex flex-col md:flex-row md:justify-between items-stretch gap-2">
         {/* Search */}
-        <Input
-        ref={searchInputRef}
-          type="text"
-          className="grow"
-          placeholder="Global Search... (Ctrl+K)"
-          value={globalFilter}
-          onChange={(e) => setGlobalFilter(e.target.value)}
-        />
+        <GlobalSearchInput value={globalFilter} onChange={setGlobalFilter} />
+
         {/* Filter dropdown */}
         <div className="flex-shrink-0">
           <TimeRangeSelector onFilterChange={setFilterDays} />
@@ -82,36 +77,39 @@ const CategoryViewPage = () => {
           <BarLoader color="#36d399" height={2} width="100%" />
         </div>
       ) : filteredCategories.length === 0 ? (
-        <p>No data found...</p>
+        <p className="text-center text-sm">No data found...</p>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {filteredCategories.map((category) => (
-            <Card
+            <Link
+              to="/document-view"
+              state={{ categoryName: category.DOC_RELATED_CATEGORY }}
               key={category.DOC_RELATED_CATEGORY}
-              className="col-span-2 md:col-span-2 lg:col-span-1"
+              className="hover:scale-[1.01] transition-transform"
             >
-              <CardContent className="p-2">
-                <div className="text-center">
-                  <div className="flex flex-col-reverse items-center">
-                    <h1 className="text-sm font-bold">
-                      ({category.total_count})
-                    </h1>
-                    <h6 className="text-sm">{category.DOC_RELATED_CATEGORY}</h6>
+              <Card className="h-20 flex items-center px-4 py-1 rounded-xl shadow-sm hover:shadow-md transition">
+                <div className="flex items-center w-full gap-3">
+                  <div className="bg-blue-100 text-blue-600 p-1 rounded-md">
+                    📁
                   </div>
 
-                  <div className="mt-2">
-                    <Link
-                      to="/document-view"
-                      state={{ categoryName: category.DOC_RELATED_CATEGORY }}
-                      className="inline-flex items-center gap-x-1 text-sm font-semibold rounded-lg border border-transparent text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-500 dark:hover:text-blue-600"
+                  {/* Text Content */}
+                  <div className="flex flex-col justify-center w-full overflow-hidden">
+                    <h3
+                      className="text-sm font-semibold truncate w-full
+                      "
+                      title={category.DOC_RELATED_CATEGORY}
                     >
-                      View Documents
-                      <ChevronRight size={18} />
-                    </Link>
+                      {category.DOC_RELATED_CATEGORY}
+                    </h3>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {category.total_count}{" "}
+                      {category.total_count === 1 ? "document" : "documents"}
+                    </p>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </Card>
+            </Link>
           ))}
         </div>
       )}

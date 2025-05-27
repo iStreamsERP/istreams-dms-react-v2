@@ -34,16 +34,16 @@ import {
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useAuth } from "../contexts/AuthContext";
-import { updateDmsVerifiedBy } from "../services/dmsService";
-import staticCategoryData from "../staticCategoryData";
-import { convertServiceDate } from "../utils/dateUtils";
-import DocumentPreview from "./DocumentPreview";
-import RejectModal from "./dialog/RejectModal";
-import { Button } from "./ui/button";
-import { Separator } from "./ui/separator";
+import { useAuth } from "../../contexts/AuthContext";
+import { updateDmsVerifiedBy } from "../../services/dmsService";
+import staticCategoryData from "../../staticCategoryData";
+import { convertServiceDate } from "../../utils/dateUtils";
+import DocumentPreview from "../DocumentPreview";
+import { Button } from "../ui/button";
+import { Separator } from "../ui/separator";
+import RejectModal from "./RejectModal";
 
-const DocumentForm = ({
+const DocumentFormModal = ({
   modalRefForm,
   selectedDocument,
   docMode,
@@ -581,15 +581,15 @@ const DocumentForm = ({
                   {formData.REF_SEQ_NO === -1 ? "(New)" : formData.REF_SEQ_NO}
                 </span>
               </h3>
-              <Button
-                type="button"
-                onClick={() => modalRefForm.current.close()}
-              >
-                <X className="h-5 w-5" />
-              </Button>
-            </div>
 
-            <div className="border-b border-gray-200 my-4" />
+              <button
+                className="hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full btn-ghost"
+                onClick={() => modalRefForm.current.close()}
+                type="button"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
 
             <form
               onSubmit={handleSubmit}
@@ -598,7 +598,7 @@ const DocumentForm = ({
             >
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Left Side - Document Form */}
-                <div className="lg:col-span-2">
+                <div className="col-span-3 lg:col-span-2">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Document Number */}
                     <div className="space-y-2">
@@ -994,7 +994,7 @@ const DocumentForm = ({
                 </div>
 
                 {/* Right Side - Activity Section */}
-                <div className="bg-slate-200 transition-colors dark:bg-slate-900 p-4 rounded-lg space-y-4">
+                <div className="col-span-3 lg:col-span-1 bg-slate-200 transition-colors dark:bg-slate-900 p-4 rounded-lg space-y-4">
                   <h2 className="text-lg font-medium mb-2">Others Details:</h2>
 
                   {/* Details remain the same but styled with Tailwind */}
@@ -1062,7 +1062,10 @@ const DocumentForm = ({
                         </label>
                       </div>
                       {formData.DOCUMENT_STATUS && (
-                        <p className="badge badge-error text-xs font-medium whitespace-nowrap">
+                        <p
+                          className="text-xs font-medium truncate w-full whitespace-nowrap"
+                          title={formData.DOCUMENT_STATUS}
+                        >
                           {formData.DOCUMENT_STATUS}
                         </p>
                       )}
@@ -1096,7 +1099,7 @@ const DocumentForm = ({
                     <p className="text-sm">Loading documents...</p>
                   ) : existingDocs.length > 0 ? (
                     <div className="col-span-3">
-                      <Separator />
+                      <Separator className="my-4" />
 
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-2 ">
                         {existingDocs.map((doc) => (
@@ -1134,7 +1137,10 @@ const DocumentForm = ({
                                     Preview
                                   </Button>
 
-                                  <Button onClick={() => handleViewDocs(doc)} type="button" >
+                                  <Button
+                                    onClick={() => handleViewDocs(doc)}
+                                    type="button"
+                                  >
                                     Download
                                   </Button>
                                 </div>
@@ -1188,4 +1194,4 @@ const DocumentForm = ({
   );
 };
 
-export default DocumentForm;
+export default DocumentFormModal;

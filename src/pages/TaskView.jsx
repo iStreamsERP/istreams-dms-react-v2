@@ -28,6 +28,7 @@ import {
   formatDateTime,
 } from "../utils/dateUtils";
 import { capitalizeFirstLetter } from "../utils/stringUtils";
+import GlobalSearchInput from "@/components/GlobalSearchInput";
 
 const TaskView = () => {
   const { userData } = useAuth();
@@ -35,7 +36,7 @@ const TaskView = () => {
   // New assignment filter: "all", "assignedByMe", "assignedToMe"
   const [assignmentFilter, setAssignmentFilter] = useState("all");
   const [sortOrder, setSortOrder] = useState("name-asc"); // name-asc, name-desc, date-asc, date-desc
-  const [searchText, setSearchText] = useState("");
+  const [globalFilter, setGlobalFilter] = useState("");
   const [loadingTasks, setLoadingTasks] = useState(false);
   const [taskData, setTaskData] = useState([]);
 
@@ -130,8 +131,8 @@ const TaskView = () => {
 
       // Filter by search text: search in TASK_NAME and TASK_INFO (case-insensitive)
       const searchMatch =
-        task.TASK_NAME?.toLowerCase().includes(searchText.toLowerCase()) ||
-        task.TASK_INFO?.toLowerCase().includes(searchText.toLowerCase());
+        task.TASK_NAME?.toLowerCase().includes(globalFilter.toLowerCase()) ||
+        task.TASK_INFO?.toLowerCase().includes(globalFilter.toLowerCase());
 
       return statusMatch && assignmentMatch && searchMatch;
     });
@@ -139,7 +140,7 @@ const TaskView = () => {
     taskData,
     statusFilter,
     assignmentFilter,
-    searchText,
+    globalFilter,
     userData.currentUserName,
   ]);
 
@@ -272,12 +273,7 @@ const TaskView = () => {
       <div className="flex flex-col lg:flex-row md:justify-between gap-4">
         {/* Search and Sorting Inputs */}
         <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
-          <Input
-            type="text"
-            placeholder="Search tasks..."
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-          />
+          <GlobalSearchInput value={globalFilter} onChange={setGlobalFilter} />
 
           <Select value={sortOrder} onValueChange={setSortOrder}>
             <SelectTrigger className="w-[180px]">
@@ -472,7 +468,7 @@ const TaskView = () => {
         </div>
       ) : (
         <div>
-          <p className="text-center text-gray-400">No tasks available.</p>
+          <p className="text-center text-sm">No data found.</p>
         </div>
       )}
 

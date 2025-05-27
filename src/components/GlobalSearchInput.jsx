@@ -20,7 +20,7 @@ const GlobalSearchInput = ({ value, onChange }) => {
     <Input
       ref={inputRef}
       type="text"
-      className="w-full md:w-1/2"
+      className="w-full lg:w-1/2"
       placeholder="Global Search... (Ctrl+K)"
       value={value}
       onChange={(e) => onChange(e.target.value)}

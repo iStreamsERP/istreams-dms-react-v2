@@ -73,7 +73,6 @@ export const getDashboardChannelSummary = async (
   loginUserName,
   dynamicClientUrl
 ) => {
-
   const doConnectionResponse = await doConnection(
     loginUserName,
     dynamicClientUrl

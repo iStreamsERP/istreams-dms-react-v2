@@ -1,16 +1,16 @@
+import GlobalSearchInput from "@/components/GlobalSearchInput";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { FilePlus2, RefreshCcw } from "lucide-react";
+import { FilePlus2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
-import DocumentForm from "../components/DocumentForm";
+import DocumentFormModal from "../components/dialog/DocumentFormModal";
 import DocumentTable from "../components/DocumentTable";
 
 const DocumentListPage = () => {
   const modalRefForm = useRef(null);
   const fetchDataRef = useRef(null);
   const location = useLocation();
-  
+
   const [globalFilter, setGlobalFilter] = useState("");
 
   useEffect(() => {
@@ -24,30 +24,13 @@ const DocumentListPage = () => {
   };
 
   return (
-    <div className="grid grid-cols-1 gap-4">
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-2 items-center">
-        <div className="md:col-span-3">
-          {/* Global Search Box in the Parent */}
-          <Input
-            type="text"
-            className="grow"
-            placeholder="Global Search..."
-            value={globalFilter}
-            onChange={(e) => setGlobalFilter(e.target.value)}
-          />
-        </div>
-        <div className="md:col-span-9 flex justify-end gap-2">
-          <Button onClick={() => modalRefForm.current.showModal()}>
-            Add Document <FilePlus2 className="h-4 w-4" />
-          </Button>
+    <div className="grid grid-cols-1 gap-2">
+      <div className="flex flex-col md:flex-row justify-between items-end md:items-center gap-2">
+        <GlobalSearchInput value={globalFilter} onChange={setGlobalFilter} />
 
-          <Button
-            variant="outline"
-            onClick={fetchData}
-          >
-            <RefreshCcw className="h-4 w-4" />
-          </Button>
-        </div>
+        <Button onClick={() => modalRefForm.current.showModal()}>
+          Add Document <FilePlus2 className="h-4 w-4" />
+        </Button>
       </div>
 
       <DocumentTable
@@ -56,7 +39,7 @@ const DocumentListPage = () => {
         fetchDataRef={fetchDataRef}
       />
 
-      <DocumentForm modalRefForm={modalRefForm} onUploadSuccess={fetchData}  />
+      <DocumentFormModal modalRefForm={modalRefForm} onUploadSuccess={fetchData} />
     </div>
   );
 };

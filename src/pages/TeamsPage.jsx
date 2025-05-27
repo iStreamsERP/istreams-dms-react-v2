@@ -1,16 +1,13 @@
-import { SearchIcon } from "lucide-react";
-import React, { useEffect, useRef, useState } from "react";
-import LoadingSpinner from "../components/common/LoadingSpinner";
-import TeamCard from "../components/TeamProfileCard";
+import GlobalSearchInput from "@/components/GlobalSearchInput";
+import { useEffect, useState } from "react";
+import { BarLoader } from "react-spinners";
+import TeamProfileCard from "../components/TeamProfileCard";
 import { useAuth } from "../contexts/AuthContext";
 import { getAllDmsActiveUser } from "../services/dashboardService";
 import { getEmployeeImage } from "../services/employeeService";
-import { BarLoader } from "react-spinners";
-import { Input } from "@/components/ui/input";
 
-const MyTeamPage = () => {
+const TeamsPage = () => {
   const { userData } = useAuth();
-  const searchInputRef = useRef(null);
 
   const [usersData, setUsersData] = useState([]);
   const [globalFilter, setGlobalFilter] = useState("");
@@ -72,17 +69,6 @@ const MyTeamPage = () => {
     fetchUsersAndImages();
   }, [userData.currentUserLogin]);
 
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault();
-        searchInputRef.current?.focus();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
-
   const filteredUsersData = usersData.filter((user) => {
     const search = globalFilter.toLowerCase();
     return user.user_name.toLowerCase().includes(search);
@@ -90,14 +76,7 @@ const MyTeamPage = () => {
 
   return (
     <div className="grid grid-cols-1 gap-4">
-      <Input
-        ref={searchInputRef}
-        type="text"
-        className="w-1/2 md:w-1/3"
-        placeholder="Global Search... (Ctrl+K)"
-        value={globalFilter}
-        onChange={(e) => setGlobalFilter(e.target.value)}
-      />
+      <GlobalSearchInput value={globalFilter} onChange={setGlobalFilter} />
 
       {loading ? (
         <div className="flex justify-center items-start">
@@ -106,7 +85,7 @@ const MyTeamPage = () => {
       ) : usersData.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {filteredUsersData.map((user, index) => (
-            <TeamCard key={index} user={user} />
+            <TeamProfileCard key={`${user.emp_no}-${index}`} user={user} />
           ))}
         </div>
       ) : (
@@ -118,4 +97,4 @@ const MyTeamPage = () => {
   );
 };
 
-export default MyTeamPage;
+export default TeamsPage;

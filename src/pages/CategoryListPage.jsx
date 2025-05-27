@@ -1,4 +1,5 @@
-import { CategoryForm } from "@/components/dialog/CategoryForm";
+import { CategoryAccessRightsModal } from "@/components/dialog/CategoryAccessRightsModal";
+import GlobalSearchInput from "@/components/GlobalSearchInput";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
@@ -10,7 +11,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -138,48 +138,101 @@ const CategoryListPage = () => {
   const columns = [
     {
       accessorKey: "CATEGORY_NAME",
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="p-0"
-          >
-            Category Name
-            <ArrowUpDown />
-          </Button>
-        );
-      },
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="p-0"
+        >
+          Category Name
+          <ArrowUpDown />
+        </Button>
+      ),
       cell: ({ row }) => (
-        <div className="capitalize">{row.getValue("CATEGORY_NAME") || "-"}</div>
+        <div
+          className="capitalize"
+          style={{
+            width: 350,
+            overflow: "hidden",
+            whiteSpace: "nowrap",
+            textOverflow: "ellipsis",
+          }}
+          title={row.getValue("CATEGORY_NAME") || "-"}
+        >
+          {row.getValue("CATEGORY_NAME") || "-"}
+        </div>
       ),
     },
     {
       accessorKey: "DISPLAY_NAME",
-      header: "Display Name",
+      header: () => (
+        <p className="truncate" style={{ width: 350 }}>
+          Display Name
+        </p>
+      ),
       cell: ({ row }) => (
-        <div className="capitalize">{row.getValue("DISPLAY_NAME") || "-"}</div>
+        <div
+          className="capitalize"
+          style={{
+            width: 350,
+            overflow: "hidden",
+            whiteSpace: "nowrap",
+            textOverflow: "ellipsis",
+          }}
+          title={row.getValue("DISPLAY_NAME") || "-"}
+        >
+          {row.getValue("DISPLAY_NAME") || "-"}
+        </div>
       ),
     },
     {
       accessorKey: "MODULE_NAME",
-      header: "Module Name",
+      header: () => (
+        <p className="truncate" style={{ width: 100 }}>
+          Module Name
+        </p>
+      ),
       cell: ({ row }) => (
-        <div className="capitalize">{row.getValue("MODULE_NAME") || "-"}</div>
+        <div
+          className="capitalize"
+          style={{
+            width: 100,
+            overflow: "hidden",
+            whiteSpace: "nowrap",
+            textOverflow: "ellipsis",
+          }}
+          title={row.getValue("MODULE_NAME") || "-"}
+        >
+          {row.getValue("MODULE_NAME") || "-"}
+        </div>
       ),
     },
     {
       accessorKey: "INCLUDE_CUSTOM_COLUMNS",
-      header: "Custom Columns",
+      header: () => (
+        <p className="truncate" style={{ width: 120 }}>
+          Custom Columns
+        </p>
+      ),
       cell: ({ row }) => (
-        <div className="capitalize">{row.getValue("INCLUDE_CUSTOM_COLUMNS") || "-"}</div>
+        <div
+          className="capitalize"
+          style={{
+            width: 120,
+            overflow: "hidden",
+            whiteSpace: "nowrap",
+            textOverflow: "ellipsis",
+          }}
+          title={row.getValue("INCLUDE_CUSTOM_COLUMNS") || "-"}
+        >
+          {row.getValue("INCLUDE_CUSTOM_COLUMNS") || "-"}
+        </div>
       ),
     },
     {
       accessorKey: "action",
-      header: () => <div>Action</div>,
+      header: () => <div style={{ width: 40 }}>Action</div>,
       id: "actions",
-      // enableHiding: false,
       cell: ({ row }) => {
         const item = row.original;
         return (
@@ -203,7 +256,6 @@ const CategoryListPage = () => {
                 className="text-red-600 flex items-center gap-1"
                 onClick={() => handleDelete(item)}
               >
-                {" "}
                 <Trash2 /> Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -247,12 +299,8 @@ const CategoryListPage = () => {
       <h1 className="title">Document Category List</h1>
       <div className="w-full">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pb-2 items-center">
-          <Input
-            placeholder="Global Search..."
-            value={table.getState().globalFilter ?? ""}
-            onChange={(event) => table.setGlobalFilter(event.target.value)}
-            className="max-w-sm"
-          />
+          <GlobalSearchInput value={globalFilter} onChange={setGlobalFilter} />
+
           <div className="flex items-center gap-x-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -288,7 +336,7 @@ const CategoryListPage = () => {
 
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogContent className="sm:max-w-[425px]">
-                <CategoryForm
+                <CategoryAccessRightsModal
                   mode={mode}
                   selectedItem={selectedItem}
                   onSuccess={() => {

@@ -1,15 +1,14 @@
+import ChannelPerformanceChart from "@/components/charts/ChannelPerformanceChart";
+import DailyReportsChart from "@/components/charts/DailyReportsChart";
+import DocumentChannelChart from "@/components/charts/DocumentChannelChart";
+import DocumentDistributionChart from "@/components/charts/DocumentDistributionChart";
 import SalesSummaryCard from "@/components/SalesSummaryCard";
+import TimeRangeSelector from "@/components/TimeRangeSelector";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { toTitleCase } from "@/utils/stringUtils";
 import { useState } from "react";
 import AIPoweredInsights from "../components/AIPoweredInsights";
-import DocumentDistributionChart from "@/components/charts/DocumentDistributionChart";
-import ChannelPerformanceChart from "@/components/charts/ChannelPerformanceChart";
-import DocumentChannelChart from "@/components/charts/DocumentChannelChart";
-import DailyReportsChart from "@/components/charts/DailyReportsChart";
-import TeamProfileContainer from "@/components/TeamProfileContainer";
-import TimeRangeSelector from "@/components/TimeRangeSelector";
 
 export default function DashboardPage() {
   const { userData } = useAuth();
@@ -68,15 +67,6 @@ export default function DashboardPage() {
         </CardHeader>
         <CardContent className="pl-6">
           <DailyReportsChart />
-        </CardContent>
-      </Card>
-
-      <Card className="col-span-2">
-        <CardHeader>
-          <CardTitle>My Team</CardTitle>
-        </CardHeader>
-        <CardContent className="pl-6">
-          <TeamProfileContainer />
         </CardContent>
       </Card>
 

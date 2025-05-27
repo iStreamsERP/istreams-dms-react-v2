@@ -41,7 +41,7 @@ import {
 import { Check, ChevronsUpDown } from "lucide-react";
 import { useEffect, useState } from "react";
 
-export function CategoryForm({ mode, selectedItem, onSuccess }) {
+export function CategoryAccessRightsModal({ mode, selectedItem, onSuccess }) {
   const { userData } = useAuth();
   const { toast } = useToast();
 

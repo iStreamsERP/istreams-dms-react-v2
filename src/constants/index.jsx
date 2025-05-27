@@ -11,37 +11,27 @@ import {
 
 export const navbarLinks = [
   {
-    title: "Dashboard",
+    title: "Main",
     links: [
       {
         label: "Dashboard",
         icon: Home,
         path: "/",
       },
-    ],
-  },
-  {
-    title: "Teams",
-    links: [
       {
-        label: "My Team",
+        label: "Teams",
         icon: Users,
-        path: "/my-team",
+        path: "/teams",
       },
-    ],
-  },
-  {
-    title: "Category",
-    links: [
       {
-        label: "Category",
+        label: "Categories",
         icon: LayoutGrid,
         path: "/category-view",
       },
     ],
   },
   {
-    title: "Document",
+    title: "Documents",
     links: [
       {
         label: "Document List",
@@ -56,7 +46,7 @@ export const navbarLinks = [
     ],
   },
   {
-    title: "Task",
+    title: "Tasks",
     links: [
       {
         label: "Task View",
@@ -64,49 +54,50 @@ export const navbarLinks = [
         path: "/task-view",
       },
       {
-        label: "Tasks",
-        icon: ClipboardListIcon,
-        path: "/task",
-      },
-      {
         label: "Time Sheet",
         icon: CalendarClock,
         path: "/time-sheet",
       },
+      {
+        label: "Task management",
+        icon: ClipboardListIcon,
+        path: "/task",
+      },
     ],
   },
   {
-    title: "Forms",
+    title: "Access Control",
     links: [
-       {
-        label: "Categories",
+      {
+        label: "User Administration",
         icon: FileText,
-        path: "/category-form",
+        children: [
+          {
+            label: "User Role",
+            icon: ShieldUser,
+            path: "/user-role",
+          },
+          {
+            label: "Category Access",
+            icon: ShieldUser,
+            path: "/category-access",
+          },
+          {
+            label: "User Access Rights",
+            icon: ShieldUser,
+            path: "/user-access-rights",
+          },
+          {
+            label: "Role Access Rights",
+            icon: ShieldUser,
+            path: "/role-access-rights",
+          },
+        ],
       },
       {
-        label: "User Role",
-        icon: ShieldUser,
-        path: "/user-role",
-      },
-      {
-        label: "Category Access",
-        icon: ShieldUser,
-        path: "/category-access",
-      },
-      {
-        label: "User Rights",
-        icon: ShieldUser,
-        path: "/user-rights",
-      },
-      {
-        label: "Access Rights",
-        icon: ShieldUser,
-        path: "/access-rights",
-      },
-      {
-        label: "Invoice Form",
-        icon: ShieldUser,
-        path: "/invoice-form",
+        label: "Category Access Rights",
+        icon: FileText,
+        path: "/category-list",
       },
     ],
   },
