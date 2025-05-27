@@ -7,8 +7,8 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from "recharts";
-import { useAuth } from "../contexts/AuthContext";
-import { getDashboardChannelSummary } from "../services/dashboardService";
+import { useAuth } from "../../contexts/AuthContext";
+import { getDashboardChannelSummary } from "../../services/dashboardService";
 
 const COLORS = [
   "#8884d8",
@@ -19,7 +19,7 @@ const COLORS = [
   "#00C49F",
 ];
 
-const ChannelPerformance = ({ daysCount = 30 }) => {
+const ChannelPerformanceChart = ({ daysCount = 30 }) => {
   const [channelData, setChannelData] = useState([]);
   const { userData, auth } = useAuth();
 
@@ -102,4 +102,4 @@ const ChannelPerformance = ({ daysCount = 30 }) => {
   );
 };
 
-export default ChannelPerformance;
+export default ChannelPerformanceChart;

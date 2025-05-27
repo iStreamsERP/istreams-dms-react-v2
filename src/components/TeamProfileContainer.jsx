@@ -4,11 +4,11 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { getAllDmsActiveUser } from "../services/dashboardService";
 import { getEmployeeImage } from "../services/employeeService";
-import TeamCard from "./TeamCard";
+import TeamCard from "./TeamProfileCard";
 import LoadingSpinner from "./common/LoadingSpinner";
 import { BarLoader } from "react-spinners";
 
-export default function TeamDashboard() {
+export default function TeamProfileContainer() {
   const { userData } = useAuth();
   const [usersData, setUsersData] = useState([]);
   const [loading, setLoading] = useState(true);

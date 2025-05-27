@@ -7,10 +7,10 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from "recharts";
-import { useAuth } from "../contexts/AuthContext";
-import { getDashboardOverallSummary } from "../services/dashboardService";
+import { useAuth } from "../../contexts/AuthContext";
+import { getDashboardOverallSummary } from "../../services/dashboardService";
 
-const DocumentDistribution = ({ daysCount = 30 }) => {
+const DocumentDistributionChart = ({ daysCount = 30 }) => {
   const [overallSummaryData, setOverallSummaryData] = useState([]);
   const { userData, auth } = useAuth();
 
@@ -94,4 +94,4 @@ const DocumentDistribution = ({ daysCount = 30 }) => {
     </div>
   );
 };
-export default DocumentDistribution;
+export default DocumentDistributionChart;

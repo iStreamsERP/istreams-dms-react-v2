@@ -1,17 +1,29 @@
 import { useEffect, useState } from "react";
-import { updateRejectDmsDetails } from "../services/dmsService";
-import { useAuth } from "../contexts/AuthContext";
+import { updateRejectDmsDetails } from "../../services/dmsService";
+import { useAuth } from "../../contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
-const RejectModal = ({ modalRefReject, selectedDocument }) => {
+const RejectModal = ({ modalRefReject, selectedDocument, onClose }) => {
   const { userData } = useAuth();
+  const { toast } = useToast();
 
   const [remarks, setRemarks] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
   const handleReject = async (selectedDocument) => {
+    const isConfirmed = window.confirm(
+      `Are you sure you want to reject the document: ${selectedDocument?.DOC_NAME}?`
+    );
+
+    if (!isConfirmed) return;
+    
     if (!remarks.trim()) {
-      alert("Please enter remarks!");
+      toast({
+        title: "Error",
+        description: "Please enter remarks before rejecting the document.",
+        variant: "destructive",
+      });
       return;
     }
     setIsLoading(true);
@@ -37,6 +49,8 @@ const RejectModal = ({ modalRefReject, selectedDocument }) => {
       } else {
         setError("Failed to reject document. Please try again.");
       }
+
+      onClose();
     } catch (error) {
       setError("Failed to reject document. Please try again.", error);
     } finally {
@@ -106,14 +120,14 @@ const RejectModal = ({ modalRefReject, selectedDocument }) => {
             <button
               type="button"
               className="btn btn-ghost p-2 w-full border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white   hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-              onClick={() => modalRefReject?.current?.close()}
+              onClick={() => onClose()}
             >
               Cancel
             </button>
             <button
               type="button"
               className="btn p-2 w-full border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-800 dark:focus:ring-offset-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              onClick={handleReject(selectedDocument)}
+              onClick={() => handleReject(selectedDocument)}
               disabled={isLoading}
             >
               {isLoading ? (

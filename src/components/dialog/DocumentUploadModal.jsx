@@ -1,19 +1,20 @@
 import { Eye, Trash2, View, X, XIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useDropzone } from "react-dropzone";
-import { useAuth } from "../contexts/AuthContext";
+import { useAuth } from "../../contexts/AuthContext";
 import {
   createAndSaveDMSDetails,
   deleteDMSDetails,
-} from "../services/dmsService";
-import { getFileIcon } from "../utils/getFileIcon";
-import { readFileAsBase64 } from "../utils/soapUtils";
-import LoadingSpinner from "./common/LoadingSpinner";
+} from "../../services/dmsService";
+import { getFileIcon } from "../../utils/getFileIcon";
+import { readFileAsBase64 } from "../../utils/soapUtils";
+import LoadingSpinner from "../common/LoadingSpinner";
 import axios from "axios";
 import { getDataModelService } from "@/services/dataModelService";
-import { Button } from "./ui/button";
+import { Button } from "../ui/button";
+import { toast } from "@/hooks/use-toast";
 
-const DocumentUpload = ({
+const DocumentUploadModal = ({
   modalRefUpload,
   selectedDocument,
   onUploadSuccess,
@@ -53,7 +54,6 @@ const DocumentUpload = ({
           : docsResponse?.Data || [];
 
         setExistingDocs(receivedDocs);
-
       } catch (err) {
         console.error("Fetch existing docs error:", err);
         setFetchError("Failed to load existing documents");
@@ -87,7 +87,7 @@ const DocumentUpload = ({
             name: file.name,
             size: (file.size / 1024).toFixed(2) + " KB",
             docExtension: ext,
-            isPrimary: false,
+            isPrimaryDocument: false,
           };
         }),
       ]);
@@ -219,20 +219,49 @@ const DocumentUpload = ({
   };
 
   const handleUpload = async () => {
+    if (files.length === 0) {
+      toast({
+        title: "No files selected for upload.",
+        description: "Please select at least one document to upload.",
+      });
+      return;
+    }
+
     const editError = canCurrentUserEdit(selectedDocument);
     if (editError) {
-      alert(editError);
+      toast({
+        title: "Access Denied",
+        description: editError,
+      });
       return;
     }
 
-    const hasPrimary = files.some((file) => file.isPrimaryDocument);
-    if (!hasPrimary) {
-      setErrorMsg("Please select a primary document before uploading.");
-      alert("Please select a primary document before uploading.");
-      setIsSubmitting(false);
+    // 2. Count primaries
+    const existingPrimaryCount = existingDocs.filter(
+      (doc) => doc.IS_PRIMARY_DOCUMENT
+    ).length;
+    const newPrimaryCount = files.filter(
+      (file) => file.isPrimaryDocument
+    ).length;
+    const totalPrimaryCount = existingPrimaryCount + newPrimaryCount;
+
+    // 3. Enforce exactly one primary
+    if (totalPrimaryCount === 0) {
+      toast({
+        title: "You must have one primary document.",
+        description: "You must select one primary document before uploading.",
+      });
+      return;
+    }
+    if (totalPrimaryCount > 1) {
+      toast({
+        title: "Only one primary document allowed.",
+        description: "You can’t upload more than one primary document.",
+      });
       return;
     }
 
+    // 4. Ready to upload
     setErrorMsg("");
     setIsSubmitting(true);
 
@@ -304,23 +333,23 @@ const DocumentUpload = ({
       await refreshDocuments();
       setFiles([]);
       modalRefUpload.current?.close();
-      if (onUploadSuccess) {
-        onUploadSuccess();
-      }
+      onUploadSuccess();
     } catch (error) {
-      console.error("Upload error:", error);
-      setErrorMsg(`Upload failed: ${error.message}`);
+      toast({
+        title: "Upload Failed",
+        description: error || "An error occurred while uploading files.",
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-  <dialog
+    <dialog
       ref={modalRefUpload}
       id="document-upload-form"
       name="document-upload-form"
-      className="p-4 w-full rounded-xl  max-w-4xl   bg-white shadow-xl dark:bg-gray-800 text-gray-900 dark:text-gray-100 "
+      className="p-4 w-full rounded-xl max-w-4xl bg-white shadow-xl dark:bg-gray-800 text-gray-900 dark:text-gray-100 "
     >
       <div className="modal-box  max-w-5xl ">
         <div className="flex items-center justify-between gap-2 mb-6">
@@ -341,17 +370,18 @@ const DocumentUpload = ({
           <button
             className="btn btn-sm btn-circle hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full btn-ghost"
             onClick={() => modalRefUpload.current?.close()}
+            type="button"
           >
             <X className="h-3 w-3" />
           </button>
         </div>
- 
+
         {fetchError && (
           <div className="alert alert-error mb-1">
             <span>{fetchError}</span>
           </div>
         )}
- 
+
         <div className=" bg-gray-100 dark:bg-gray-700 rounded-lg p-8 text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
           <div {...getRootProps()} className="text-center cursor-pointer">
             <input {...getInputProps()} />
@@ -360,7 +390,7 @@ const DocumentUpload = ({
             </p>
           </div>
         </div>
- 
+
         {isLoadingDocs ? (
           <LoadingSpinner />
         ) : existingDocs.length > 0 ? (
@@ -400,7 +430,7 @@ const DocumentUpload = ({
                             </div>
                           </div>
                         </div>
- 
+
                         <div className="flex items-center gap-1 flex-shrink-0">
                           <button
                             onClick={() => handleViewDocs(doc)}
@@ -429,9 +459,9 @@ const DocumentUpload = ({
             No documents found for this reference
           </div>
         )}
- 
+
         <div className="divider my-1"></div>
- 
+
         {files.length > 0 && (
           <div>
             <div className="flex flex-wrap">
@@ -457,7 +487,7 @@ const DocumentUpload = ({
                             </span>
                           </div>
                         </div>
- 
+
                         <button
                           className="btn btn-sm btn-circle hover:bg-gray-100 dark:hover:bg-gray-700 p-1.5 rounded-full btn-ghost text-gray-500 dark:text-gray-400 transition-colors"
                           onClick={() =>
@@ -467,7 +497,7 @@ const DocumentUpload = ({
                           <X className="h-4 w-4" />
                         </button>
                       </div>
- 
+
                       <div className="mt-3 flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-700">
                         <label className="flex items-center gap-2 cursor-pointer">
                           <div className="relative">
@@ -486,7 +516,7 @@ const DocumentUpload = ({
                             Primary Document
                           </span>
                         </label>
- 
+
                         {file.isPrimaryDocument && (
                           <span className="px-2 py-1 text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full">
                             Selected
@@ -500,7 +530,7 @@ const DocumentUpload = ({
             </div>
           </div>
         )}
- 
+
         <div className="modal-action">
           <div className="flex justify-end gap-3 w-full">
             <Button
@@ -523,8 +553,7 @@ const DocumentUpload = ({
         </div>
       </div>
     </dialog>
- 
   );
 };
 
-export default DocumentUpload;
+export default DocumentUploadModal;

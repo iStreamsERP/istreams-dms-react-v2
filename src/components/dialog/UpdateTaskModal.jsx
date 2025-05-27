@@ -1,9 +1,9 @@
 import { CalendarDays, MessageSquare, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
-import { Textarea } from "./ui/textarea";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import { Textarea } from "../ui/textarea";
 
 const UpdateTaskModal = ({ isOpen, onAction, onClose }) => {
   const [status, setStatus] = useState("");

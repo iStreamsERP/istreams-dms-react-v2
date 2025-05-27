@@ -1,7 +1,7 @@
 import { CalendarDays, MessageSquare, User2, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { getAllDmsActiveUser } from "../services/dashboardService";
-import { useAuth } from "../contexts/AuthContext";
+import { getAllDmsActiveUser } from "../../services/dashboardService";
+import { useAuth } from "../../contexts/AuthContext";
 
 const TransferTaskModal = ({ isOpen, onTransfer, onClose }) => {
   const { userData } = useAuth();

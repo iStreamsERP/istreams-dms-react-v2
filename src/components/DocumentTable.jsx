@@ -30,11 +30,10 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PacmanLoader } from "react-spinners";
-import { v4 as uuidv4 } from "uuid";
 import { useAuth } from "../contexts/AuthContext";
 import { deleteDMSMaster, getDocMasterList } from "../services/dmsService";
 import DocumentForm from "./DocumentForm";
-import DocumentUpload from "./DocumentUpload";
+import DocumentUploadModal from "./dialog/DocumentUploadModal";
 import { Badge } from "./ui/badge";
 
 const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
@@ -68,7 +67,6 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
       const enriched = (Array.isArray(response) ? response : []).map((doc) => ({
         ...doc,
         uploadedDocs: Array.isArray(doc.uploadedDocs) ? doc.uploadedDocs : [],
-        uuid: uuidv4(),
         IsPrimaryDocument: "",
       }));
 
@@ -82,7 +80,7 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
     } finally {
       setLoading(false);
     }
-  }, [CURRENT_USER_LOGIN]);
+  }, [CURRENT_USER_LOGIN, userData.clientURL]);
 
   // Initial data load
   useEffect(() => {
@@ -95,6 +93,15 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
       fetchDataRef.current = fetchDocsMasterList;
     }
   }, [fetchDataRef, fetchDocsMasterList]);
+
+  const onUploadSuccess = () => {
+    fetchDocsMasterList();
+    if (modalRefUpload?.current) {
+      modalRefUpload.current.close();
+    } else {
+      console.error("Upload modal element not found");
+    }
+  };
 
   const canCurrentUserEdit = (doc) => {
     if (doc?.USER_NAME !== userData.currentUserName)
@@ -134,7 +141,11 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
     async (doc) => {
       const errorMsg = canCurrentUserEdit(doc);
       if (errorMsg) {
-        alert(errorMsg);
+        toast({
+          variant: "destructive",
+          title: "Permission Denied",
+          description: errorMsg,
+        });
         return;
       }
 
@@ -159,7 +170,8 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
         toast({
           variant: "destructive",
           title: "Document deleted successfully.",
-          description: response,
+          description:
+            typeof response === "string" ? response : "Document deleted.",
         });
       } catch (error) {
         toast({
@@ -168,7 +180,7 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
         });
       }
     },
-    [CURRENT_USER_LOGIN]
+    [CURRENT_USER_LOGIN, userData.clientURL, toast]
   );
 
   const columns = useMemo(
@@ -218,7 +230,7 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
           <div className="flex items-center gap-1">
             <div>
               <p className="text-xs font-semibold">
-                {row.getValue("CHANNEL_SOURCE") === " "
+                {(row.getValue("CHANNEL_SOURCE") || "").trim() === ""
                   ? userData.organization
                   : row.getValue("CHANNEL_SOURCE")}
               </p>
@@ -266,18 +278,12 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
                 <Badge className="bg-green-500 rounded-full text-[9px] font-extrabold">
                   {info.getValue()}
                 </Badge>
-                <button
-                  className="btn btn-ghost btn-circle btn-sm"
-                  onClick={() => handleOpenUpload(info.row.original)}
-                >
+                <button onClick={() => handleOpenUpload(info.row.original)}>
                   <FilePen className="h-4 w-4" />
                 </button>
               </>
             ) : (
-              <button
-                className="btn btn-ghost btn-circle btn-sm"
-                onClick={() => handleOpenUpload(info.row.original)}
-              >
+              <button onClick={() => handleOpenUpload(info.row.original)}>
                 <Upload className="h-4 w-4" />
               </button>
             )}
@@ -290,15 +296,12 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
         cell: ({ row }) => {
           const doc = row.original;
           return (
-            <div className="flex items-center gap-1">
-              <button
-                className="btn btn-ghost btn-circle btn-sm"
-                onClick={() => handleOpenForm(doc)}
-              >
+            <div className="flex items-center gap-2">
+              <button onClick={() => handleOpenForm(doc)}>
                 <SquarePenIcon className="h-4 w-4" />
               </button>
               <button
-                className="btn btn-ghost btn-circle btn-sm text-red-600"
+                className="text-red-600"
                 onClick={() => handleDelete(doc)}
               >
                 <Trash2 className="h-4 w-4" />
@@ -324,14 +327,14 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
   const table = useReactTable({
     data: masterData,
     columns,
-    state: { globalFilter },
-    onGlobalFilterChange: setGlobalFilter,
     globalFilterFn,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    state: { globalFilter },
     getExpandedRowModel: getExpandedRowModel(),
+    onGlobalFilterChange: setGlobalFilter,
   });
 
   return (
@@ -367,19 +370,19 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
               </tr>
             ) : error ? (
               <tr>
-                <td colSpan="12" className="text-center text-red-500 py-4">
+                <td colSpan="12" className="text-center text-sm text-red-500 py-4">
                   Error: {error}
                 </td>
               </tr>
             ) : table.getRowModel().rows.length > 0 ? (
               table.getRowModel().rows.map((row) => (
                 <tr
-                  key={row.original.uuid}
+                  key={row.original.REF_SEQ_NO}
                   className="hover:bg-slate-200 cursor-pointer dark:hover:bg-slate-900"
                 >
                   {row.getVisibleCells().map((cell) => (
                     <td
-                      key={`${row.original.uuid}-${cell.column.id}`}
+                      key={`${row.original.REF_SEQ_NO}-${cell.column.id}`}
                       style={{ width: cell.column.getSize() }}
                       className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100"
                     >
@@ -481,10 +484,11 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
       <DocumentForm
         modalRefForm={modalRefForm}
         selectedDocument={selectedDocument}
+        onUploadSuccess={fetchDocsMasterList}
       />
 
       {/* Modal for Document Upload */}
-      <DocumentUpload
+      <DocumentUploadModal
         modalRefUpload={modalRefUpload}
         selectedDocument={selectedDocument}
         onUploadSuccess={fetchDocsMasterList}

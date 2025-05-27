@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 
 
-const DashboardFilter = ({ onFilterChange }) => {
+const TimeRangeSelector = ({ onFilterChange }) => {
   const [selectedFilter, setSelectedFilter] = useState("365");
 
   const filterOptions = [
@@ -34,4 +34,4 @@ const DashboardFilter = ({ onFilterChange }) => {
   );
 };
 
-export default DashboardFilter;
+export default TimeRangeSelector;

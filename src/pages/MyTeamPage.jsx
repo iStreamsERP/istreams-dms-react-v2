@@ -1,7 +1,7 @@
 import { SearchIcon } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 import LoadingSpinner from "../components/common/LoadingSpinner";
-import TeamCard from "../components/TeamCard";
+import TeamCard from "../components/TeamProfileCard";
 import { useAuth } from "../contexts/AuthContext";
 import { getAllDmsActiveUser } from "../services/dashboardService";
 import { getEmployeeImage } from "../services/employeeService";
@@ -89,22 +89,22 @@ const MyTeamPage = () => {
   });
 
   return (
-    <div className="grid grid-cols-2  md:grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 gap-4">
       <Input
         ref={searchInputRef}
         type="text"
-        className="w-full md:col-span-1"
+        className="w-1/2 md:w-1/3"
         placeholder="Global Search... (Ctrl+K)"
         value={globalFilter}
         onChange={(e) => setGlobalFilter(e.target.value)}
       />
 
       {loading ? (
-        <div className="md:col-span-2 flex justify-center items-start">
+        <div className="flex justify-center items-start">
           <BarLoader color="#36d399" height={2} width="100%" />
         </div>
       ) : usersData.length > 0 ? (
-        <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {filteredUsersData.map((user, index) => (
             <TeamCard key={index} user={user} />
           ))}

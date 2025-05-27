@@ -4,7 +4,7 @@ import { ChevronRight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { BarLoader } from "react-spinners";
-import DashboardFilter from "../components/DashboardFilter";
+import TimeRangeSelector from "../components/TimeRangeSelector";
 import { useAuth } from "../contexts/AuthContext";
 import { getCategoriesSummary } from "../services/dmsService";
 
@@ -73,7 +73,7 @@ const CategoryViewPage = () => {
         />
         {/* Filter dropdown */}
         <div className="flex-shrink-0">
-          <DashboardFilter onFilterChange={setFilterDays} />
+          <TimeRangeSelector onFilterChange={setFilterDays} />
         </div>
       </div>
 

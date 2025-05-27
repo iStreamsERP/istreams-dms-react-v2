@@ -19,7 +19,7 @@ const dailyOrdersData = [
   { date: "07/07", Documents: 62 },
 ];
 
-const DailyReports = () => {
+const DailyReportsChart = () => {
   return (
     <div style={{ width: "100%", height: 300 }}>
       <ResponsiveContainer>
@@ -49,4 +49,4 @@ const DailyReports = () => {
     </div>
   );
 };
-export default DailyReports;
+export default DailyReportsChart;

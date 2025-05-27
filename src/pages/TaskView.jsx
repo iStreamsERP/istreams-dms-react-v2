@@ -1,9 +1,20 @@
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { ArrowDownLeft, ArrowUpRight, IterationCwIcon } from "lucide-react";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import LoadingSpinner from "../components/common/LoadingSpinner";
-import ConfirmationTaskModal from "../components/ConfirmationTaskModal";
-import TransferTaskModal from "../components/TransferTaskModal";
-import UpdateTaskModal from "../components/UpdateTaskModal";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { BarLoader } from "react-spinners";
+import ConfirmationTaskModal from "../components/dialog/ConfirmationTaskModal";
+import TransferTaskModal from "../components/dialog/TransferTaskModal";
+import UpdateTaskModal from "../components/dialog/UpdateTaskModal";
 import { useAuth } from "../contexts/AuthContext";
 import { getEmployeeImage } from "../services/employeeService";
 import {
@@ -17,18 +28,6 @@ import {
   formatDateTime,
 } from "../utils/dateUtils";
 import { capitalizeFirstLetter } from "../utils/stringUtils";
-import { BarLoader } from "react-spinners";
-import { Card, CardContent } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
 
 const TaskView = () => {
   const { userData } = useAuth();

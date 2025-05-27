@@ -7,16 +7,21 @@ import DocumentForm from "../components/DocumentForm";
 import DocumentTable from "../components/DocumentTable";
 
 const DocumentListPage = () => {
-  const location = useLocation();
-  const [globalFilter, setGlobalFilter] = useState("");
   const modalRefForm = useRef(null);
   const fetchDataRef = useRef(null);
+  const location = useLocation();
+  
+  const [globalFilter, setGlobalFilter] = useState("");
 
   useEffect(() => {
     if (location.state?.userName) {
       setGlobalFilter(location.state.userName);
     }
   }, [location.state]);
+
+  const fetchData = () => {
+    fetchDataRef.current && fetchDataRef.current();
+  };
 
   return (
     <div className="grid grid-cols-1 gap-4">
@@ -38,7 +43,7 @@ const DocumentListPage = () => {
 
           <Button
             variant="outline"
-            onClick={() => fetchDataRef.current && fetchDataRef.current()}
+            onClick={fetchData}
           >
             <RefreshCcw className="h-4 w-4" />
           </Button>
@@ -51,7 +56,7 @@ const DocumentListPage = () => {
         fetchDataRef={fetchDataRef}
       />
 
-      <DocumentForm modalRefForm={modalRefForm} />
+      <DocumentForm modalRefForm={modalRefForm} onUploadSuccess={fetchData}  />
     </div>
   );
 };

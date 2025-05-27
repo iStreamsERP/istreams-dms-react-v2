@@ -1,3 +1,11 @@
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,7 +31,6 @@ import {
   LocateFixed,
   MessageSquare,
   UserRound,
-  View,
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -31,14 +38,17 @@ import { useAuth } from "../contexts/AuthContext";
 import { updateDmsVerifiedBy } from "../services/dmsService";
 import staticCategoryData from "../staticCategoryData";
 import { convertServiceDate } from "../utils/dateUtils";
-import RejectModal from "./RejectModal";
+import DocumentPreview from "./DocumentPreview";
+import RejectModal from "./dialog/RejectModal";
 import { Button } from "./ui/button";
+import { Separator } from "./ui/separator";
 
 const DocumentForm = ({
   modalRefForm,
   selectedDocument,
   docMode,
   onSuccess,
+  onUploadSuccess,
 }) => {
   const { userData } = useAuth();
 
@@ -77,6 +87,8 @@ const DocumentForm = ({
 
   const [vendorData, setVendorData] = useState([]);
   const [clientData, setClientData] = useState([]);
+
+  const [currentPreviewUrl, setCurrentPreviewUrl] = useState(null);
 
   useEffect(() => {
     if (docMode === "view" || docMode === "verify") {
@@ -412,21 +424,38 @@ const DocumentForm = ({
       }
     } catch (err) {
       console.error("Error downloading documents:", err);
+      toast({
+        title: "Error",
+        description: "Failed to download document.",
+      });
     }
   };
 
+  const handlePreview = useCallback((doc) => {
+    // Convert DOC_DATA to Blob URL
+    const byteArray = new Uint8Array(doc.DOC_DATA);
+    const mimeType =
+      {
+        pdf: "application/pdf",
+        jpg: "image/jpeg",
+        jpeg: "image/jpeg",
+        png: "image/png",
+        pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        ppt: "application/vnd.ms-powerpoint",
+        xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        xls: "application/vnd.ms-excel",
+        docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        doc: "application/msword",
+        webp: "image/webp",
+      }[doc.DOC_EXT.toLowerCase()] || "application/octet-stream";
+
+    const blob = new Blob([byteArray], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    setCurrentPreviewUrl(url);
+  }, []);
+
   const handleVerifyApprove = async () => {
     try {
-      // if (userData.currentUserName === selectedDocument?.USER_NAME) {
-      //   alert("Access Denied: You created this document.");
-      //   return;
-      // } else if (existingDocs.length === 0) {
-      //   alert(
-      //     "Warning: No associated documents found. Check with uploader or reject."
-      //   );
-      //   return; isVAndVProcess
-      // }
-
       const verifyDmsPayload = {
         userName: userData.currentUserName,
         refSeqNo: selectedDocument.REF_SEQ_NO,
@@ -447,14 +476,7 @@ const DocumentForm = ({
   };
 
   const handleReject = async () => {
-    // if (userData.currentUserName === selectedDocument?.USER_NAME) {
-    //   alert("Access Denied: You created this document.");
-    //   return;
-    // }
-
-    if (!showRejectModal) {
-      setShowRejectModal(true);
-    }
+    setShowRejectModal(true);
   };
 
   // Once the RejectModal is mounted, open it automatically
@@ -515,21 +537,20 @@ const DocumentForm = ({
         userData.clientURL
       );
 
-      if (response) {
-        // Reset form but retain the next reference number
-        toast({
-          title: "Success",
-          description: response,
-        });
-        setFormData(initialFormState);
-        modalRefForm.current?.close();
-      } else {
-        console.error("Failed to submit data. Please try again.");
-      }
+      // Reset form but retain the next reference number
+      toast({
+        title: "Success",
+        description: response,
+      });
+
+      if (onUploadSuccess) onUploadSuccess();
+
+      modalRefForm.current?.close();
+      setFormData(initialFormState);
     } catch (error) {
       toast({
         title: "Error",
-        description: error.message,
+        description: error,
         variant: "destructive",
       });
     } finally {
@@ -543,7 +564,7 @@ const DocumentForm = ({
         ref={modalRefForm}
         id="document-form"
         name="document-form"
-        className="relative z-50"
+        className="relative"
       >
         <div
           className="fixed inset-0 bg-black/50 z-40"
@@ -552,7 +573,7 @@ const DocumentForm = ({
         />
 
         <div className="fixed inset-0 flex items-center justify-center p-4 z-50">
-          <div className="bg-slate-100 transition-colors dark:bg-slate-950 text-black dark:text-white p-6 rounded-lg shadow-xl w-full max-w-5xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-white shadow-xl dark:bg-gray-800 text-gray-900 dark:text-gray-100 p-6 rounded-lg w-full max-w-5xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between gap-2 mb-4">
               <h3 className="text-xl font-semibold">
                 Reference ID:
@@ -866,9 +887,9 @@ const DocumentForm = ({
                                 <option value="">
                                   Select {field.COLUMN_LABEL}
                                 </option>
-                                {clientData.map((client) => (
+                                {clientData.map((client, index) => (
                                   <option
-                                    key={client.CLIENT_NAME}
+                                    key={`${client.CLIENT_ID}-${index}`}
                                     value={client.CLIENT_NAME}
                                   >
                                     {client.CLIENT_NAME}
@@ -1072,15 +1093,16 @@ const DocumentForm = ({
 
                 {docMode === "view" || docMode === "verify" ? (
                   isLoadingDocs ? (
-                    <p>Loading documents...</p>
+                    <p className="text-sm">Loading documents...</p>
                   ) : existingDocs.length > 0 ? (
                     <div className="col-span-3">
-                      <div className="divider my-1"></div>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                      <Separator />
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2 ">
                         {existingDocs.map((doc) => (
                           <div
                             key={`${doc.REF_SEQ_NO}-${doc.SERIAL_NO}`}
-                            className="cust-card-group p-4"
+                            className="cust-card-group p-4 bg-gray-100 dark:bg-gray-700 rounded-lg"
                           >
                             <div>
                               <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1088,11 +1110,11 @@ const DocumentForm = ({
                                 <div className="flex items-start gap-2 min-w-0">
                                   <img
                                     src={getFileIcon(doc.DOC_EXT)}
-                                    alt="Document type"
+                                    alt={doc.DOC_NAME}
                                     className="w-8 h-8 flex-shrink-0"
                                   />
                                   <div className="flex-1 min-w-0">
-                                    <h5 className="text-md font-medium md:truncate break-words">
+                                    <h5 className="text-sm font-medium md:truncate break-words">
                                       {doc.DOC_NAME.length > 24
                                         ? doc.DOC_NAME.substring(0, 23) + "..."
                                         : doc.DOC_NAME}
@@ -1103,10 +1125,19 @@ const DocumentForm = ({
                                   </div>
                                 </div>
 
-                                <Button onClick={() => handleViewDocs(doc)}>
-                                  View
-                                  <View size={14} />
-                                </Button>
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    variant="outline"
+                                    onClick={() => handlePreview(doc)}
+                                    type="button"
+                                  >
+                                    Preview
+                                  </Button>
+
+                                  <Button onClick={() => handleViewDocs(doc)} type="button" >
+                                    Download
+                                  </Button>
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -1115,11 +1146,31 @@ const DocumentForm = ({
                     </div>
                   ) : (
                     <div className="col-span-3 text-xs text-center text-gray-500">
-                      <div className="divider my-1"></div>
+                      <Separator />
                       No documents found for this reference no
                     </div>
                   )
                 ) : null}
+
+                {currentPreviewUrl && (
+                  <div className="col-span-3 mt-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <h3 className="text-lg font-semibold">Preview</h3>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        type="button"
+                        onClick={() => setCurrentPreviewUrl(null)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <DocumentPreview
+                      fileUrl={currentPreviewUrl}
+                      className="h-96"
+                    />
+                  </div>
+                )}
               </div>
             </form>
           </div>
@@ -1130,6 +1181,7 @@ const DocumentForm = ({
         <RejectModal
           modalRefReject={modalRefReject}
           selectedDocument={selectedDocument}
+          onClose={() => setShowRejectModal(false)}
         />
       )}
     </>

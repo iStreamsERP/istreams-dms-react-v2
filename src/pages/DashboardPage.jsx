@@ -4,12 +4,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toTitleCase } from "@/utils/stringUtils";
 import { useState } from "react";
 import AIPoweredInsights from "../components/AIPoweredInsights";
-import ChannelPerformance from "../components/ChannelPerformance";
-import DailyReports from "../components/DailyReports";
-import DashboardFilter from "../components/DashboardFilter";
-import DocumentChannelChart from "../components/DocumentChannelChart";
-import DocumentDistribution from "../components/DocumentDistribution";
-import TeamDashboard from "../components/TeamDashboard";
+import DocumentDistributionChart from "@/components/charts/DocumentDistributionChart";
+import ChannelPerformanceChart from "@/components/charts/ChannelPerformanceChart";
+import DocumentChannelChart from "@/components/charts/DocumentChannelChart";
+import DailyReportsChart from "@/components/charts/DailyReportsChart";
+import TeamProfileContainer from "@/components/TeamProfileContainer";
+import TimeRangeSelector from "@/components/TimeRangeSelector";
 
 export default function DashboardPage() {
   const { userData } = useAuth();
@@ -28,7 +28,7 @@ export default function DashboardPage() {
         </div>
       </div>
       <div className="col-span-2 flex justify-end">
-        <DashboardFilter onFilterChange={setFilterDays} />
+        <TimeRangeSelector onFilterChange={setFilterDays} />
       </div>
 
       <div className="col-span-2">
@@ -40,7 +40,7 @@ export default function DashboardPage() {
           <CardTitle>Document Status Distribution</CardTitle>
         </CardHeader>
         <CardContent className="pl-2">
-          <DocumentDistribution daysCount={filterDays} />
+          <DocumentDistributionChart daysCount={filterDays} />
         </CardContent>
       </Card>
 
@@ -49,7 +49,7 @@ export default function DashboardPage() {
           <CardTitle>Channel Performance</CardTitle>
         </CardHeader>
         <CardContent className="pl-6">
-          <ChannelPerformance daysCount={filterDays} />
+          <ChannelPerformanceChart daysCount={filterDays} />
         </CardContent>
       </Card>
 
@@ -67,7 +67,7 @@ export default function DashboardPage() {
           <CardTitle>Daily Reports</CardTitle>
         </CardHeader>
         <CardContent className="pl-6">
-          <DailyReports />
+          <DailyReportsChart />
         </CardContent>
       </Card>
 
@@ -76,7 +76,7 @@ export default function DashboardPage() {
           <CardTitle>My Team</CardTitle>
         </CardHeader>
         <CardContent className="pl-6">
-          <TeamDashboard />
+          <TeamProfileContainer />
         </CardContent>
       </Card>
 

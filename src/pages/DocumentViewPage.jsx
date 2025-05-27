@@ -1,16 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { FileSearch } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useLocation } from "react-router-dom";
-import DocumentForm from "../components/DocumentForm";
-import TaskForm from "../components/TaskForm";
-import LoadingSpinner from "../components/common/LoadingSpinner";
-import { useAuth } from "../contexts/AuthContext";
-import { getAllDmsActiveUser } from "../services/dashboardService";
-import { getDocMasterList, updateDmsAssignedTo } from "../services/dmsService";
-import { formatDateTime } from "../utils/dateUtils";
 import {
   Select,
   SelectContent,
@@ -18,7 +8,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { FileSearch } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { BarLoader } from "react-spinners";
+import DocumentForm from "../components/DocumentForm";
+import TaskForm from "../components/TaskForm";
+import { useAuth } from "../contexts/AuthContext";
+import { getAllDmsActiveUser } from "../services/dashboardService";
+import { getDocMasterList, updateDmsAssignedTo } from "../services/dmsService";
+import { formatDateTime } from "../utils/dateUtils";
 
 export default function DocumentViewPage() {
   const [docsData, setDocsData] = useState([]);
@@ -28,7 +27,6 @@ export default function DocumentViewPage() {
   const [users, setUsers] = useState([]);
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [docFormMode, setDocFormMode] = useState("view");
-  const [isVAndVProcess, setIsVAndVProcess] = useState(false);
   // verifyEnabled keyed by doc id so each Verify button works independently
   const [verifyEnabled, setVerifyEnabled] = useState({});
   // assignedUsers holds the selected employee for each document
@@ -152,8 +150,6 @@ export default function DocumentViewPage() {
 
   // Handle dropdown select for each document.
   const handleEmployeeSelect = async (doc, selectedUserName) => {
-    console.log("Selected employee for", doc.REF_SEQ_NO, "→", selectedUserName);
-
     // Update task data with document-specific info
     setTaskData((prev) => ({
       ...prev,
@@ -211,7 +207,7 @@ export default function DocumentViewPage() {
         doc.REF_SEQ_NO.toString().toLowerCase().includes(search)
       );
     });
-  });
+  }, [docsData, globalFilter]);
 
   return (
     <>
@@ -231,10 +227,10 @@ export default function DocumentViewPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
             {filteredDocs.map((doc, index) => (
               <Card
-                key={index}
+                key={`${doc.REF_SEQ_NO}-${index}`}
                 className="col-span-2 md:col-span-2 lg:col-span-1"
               >
-                <CardContent key={doc.REF_SEQ_NO} className="p-4">
+                <CardContent key={`${doc.REF_SEQ_NO}-${index}`} className="p-4">
                   <div
                     className={`flex items-start gap-2 ${
                       doc.VERIFIED_BY ? "cursor-pointer" : ""
@@ -277,7 +273,7 @@ export default function DocumentViewPage() {
                         {doc.DOC_RELATED_CATEGORY}
                       </span>
                     </p>
-                    <div className="flex items-start justify-between gap-2 w-full">
+                    <div className="flex items-end justify-between gap-2 w-full">
                       <div className="flex-1">
                         <div className="flex flex-wrap items-center justify-between gap-1 mb-3">
                           {doc.VERIFIED_BY ? (
@@ -329,9 +325,9 @@ export default function DocumentViewPage() {
                             <SelectValue placeholder="Assign to" />
                           </SelectTrigger>
                           <SelectContent>
-                            {users.map((user) => (
+                            {users.map((user, index) => (
                               <SelectItem
-                                key={user.user_name}
+                                key={`user-${user.user_name}-${index}`}
                                 value={user.user_name}
                               >
                                 {user.user_name}
@@ -340,6 +336,9 @@ export default function DocumentViewPage() {
                           </SelectContent>
                         </Select>
                       </div>
+                      <Button variant="ghost" onClick={() => handleView(doc)}>
+                        View
+                      </Button>
                     </div>
                   </div>
                 </CardContent>
@@ -366,7 +365,6 @@ export default function DocumentViewPage() {
         modalRefForm={modalRefForm}
         selectedDocument={selectedDocument}
         docMode={docFormMode}
-        isVAndVProcess={isVAndVProcess}
         onSuccess={handleVerifySuccess}
       />
     </>

@@ -9,8 +9,8 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { useAuth } from "../contexts/AuthContext";
-import { getDashboardChannelSummary } from "../services/dashboardService";
+import { useAuth } from "../../contexts/AuthContext";
+import { getDashboardChannelSummary } from "../../services/dashboardService";
 
 const DocumentChannelChart = ({ daysCount = 30 }) => {
   const [channelData, setChannelData] = useState([]);
