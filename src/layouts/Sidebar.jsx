@@ -41,7 +41,7 @@ export const Sidebar = forwardRef(({ collapsed }, ref) => {
           <div key={navbarLink.title}>
             <p
               className={cn(
-                "text-xs font-semibold uppercase text-slate-400 px-3"
+                "text-xs mb-2 font-semibold uppercase text-slate-400 px-3"
               )}
             >
               {navbarLink.title}
@@ -80,7 +80,7 @@ export const Sidebar = forwardRef(({ collapsed }, ref) => {
                               key={child.label}
                               to={child.path}
                               className={cn(
-                                "sidebar-item flex items-center gap-x-2 my-2 px-3 py-2 rounded-md text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors pl-8"
+                                "sidebar-item flex items-center gap-x-2 my-2 py-2 rounded-md text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                               )}
                             >
                               <child.icon size={18} className="flex-shrink-0" />

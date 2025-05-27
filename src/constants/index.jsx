@@ -1,10 +1,13 @@
 import {
   CalendarClock,
   ClipboardListIcon,
+  FileCheck2,
   FileSearch,
   FileText,
   Home,
+  LayoutDashboard,
   LayoutGrid,
+  LibraryBig,
   ShieldUser,
   Users,
 } from "lucide-react";
@@ -50,7 +53,7 @@ export const navbarLinks = [
     links: [
       {
         label: "Task View",
-        icon: ClipboardListIcon,
+        icon: FileCheck2,
         path: "/task-view",
       },
       {
@@ -60,7 +63,7 @@ export const navbarLinks = [
       },
       {
         label: "Task management",
-        icon: ClipboardListIcon,
+        icon: LayoutDashboard,
         path: "/task",
       },
     ],
@@ -70,33 +73,33 @@ export const navbarLinks = [
     links: [
       {
         label: "User Administration",
-        icon: FileText,
+        icon: ShieldUser,
         children: [
           {
             label: "User Role",
-            icon: ShieldUser,
+            icon: LibraryBig,
             path: "/user-role",
           },
           {
-            label: "Category Access",
-            icon: ShieldUser,
-            path: "/category-access",
-          },
-          {
             label: "User Access Rights",
-            icon: ShieldUser,
+            icon: LibraryBig,
             path: "/user-access-rights",
           },
           {
             label: "Role Access Rights",
-            icon: ShieldUser,
+            icon: LibraryBig,
             path: "/role-access-rights",
+          },
+          {
+            label: "Category Access",
+            icon: LibraryBig,
+            path: "/category-access",
           },
         ],
       },
       {
         label: "Category Access Rights",
-        icon: FileText,
+        icon: LibraryBig,
         path: "/category-list",
       },
     ],
