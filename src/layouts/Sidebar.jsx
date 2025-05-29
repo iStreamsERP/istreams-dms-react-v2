@@ -1,14 +1,17 @@
 import logoDark from "@/assets/logo-dark.png";
 import logoLight from "@/assets/logo-light.png";
-import { navbarLinks } from "@/constants";
+import { getNavbarLinks } from "@/constants";
+import { useAuth } from "@/contexts/AuthContext";
+import { cn } from "@/lib/utils";
+import { ChevronDownIcon } from "lucide-react"; // assuming this is used for the dropdown
 import PropTypes from "prop-types";
 import React, { forwardRef } from "react";
 import { NavLink } from "react-router-dom";
-import { cn } from "@/lib/utils";
-import { ChevronDownIcon } from "lucide-react"; // assuming this is used for the dropdown
 
 export const Sidebar = forwardRef(({ collapsed }, ref) => {
+  const { userData } = useAuth();
   const [expandedMenu, setExpandedMenu] = React.useState(null);
+  const navbarLinks = getNavbarLinks(userData.isAdmin);
 
   const toggleMenu = (label) => {
     setExpandedMenu((current) => (current === label ? null : label));
@@ -18,7 +21,7 @@ export const Sidebar = forwardRef(({ collapsed }, ref) => {
     <aside
       ref={ref}
       className={cn(
-        "fixed z-[100] flex h-full w-[240px] flex-col overflow-x-hidden border-r border-slate-300 bg-white transition-all duration-300 dark:border-slate-700 dark:bg-slate-900",
+        "fixed z-[100] flex h-full w-[240px] flex-col overflow-x-hidden border-r border-slate-300 dark:border-slate-700 bg-slate-100 transition-all duration-300 dark:bg-slate-950",
         collapsed ? "md:w-[70px] md:items-center" : "md:w-[240px]",
         collapsed ? "max-md:-left-full" : "max-md:left-0"
       )}
@@ -41,7 +44,7 @@ export const Sidebar = forwardRef(({ collapsed }, ref) => {
           <div key={navbarLink.title}>
             <p
               className={cn(
-                "text-xs mb-2 font-semibold uppercase text-slate-400 px-3"
+                "text-[10px] mb-2 font-semibold uppercase leading-none text-slate-400 pr-3"
               )}
             >
               {navbarLink.title}
@@ -57,7 +60,7 @@ export const Sidebar = forwardRef(({ collapsed }, ref) => {
                         className={cn(
                           "sidebar-item",
                           collapsed && "md:w-[45px]",
-                          "flex items-center gap-x-2 w-full px-3 py-2 rounded-md text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                          "flex items-center gap-x-2 w-full px-3 py-2 rounded-md text-sm font-medium hover:bg-slate-200 dark:hover:bg-slate-900 transition-colors"
                         )}
                       >
                         <link.icon size={18} className="flex-shrink-0" />
@@ -80,10 +83,10 @@ export const Sidebar = forwardRef(({ collapsed }, ref) => {
                               key={child.label}
                               to={child.path}
                               className={cn(
-                                "sidebar-item flex items-center gap-x-2 my-2 py-2 rounded-md text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                "sidebar-item flex items-center gap-x-2 my-2 py-2 rounded-md text-sm font-medium hover:bg-slate-200 dark:hover:bg-slate-900 transition-colors"
                               )}
                             >
-                              <child.icon size={18} className="flex-shrink-0" />
+                              {/* <child.icon size={18} className="flex-shrink-0" /> */}
                               {!collapsed && (
                                 <p className="whitespace-nowrap">
                                   {child.label}
@@ -98,7 +101,7 @@ export const Sidebar = forwardRef(({ collapsed }, ref) => {
                     <NavLink
                       to={link.path}
                       className={cn(
-                        "sidebar-item flex items-center gap-x-2 px-3 py-2 my-2 rounded-md text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors",
+                        "sidebar-item flex items-center gap-x-2 px-3 py-2 my-2 rounded-md text-sm font-medium hover:bg-slate-200 dark:hover:bg-slate-900 transition-colors",
                         collapsed && "md:w-[45px]"
                       )}
                     >

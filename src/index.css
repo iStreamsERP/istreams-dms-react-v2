@@ -4,11 +4,10 @@
 
 @layer base {
   body {
-    @apply text-slate-900 dark:text-slate-50;
+    @apply text-slate-900 dark:text-slate-50 bg-background text-foreground;
 
     /* Firefox Scrollbar */
     scrollbar-color: #cbd5e1 transparent;
-    scrollbar-width: thin;
   }
 
   @media (prefers-color-scheme: dark) {
@@ -19,6 +18,7 @@
 
   /* WebKit Browsers (Chrome, Safari, Edge) */
   * {
+    @apply border-border;
     scrollbar-width: thin;
   }
 
@@ -43,7 +43,7 @@
   }
 
   :root {
-    --radix-select-content-z-index: 9999;
+    --radix-select-content-z-index: 999;
     --background: 0 0% 100%;
     --foreground: 240 10% 3.9%;
     --popover: 0 0% 100%;
@@ -68,24 +68,34 @@
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
   }
+
   .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 5.9% 10%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 240 4.9% 83.9%;
+    --background: 222.2 84% 4.9%; /* slate-950 */
+    --foreground: 210 20% 98%; /* slate-50 */
+
+    --popover: 222.2 47.4% 11.2%; /* slate-900 */
+    --popover-foreground: 210 20% 98%; /* slate-50 */
+
+    --primary: 210 20% 98%; /* slate-50 */
+    --primary-foreground: 222.2 84% 4.9%; /* slate-950 */
+
+    --secondary: 222.2 47.4% 11.2%; /* slate-900 */
+    --secondary-foreground: 210 20% 98%; /* slate-50 */
+
+    --muted: 222.2 47.4% 11.2%; /* slate-900 */
+    --muted-foreground: 220 8.9% 64.9%; /* slate-400 */
+
+    --accent: 222.2 47.4% 11.2%; /* slate-900 */
+    --accent-foreground: 210 20% 98%; /* slate-50 */
+
+    --destructive: 0 62.8% 30.6%; /* red-700 */
+    --destructive-foreground: 210 20% 98%; /* slate-50 */
+
+    --border: 222.2 47.4% 11.2%; /* slate-900 */
+    --input: 222.2 47.4% 11.2%; /* slate-900 */
+    --ring: 220 14.3% 95.9%; /* slate-100 */
+
+    /* Charts are vibrant, these are fine */
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
@@ -96,13 +106,6 @@
   [data-radix-portal] {
     position: fixed;
     z-index: var(--radix-select-content-z-index);
-  }
-
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
   }
 }
 

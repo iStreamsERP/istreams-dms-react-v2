@@ -21,19 +21,21 @@ const COLORS = [
 
 const ChannelPerformanceChart = ({ daysCount = 30 }) => {
   const [channelData, setChannelData] = useState([]);
-  const { userData, auth } = useAuth();
+  const { userData } = useAuth();
 
   useEffect(() => {
     const fetchChannelSummary = async () => {
       try {
+        const payloadForTheUser = userData.isAdmin ? "" : `${userData.userName}`;
+
         const payload = {
           NoOfDays: daysCount,
-          ForTheUser: `${auth.isAdmin ? "" : userData.currentUserName}`,
+          ForTheUser: payloadForTheUser,
         };
 
         const data = await getDashboardChannelSummary(
           payload,
-          userData.currentUserLogin,
+          userData.userEmail,
           userData.clientURL
         );
 
@@ -41,7 +43,7 @@ const ChannelPerformanceChart = ({ daysCount = 30 }) => {
         const formattedData = data.map((item) => ({
           name:
             item.CHANNEL_SOURCE === " "
-              ? userData.organization
+              ? userData.organizationName
               : item.CHANNEL_SOURCE,
           value: Number(item.total_count) || 0,
         }));

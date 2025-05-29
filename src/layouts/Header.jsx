@@ -53,7 +53,7 @@ export const Header = ({ collapsed, setCollapsed }) => {
   };
   
   return (
-    <header className="relative z-10 flex p-3 items-center justify-between bg-white shadow-md transition-colors dark:bg-slate-900">
+    <header className="relative z-10 flex p-3 items-center justify-between bg-slate-100 shadow-md transition-colors dark:bg-slate-950">
       <div className="flex items-center gap-x-2">
         <Button
           variant="ghost"
@@ -69,7 +69,7 @@ export const Header = ({ collapsed, setCollapsed }) => {
       <nav className="flex items-center justify-end w-full">
         <div className="flex items-center gap-2">
           <div className="border border-gray-700 px-2 py-2 rounded-lg text-sm font-semibold hidden lg:block">
-            {userData.organization}
+            {userData.organizationName}
           </div>
 
           <Button
@@ -99,25 +99,25 @@ export const Header = ({ collapsed, setCollapsed }) => {
           <DropdownMenu >
             <DropdownMenuTrigger className="flex items-start gap-2">
               <Avatar>
-                <AvatarImage src={userData.currentUserImageData} alt={userData.currentUserName} />
-                <AvatarFallback>{userData.currentUserName}</AvatarFallback>
+                <AvatarImage src={userData.userAvatar} alt={userData.userName} />
+                <AvatarFallback>{userData.userName}</AvatarFallback>
               </Avatar>
               <div className="flex flex-col items-start">
                 <span className="text-lg font-semibold leading-6">
-                  {userData.currentUserName}
+                  {userData.userName}
                 </span>
                 <span className="text-xs text-gray-400">
-                  {userData.currentUserLogin}
+                  {userData.userEmail}
                 </span>
               </div>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-[250px]">
               <DropdownMenuLabel className="flex flex-col justify-between items-start mb-2">
                 <p className="text-md font-medium">
-                  {userData.currentUserName}
+                  {userData.userName}
                 </p>
                 <p className="text-xs font-normal text-gray-400">
-                  {userData.currentUserLogin}
+                  {userData.userEmail}
                 </p>
               </DropdownMenuLabel>
               <DropdownMenuGroup>

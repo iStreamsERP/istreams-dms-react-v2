@@ -1,5 +1,6 @@
 import { ThemeProvider } from "@/components/theme-provider";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { useAuth } from "./contexts/AuthContext";
 import CategoryAccessPage from "./pages/CategoryAccessPage";
 import CategoryListPage from "./pages/CategoryListPage";
 import CategoryViewPage from "./pages/CategoryViewPage";
@@ -15,12 +16,15 @@ import TaskPage from "./pages/TaskPage";
 import TaskView from "./pages/TaskView";
 import TeamsPage from "./pages/TeamsPage";
 import TimeSheetPage from "./pages/TimeSheetPage";
-import UserRights from "./pages/UserRights";
+import UserAccessRights from "./pages/UserAccessRights";
+import UserListPage from "./pages/UserListPage";
 import UserRole from "./pages/UserRole";
 import Layout from "./routes/Layout";
 import ProtectedRoute from "./routes/ProtectedRoute";
 
 const App = () => {
+  const { userData } = useAuth();
+
   const router = createBrowserRouter([
     {
       path: "/login",
@@ -43,7 +47,9 @@ const App = () => {
           children: [
             { index: true, element: <DashboardPage /> },
 
-            { path: "/teams", element: <TeamsPage /> },
+            ...(userData.isAdmin
+              ? [{ path: "/teams", element: <TeamsPage /> }]
+              : []),
             { path: "/category-view", element: <CategoryViewPage /> },
             { path: "/document-list", element: <DocumentListPage /> },
             { path: "/document-view", element: <DocumentViewPage /> },
@@ -51,9 +57,10 @@ const App = () => {
             { path: "task-view", element: <TaskView /> },
             { path: "time-sheet", element: <TimeSheetPage /> },
             { path: "task", element: <TaskPage /> },
+            { path: "users", element: <UserListPage /> },
             { path: "user-role", element: <UserRole /> },
             { path: "category-access", element: <CategoryAccessPage /> },
-            { path: "user-access-rights", element: <UserRights /> },
+            { path: "user-access-rights", element: <UserAccessRights /> },
             { path: "role-access-rights", element: <RoleAccessRightsPage /> },
             { path: "category-list", element: <CategoryListPage /> },
           ],

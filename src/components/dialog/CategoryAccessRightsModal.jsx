@@ -103,7 +103,7 @@ export function CategoryAccessRightsModal({ mode, selectedItem, onSuccess }) {
     };
     const response = await getDataModelFromQueryService(
       payload,
-      userData.currentUserLogin,
+      userData.userEmail,
       userData.clientURL
     );
 
@@ -119,7 +119,7 @@ export function CategoryAccessRightsModal({ mode, selectedItem, onSuccess }) {
 
     const response = await getDataModelService(
       payload,
-      userData.currentUserLogin,
+      userData.userEmail,
       userData.clientURL
     );
 
@@ -143,13 +143,13 @@ export function CategoryAccessRightsModal({ mode, selectedItem, onSuccess }) {
       );
 
       const payload = {
-        UserName: userData.currentUserLogin,
+        UserName: userData.userEmail,
         DModelData: convertedDataModel,
       };
 
       const response = await saveDataService(
         payload,
-        userData.currentUserLogin,
+        userData.userEmail,
         userData.clientURL
       );
 

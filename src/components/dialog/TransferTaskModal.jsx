@@ -18,8 +18,8 @@ const TransferTaskModal = ({ isOpen, onTransfer, onClose }) => {
   const fetchUsers = useCallback(async () => {
     try {
       const userDetails = await getAllDmsActiveUser(
-        userData.currentUserName,
-        userData.currentUserLogin,
+        userData.userName,
+        userData.userEmail,
         userData.clientURL
       );
       setUsers(Array.isArray(userDetails) ? userDetails : []);
@@ -27,7 +27,7 @@ const TransferTaskModal = ({ isOpen, onTransfer, onClose }) => {
       console.error("Error fetching all active users:", err);
       setUsers([]);
     }
-  }, [userData.currentUserName, userData.currentUserLogin, userData.clientURL]);
+  }, [userData.userName, userData.userEmail, userData.clientURL]);
 
   useEffect(() => {
     fetchUsers();

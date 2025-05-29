@@ -84,7 +84,7 @@ const TaskPage = () => {
             };
 
 
-            const response = await getDataModelFromQueryService(query, userData.currentUserLogin, userData.clientURL);
+            const response = await getDataModelFromQueryService(query, userData.userEmail, userData.clientURL);
 
             setTasks(response);
 

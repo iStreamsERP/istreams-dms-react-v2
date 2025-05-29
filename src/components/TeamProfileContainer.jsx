@@ -19,7 +19,7 @@ export default function TeamProfileContainer() {
         // Fetch user data
         const userDetails = await getAllDmsActiveUser(
           "",
-          userData.currentUserLogin,
+          userData.userEmail,
           userData.clientURL
         );
         let usersArray = [];
@@ -39,7 +39,7 @@ export default function TeamProfileContainer() {
             try {
               const imageData = await getEmployeeImage(
                 user.emp_no,
-                userData.currentUserLogin,
+                userData.userEmail,
                 userData.clientURL
               );
 
@@ -71,7 +71,7 @@ export default function TeamProfileContainer() {
     };
 
     fetchUsersAndImages();
-  }, [userData.currentUserLogin]);
+  }, [userData.userEmail]);
   return (
     <div>
       {loading ? (

@@ -1,16 +1,15 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { ChevronRight } from "lucide-react";
+import GlobalSearchInput from "@/components/GlobalSearchInput";
+import { Card } from "@/components/ui/card";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { BarLoader } from "react-spinners";
 import TimeRangeSelector from "../components/TimeRangeSelector";
 import { useAuth } from "../contexts/AuthContext";
 import { getCategoriesSummary } from "../services/dmsService";
-import GlobalSearchInput from "@/components/GlobalSearchInput";
+import { callSoapService } from "@/services/callSoapService";
 
 const CategoryViewPage = () => {
-  const { userData, auth } = useAuth();
+  const { userData } = useAuth();
   const searchInputRef = useRef(null);
 
   const [categories, setCategories] = useState([]);
@@ -24,13 +23,13 @@ const CategoryViewPage = () => {
       try {
         const payload = {
           NoOfDays: filterDays,
-          ForTheUser: `${auth.isAdmin ? "" : userData.currentUserName}`,
+          ForTheUser: `${userData.isAdmin ? "" : userData.userName}`,
         };
 
-        const response = await getCategoriesSummary(
-          payload,
-          userData.currentUserLogin,
-          userData.clientURL
+        const response = await callSoapService(
+          userData.clientURL,
+          "DMS_GetDashboard_CategoriesSummary",
+          payload
         );
 
         setCategories(response);
@@ -42,17 +41,6 @@ const CategoryViewPage = () => {
 
     fetchData();
   }, [filterDays]);
-
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault();
-        searchInputRef.current?.focus();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
 
   const filteredCategories = categories.filter((category) => {
     const search = globalFilter.toLowerCase();

@@ -1,112 +1,135 @@
-import { CategoryAccessRightsModal } from "@/components/dialog/CategoryAccessRightsModal";
-import GlobalSearchInput from "@/components/GlobalSearchInput";
+import UserCreateModal from "@/components/dialog/UserCreateModal";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+    DropdownMenu,
+    DropdownMenuCheckboxItem,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
 } from "@/components/ui/table";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { callSoapService } from "@/services/callSoapService";
 import {
-  deleteDataModelService,
-  getDataModelService,
-} from "@/services/dataModelService";
-import {
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
+    flexRender,
+    getCoreRowModel,
+    getFilteredRowModel,
+    getPaginationRowModel,
+    getSortedRowModel,
+    useReactTable,
 } from "@tanstack/react-table";
+import axios from "axios";
 import {
-  ArrowUpDown,
-  MoreHorizontal,
-  Pencil,
-  Plus,
-  Settings2,
-  Trash2,
+    ArrowUpDown,
+    MoreHorizontal,
+    Pencil,
+    Plus,
+    Settings2,
+    Trash2
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { PacmanLoader } from "react-spinners";
 
-const CategoryListPage = () => {
-  const { userData } = useAuth();
-  const { toast } = useToast();
-
-  const [tableList, setTableList] = useState([]);
+const UserListPage = () => {
+    const { userData } = useAuth();
+    const { toast } = useToast();
+    
+  const [userTableData, setUserTableData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [sorting, setSorting] = useState([]);
   const [columnFilters, setColumnFilters] = useState([]);
   const [columnVisibility, setColumnVisibility] = useState({});
   const [rowSelection, setRowSelection] = useState({});
-  const [globalFilter, setGlobalFilter] = useState("");
 
-  const [mode, setMode] = useState("create");
-  const [selectedItem, setSelectedItem] = useState(null);
+  const [selectedUser, setSelectedUser] = useState(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   useEffect(() => {
-    fetchAllProductsData();
+    fetchAllUsersData();
   }, []);
 
-  const fetchAllProductsData = async () => {
+  const fetchAllUsersData = async () => {
     setLoading(true);
     setError(null);
     try {
-      const allProductDataPayload = {
-        DataModelName: "SYNM_DMS_DOC_CATEGORIES",
-        WhereCondition: "",
-        Orderby: "",
-      };
-      const data = await getDataModelService(
-        allProductDataPayload,
-        userData.userEmail,
-        userData.clientURL
+      const response = await callSoapService(
+        userData.clientURL,
+        "UM_Get_All_Users_List",
+        ""
       );
-      setTableList(data);
+      setUserTableData(response);
     } catch (error) {
-      setError(error?.message);
+      setError(error.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = async (item) => {
-    const result = window.confirm(
-      "Are you sure you want to delete? This action cannot be undone."
+  const handleImageDelete = async (empNo) => {
+    setLoading(true);
+
+    try {
+      const email = encodeURIComponent(userData.currentUserLogin);
+      const fileName = encodeURIComponent(`EMPLOYEE_IMAGE_${empNo}`);
+      const url = `https://cloud.istreams-erp.com:4498/api/empImage/delete?email=${email}&fileName=${fileName}`;
+
+      const response = await axios.delete(url);
+
+      if (response.status === 200) {
+        toast({
+          title: response.data.message,
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: `Image delete failed with status: ${response.status}`,
+        });
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error deleting image.",
+        description:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Unknown error occurred.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteUser = async (user) => {
+    const isConfirm = window.confirm(
+      "Are you sure you want to delete this user? This action cannot be undone."
     );
 
-    if (!result) {
-      return;
-    }
+    if (!isConfirm) return;
 
     try {
       const payload = {
-        UserName: userData.userEmail,
-        DataModelName: "SYNM_DMS_DOC_CATEGORIES",
-        WhereCondition: `CATEGORY_NAME = '${item.CATEGORY_NAME}'`,
+        FQ_USER_NAME: user.EMAIL_ADDRESS,
+        USER_NAME_ONLY: user.USER_NAME,
       };
 
-      const response = await deleteDataModelService(
-        payload,
-        userData.userEmail,
-        userData.clientURL
+      const response = await callSoapService(
+        userData.clientURL,
+        "UM_Delete_User",
+        payload
       );
 
       toast({
@@ -114,8 +137,12 @@ const CategoryListPage = () => {
         title: response,
       });
 
-      fetchAllProductsData();
+      await handleImageDelete(user.EMP_NO);
+
+      fetchAllUsersData();
     } catch (error) {
+      console.error("Error deleting user:", error);
+
       toast({
         variant: "destructive",
         title: error?.message || "Unknown error occurred.",
@@ -123,118 +150,105 @@ const CategoryListPage = () => {
     }
   };
 
-  const handleCreate = () => {
-    setMode("create");
-    setSelectedItem(null);
+  const handleEditUser = (user) => {
+    setSelectedUser(user);
     setIsDialogOpen(true);
   };
 
-  const handleEdit = (item) => {
-    setMode("edit");
-    setSelectedItem(item);
-    setIsDialogOpen(true);
+  const handleDialogClose = () => {
+    setSelectedUser(null);
+    setIsDialogOpen(false);
+    fetchAllUsersData();
   };
 
   const columns = [
     {
-      accessorKey: "CATEGORY_NAME",
-      header: ({ column }) => (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="p-0"
-        >
-          Category Name
-          <ArrowUpDown />
-        </Button>
+      id: "select",
+      header: ({ table }) => (
+        <Checkbox
+          checked={
+            table.getIsAllPageRowsSelected() ||
+            (table.getIsSomePageRowsSelected() && "indeterminate")
+          }
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+          aria-label="Select all"
+        />
       ),
       cell: ({ row }) => (
-        <div
-          className="capitalize"
-          style={{
-            width: 350,
-            overflow: "hidden",
-            whiteSpace: "nowrap",
-            textOverflow: "ellipsis",
-          }}
-          title={row.getValue("CATEGORY_NAME") || "-"}
-        >
-          {row.getValue("CATEGORY_NAME") || "-"}
-        </div>
+        <Checkbox
+          checked={row.getIsSelected()}
+          onCheckedChange={(value) => row.toggleSelected(!!value)}
+          aria-label="Select row"
+        />
+      ),
+      enableSorting: false,
+      enableHiding: false,
+    },
+    {
+      accessorKey: "EMP_NO",
+      header: () => <div>Employee No</div>,
+      cell: ({ row }) => <div>{row.getValue("EMP_NO") || "-"}</div>,
+    },
+    {
+      accessorKey: "USER_NAME",
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+            className="p-0"
+          >
+            User Name
+            <ArrowUpDown />
+          </Button>
+        );
+      },
+      cell: ({ row }) => (
+        <div className="capitalize">{row.getValue("USER_NAME") || "-"}</div>
       ),
     },
     {
-      accessorKey: "DISPLAY_NAME",
-      header: () => (
-        <p className="truncate" style={{ width: 350 }}>
-          Display Name
-        </p>
-      ),
+      accessorKey: "FULL_NAME",
+      header: "Full Name",
       cell: ({ row }) => (
-        <div
-          className="capitalize"
-          style={{
-            width: 350,
-            overflow: "hidden",
-            whiteSpace: "nowrap",
-            textOverflow: "ellipsis",
-          }}
-          title={row.getValue("DISPLAY_NAME") || "-"}
-        >
-          {row.getValue("DISPLAY_NAME") || "-"}
-        </div>
+        <div className="capitalize">{row.getValue("FULL_NAME") || "-"}</div>
       ),
     },
     {
-      accessorKey: "MODULE_NAME",
-      header: () => (
-        <p className="truncate" style={{ width: 100 }}>
-          Module Name
-        </p>
-      ),
+      accessorKey: "USER_TYPE",
+      header: "User Type",
       cell: ({ row }) => (
-        <div
-          className="capitalize"
-          style={{
-            width: 100,
-            overflow: "hidden",
-            whiteSpace: "nowrap",
-            textOverflow: "ellipsis",
-          }}
-          title={row.getValue("MODULE_NAME") || "-"}
-        >
-          {row.getValue("MODULE_NAME") || "-"}
-        </div>
+        <div className="capitalize">{row.getValue("USER_TYPE")}</div>
       ),
     },
     {
-      accessorKey: "INCLUDE_CUSTOM_COLUMNS",
-      header: () => (
-        <p className="truncate" style={{ width: 120 }}>
-          Custom Columns
-        </p>
-      ),
-      cell: ({ row }) => (
-        <div
-          className="capitalize"
-          style={{
-            width: 120,
-            overflow: "hidden",
-            whiteSpace: "nowrap",
-            textOverflow: "ellipsis",
-          }}
-          title={row.getValue("INCLUDE_CUSTOM_COLUMNS") || "-"}
-        >
-          {row.getValue("INCLUDE_CUSTOM_COLUMNS") || "-"}
-        </div>
-      ),
+      accessorKey: "EMAIL_ADDRESS",
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+            className="p-0"
+          >
+            Email
+            <ArrowUpDown />
+          </Button>
+        );
+      },
+      cell: ({ row }) => <div>{row.getValue("EMAIL_ADDRESS") || "-"}</div>,
+    },
+    {
+      accessorKey: "MOBILE_NO",
+      header: () => <div>Mobile No</div>,
+      cell: ({ row }) => <div>{row.getValue("MOBILE_NO") || "-"}</div>,
     },
     {
       accessorKey: "action",
-      header: () => <div style={{ width: 40 }}>Action</div>,
+      header: () => <div>Action</div>,
       id: "actions",
+      // enableHiding: false,
       cell: ({ row }) => {
-        const item = row.original;
+        const user = row.original;
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -247,15 +261,16 @@ const CategoryListPage = () => {
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                onClick={() => handleEdit(item)}
+                onClick={() => handleEditUser(user)}
                 className="flex items-center gap-1"
               >
                 <Pencil /> Edit
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="text-red-600 flex items-center gap-1"
-                onClick={() => handleDelete(item)}
+                onClick={() => handleDeleteUser(user)}
               >
+                {" "}
                 <Trash2 /> Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -266,14 +281,14 @@ const CategoryListPage = () => {
   ];
 
   const fuzzyFilter = (row, columnId, filterValue) => {
-    const value = row.getValue(columnId);
-    return String(value || "")
-      .toLowerCase()
+    return row
+      .getValue(columnId)
+      ?.toLowerCase()
       .includes(filterValue.toLowerCase());
   };
 
   const table = useReactTable({
-    data: tableList,
+    data: userTableData,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -283,14 +298,12 @@ const CategoryListPage = () => {
     getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
-    onGlobalFilterChange: setGlobalFilter,
     globalFilterFn: fuzzyFilter,
     state: {
       sorting,
       columnFilters,
       columnVisibility,
       rowSelection,
-      globalFilter,
     },
   });
 
@@ -298,8 +311,12 @@ const CategoryListPage = () => {
     <div className="flex flex-col gap-y-4">
       <div className="w-full">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pb-2 items-center">
-          <GlobalSearchInput value={globalFilter} onChange={setGlobalFilter} />
-
+          <Input
+            placeholder="Global Search..."
+            value={table.getState().globalFilter ?? ""}
+            onChange={(event) => table.setGlobalFilter(event.target.value)}
+            className="max-w-sm"
+          />
           <div className="flex items-center gap-x-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -328,22 +345,24 @@ const CategoryListPage = () => {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <Button onClick={handleCreate}>
-              Create
-              <Plus />
-            </Button>
+            <Dialog
+              open={isDialogOpen}
+              onOpenChange={(open) => {
+                if (!open) handleDialogClose();
+                setIsDialogOpen(open);
+              }}
+            >
+              <DialogTrigger asChild>
+                <Button onClick={() => setIsDialogOpen(true)}>
+                  Create <Plus />
+                </Button>
+              </DialogTrigger>
 
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogContent className="sm:max-w-[425px]">
-                <CategoryAccessRightsModal
-                  mode={mode}
-                  selectedItem={selectedItem}
-                  onSuccess={() => {
-                    setIsDialogOpen(false);
-                    fetchAllProductsData();
-                  }}
-                />
-              </DialogContent>
+              <UserCreateModal
+                open={isDialogOpen}
+                onClose={handleDialogClose}
+                user={selectedUser}
+              />
             </Dialog>
           </div>
         </div>
@@ -408,7 +427,7 @@ const CategoryListPage = () => {
                     colSpan={columns.length}
                     className="h-24 text-center"
                   >
-                    No data found.
+                    No results.
                   </TableCell>
                 </TableRow>
               )}
@@ -444,4 +463,4 @@ const CategoryListPage = () => {
   );
 };
 
-export default CategoryListPage;
+export default UserListPage;

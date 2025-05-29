@@ -12,21 +12,23 @@ import { getDashboardOverallSummary } from "../../services/dashboardService";
 
 const DocumentDistributionChart = ({ daysCount = 30 }) => {
   const [overallSummaryData, setOverallSummaryData] = useState([]);
-  const { userData, auth } = useAuth();
+  const { userData } = useAuth();
 
   const COLORS = ["#FF6B6B", "#4ECDC4", "#45B7D1", "#FED766", "#2AB7CA"];
 
   useEffect(() => {
     const fetchData = async () => {
       try {
+        const payloadForTheUser = userData.isAdmin ? "" : `${userData.userName}`;
+
         const payload = {
           NoOfDays: daysCount,
-          ForTheUser: `${auth.isAdmin ? "" : userData.currentUserName}`,
+          ForTheUser: payloadForTheUser,
         };
 
         const data = await getDashboardOverallSummary(
           payload,
-          userData.currentUserLogin,
+          userData.userEmail,
           userData.clientURL
         );
         // Convert each object to the expected format for the chart

@@ -18,8 +18,11 @@ export default function DashboardPage() {
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
       <div className="col-span-2">
         <div>
+          <p className="text-xs text-gray-500">
+            {userData.isAdmin ? "Admin Dashboard" : "User Dashboard"}
+          </p>
           <h1 className="font-semibold">
-            Welcome back, {toTitleCase(userData.currentUserName)} 👋
+            Welcome back, {toTitleCase(userData.userName)} 👋
           </h1>
           <p className="text-gray-400 text-sm">
             here's what's happening with your account today

@@ -1,6 +1,5 @@
 import axios from "axios";
 import { XMLParser } from "fast-xml-parser";
-import GlobalVariables from "../iStServices/GlobalVariables";
 
 const NAMESPACE = "http://tempuri.org/";
 
@@ -52,25 +51,40 @@ const callSoapServiceforMethods = async (url, methodName, parameterDetails) => {
 
 export const callSoapService = async (url, methodName, parameterDetails) => {
   try {
-    if (
-      GlobalVariables.doConnectionParameter &&
-      typeof GlobalVariables.doConnectionParameter === "object"
-    ) {
-      await callSoapServiceforMethods(
-        url,
-        "doConnection",
-        GlobalVariables.doConnectionParameter
-      );
+    const storedPayload = JSON.parse(
+      localStorage.getItem("doConnectionPayload")
+    );
+    if (storedPayload && typeof storedPayload === "object") {
+      await callSoapServiceforMethods(url, "doConnection", storedPayload);
     } else {
       console.warn("⚠️ doConnectionParameter is missing or invalid.");
     }
 
-    const result = await callSoapServiceforMethods(
+    const response = await callSoapServiceforMethods(
       url,
       methodName,
       parameterDetails
     );
-    return result;
+
+    let parsedResponse;
+
+    try {
+      // Try parsing the string
+      const temp = JSON.parse(response);
+
+      // Only set parsedResponse if it's an object or array
+      if (typeof temp === "object") {
+        parsedResponse = temp;
+      } else {
+        // It's a plain string like "SUCCESS", not JSON
+        parsedResponse = response;
+      }
+    } catch (error) {
+      // JSON.parse failed → definitely not JSON
+      parsedResponse = response;
+    }
+
+    return parsedResponse;
   } catch (error) {
     console.error("SOAP error (main call):", error);
     throw error;

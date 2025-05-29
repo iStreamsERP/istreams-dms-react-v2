@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { callSoapService } from "@/services/callSoapService";
 import {
   flexRender,
   getCoreRowModel,
@@ -31,7 +32,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PacmanLoader } from "react-spinners";
 import { useAuth } from "../contexts/AuthContext";
-import { deleteDMSMaster, getDocMasterList } from "../services/dmsService";
+import { deleteDMSMaster } from "../services/dmsService";
 import DocumentFormModal from "./dialog/DocumentFormModal";
 import DocumentUploadModal from "./dialog/DocumentUploadModal";
 import { Badge } from "./ui/badge";
@@ -39,30 +40,33 @@ import { Button } from "./ui/button";
 
 const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
   const { userData } = useAuth();
-  const CURRENT_USER_LOGIN = userData.currentUserLogin;
-
   const { toast } = useToast();
-  const modalRefForm = useRef(null);
-  const modalRefUpload = useRef(null);
 
-  const [masterData, setMasterData] = useState([]);
+  const formModalRef = useRef(null);
+  const uploadModalRef = useRef(null);
+
+  const [documentList, setDocumentList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
   const [selectedDocument, setSelectedDocument] = useState(null);
 
   const fetchDocsMasterList = useCallback(async () => {
     setLoading(true);
     try {
+      const whereCondition = userData.isAdmin
+        ? ""
+        : ` AND (USER_NAME = '${userData.userName}' OR ASSIGNED_USER = '${userData.userName}')`;
       const payload = {
-        WhereCondition: "",
+        WhereCondition: whereCondition,
         Orderby: "REF_SEQ_NO DESC",
         IncludeEmpImage: false,
       };
 
-      const response = await getDocMasterList(
-        payload,
-        CURRENT_USER_LOGIN,
-        userData.clientURL
+      const response = await callSoapService(
+        userData.clientURL,
+        "DMS_GetDocMaster_List",
+        payload
       );
 
       const enriched = (Array.isArray(response) ? response : []).map((doc) => ({
@@ -71,7 +75,7 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
         IsPrimaryDocument: "",
       }));
 
-      setMasterData(enriched);
+      setDocumentList(enriched);
       setError(null);
       return enriched;
     } catch (err) {
@@ -81,7 +85,7 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
     } finally {
       setLoading(false);
     }
-  }, [CURRENT_USER_LOGIN, userData.clientURL]);
+  }, [userData.userEmail, userData.clientURL]);
 
   // Initial data load
   useEffect(() => {
@@ -97,15 +101,15 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
 
   const onUploadSuccess = () => {
     fetchDocsMasterList();
-    if (modalRefUpload?.current) {
-      modalRefUpload.current.close();
+    if (uploadModalRef?.current) {
+      uploadModalRef.current.close();
     } else {
       console.error("Upload modal element not found");
     }
   };
 
   const canCurrentUserEdit = (doc) => {
-    if (doc?.USER_NAME !== userData.currentUserName)
+    if (doc?.USER_NAME !== userData.userName)
       return "Access Denied: This document is created by another user.";
 
     const status = doc?.DOCUMENT_STATUS?.toUpperCase();
@@ -122,8 +126,8 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
 
   const handleOpenUpload = useCallback((doc) => {
     setSelectedDocument(doc);
-    if (modalRefUpload?.current) {
-      modalRefUpload.current.showModal();
+    if (uploadModalRef?.current) {
+      uploadModalRef.current.showModal();
     } else {
       console.error("Form modal element not found");
     }
@@ -131,8 +135,8 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
 
   const handleOpenForm = useCallback((doc) => {
     setSelectedDocument(doc);
-    if (modalRefForm?.current) {
-      modalRefForm.current.showModal();
+    if (formModalRef?.current) {
+      formModalRef.current.showModal();
     } else {
       console.error("Form modal element not found");
     }
@@ -160,11 +164,11 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
         };
         const response = await deleteDMSMaster(
           payload,
-          CURRENT_USER_LOGIN,
+          userData.userEmail,
           userData.clientURL
         );
 
-        setMasterData((prevData) =>
+        setDocumentList((prevData) =>
           prevData.filter((item) => item.REF_SEQ_NO !== doc.REF_SEQ_NO)
         );
 
@@ -181,28 +185,38 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
         });
       }
     },
-    [CURRENT_USER_LOGIN, userData.clientURL, toast]
+    [userData.userEmail, userData.clientURL, toast]
   );
 
   const columns = useMemo(
     () => [
       {
         header: () => <p className="truncate w-full">Ref No</p>,
-        size: 80,
         accessorKey: "REF_SEQ_NO",
-        cell: (info) => info.getValue() || "-",
+        cell: ({ row }) => (
+          <p
+            className="truncate"
+            style={{ width: 40 }}
+            title={row.getValue("REF_SEQ_NO")}
+          >
+            {row.getValue("REF_SEQ_NO")}
+          </p>
+        ),
       },
       {
         header: () => <p className="truncate w-full">Document Name</p>,
-        size: 300,
         accessorKey: "DOCUMENT_DESCRIPTION",
         cell: ({ row }) => (
-          <div className="flex items-center gap-1">
+          <div
+            className="truncate"
+            style={{ width: 150 }}
+            title={row.getValue("DOCUMENT_DESCRIPTION")}
+          >
             <div>
-              <p className="text-[10px] font-semibold text-gray-500">
+              <p className="text-[10px] font-semibold text-gray-500 truncate">
                 {row.original.DOCUMENT_NO}
               </p>
-              <p className="text-xs font-semibold">
+              <p className="text-xs font-semibold truncate">
                 {row.getValue("DOCUMENT_DESCRIPTION")}
               </p>
             </div>
@@ -210,13 +224,16 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
         ),
       },
       {
-        header: () => <p className="truncate w-full">Uploader</p>,
-        size: 150,
+        header: () => <p className="truncate">Uploader</p>,
         accessorKey: "USER_NAME",
         cell: ({ row }) => (
-          <div className="flex items-center gap-1">
+          <div
+            className="truncate"
+            style={{ width: 100 }}
+            title={row.getValue("USER_NAME")}
+          >
             <div>
-              <p className="text-xs font-semibold">
+              <p className="text-xs font-semibold truncate">
                 {row.getValue("USER_NAME")}
               </p>
             </div>
@@ -224,49 +241,86 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
         ),
       },
       {
-        header: () => <p className="truncate w-full">Channel Source</p>,
-        size: 100,
+        header: () => <p className="truncate">Channel Source</p>,
         accessorKey: "CHANNEL_SOURCE",
         cell: ({ row }) => (
-          <div className="flex items-center gap-1">
-            <div>
-              <p className="text-xs font-semibold">
-                {(row.getValue("CHANNEL_SOURCE") || "").trim() === ""
-                  ? userData.organization
-                  : row.getValue("CHANNEL_SOURCE")}
-              </p>
-            </div>
-          </div>
+          <p
+            className="text-xs font-semibold truncate"
+            style={{ width: 100 }}
+            title={row.getValue("CHANNEL_SOURCE")}
+          >
+            {(row.getValue("CHANNEL_SOURCE") || "").trim() === ""
+              ? userData.organizationName
+              : row.getValue("CHANNEL_SOURCE")}
+          </p>
         ),
       },
       {
         header: () => <p className="truncate w-full">Related to</p>,
-        size: 100,
         accessorKey: "DOC_RELATED_TO",
-        cell: (info) => info.getValue() || "-",
-      },
-      {
-        header: () => <p className="truncate w-full">Category</p>,
-        size: 200,
-        accessorKey: "DOC_RELATED_CATEGORY",
         cell: ({ row }) => (
-          <p className="truncate hover:text-clip">
-            {row.getValue("DOC_RELATED_CATEGORY") || "-"}
+          <p
+            className="truncate"
+            style={{ width: 100 }}
+            title={row.getValue("DOC_RELATED_TO")}
+          >
+            {row.getValue("DOC_RELATED_TO")}
           </p>
         ),
       },
-
+      {
+        header: () => <p className="truncate w-full">Category</p>,
+        accessorKey: "DOC_RELATED_CATEGORY",
+        cell: ({ row }) => (
+          <p
+            className="truncate"
+            style={{ width: 100 }}
+            title={row.getValue("DOC_RELATED_CATEGORY")}
+          >
+            {row.getValue("DOC_RELATED_CATEGORY")}
+          </p>
+        ),
+      },
       {
         header: () => <p className="truncate w-full">Status</p>,
-        size: 100,
         accessorKey: "DOCUMENT_STATUS",
-        cell: (info) => (info.getValue() ? info.getValue() : <span>-</span>),
+        cell: ({ row }) => {
+          const status = row.getValue("DOCUMENT_STATUS");
+
+          // Define a color map for statuses
+          const statusColorMap = {
+            ACCEPTED: "text-green-600",
+            Pending: "text-yellow-600",
+            Rejected: "text-red-600",
+            Inprogress: "text-blue-600",
+          };
+
+          // Fallback to gray if status doesn't match any key
+          const statusClass = statusColorMap[status] || "text-gray-600";
+
+          return (
+            <p
+              className={`truncate ${statusClass}`}
+              style={{ width: 80 }}
+              title={status}
+            >
+              {status}
+            </p>
+          );
+        },
       },
       {
         header: () => <p className="truncate w-full">Assigned to</p>,
-        size: 100,
         accessorKey: "ASSIGNED_USER",
-        cell: (info) => (info.getValue() ? info.getValue() : <span>-</span>),
+        cell: ({ row }) => (
+          <p
+            className="truncate"
+            style={{ width: 100 }}
+            title={row.getValue("ASSIGNED_USER")}
+          >
+            {row.getValue("ASSIGNED_USER")}
+          </p>
+        ),
       },
       {
         header: () => (
@@ -275,7 +329,6 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
           </p>
         ),
         accessorKey: "NO_OF_DOCUMENTS",
-        size: 50,
         cell: (info) => {
           const value = info.getValue();
           const rowData = info.row.original;
@@ -344,7 +397,7 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
 
   // Initialize TanStack table
   const table = useReactTable({
-    data: masterData,
+    data: documentList,
     columns,
     globalFilterFn,
     getCoreRowModel: getCoreRowModel(),
@@ -358,8 +411,8 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
 
   return (
     <>
-      <div className="overflow-x-auto rounded-lg border border-gray-200">
-        <table className="min-w-full divide-y divide-gray-200">
+      <div className="overflow-x-auto rounded-lg border">
+        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
           <thead className="bg-slate-100 transition-colors dark:bg-slate-950 ">
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
@@ -380,7 +433,7 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
               </tr>
             ))}
           </thead>
-          <tbody className="bg-slate-100 transition-colors dark:bg-slate-950 divide-y divide-gray-200">
+          <tbody className="bg-slate-100 transition-colors dark:bg-slate-950 divide-y divide-gray-200 dark:divide-gray-800">
             {loading ? (
               <tr>
                 <td colSpan="12" className="text-center py-4">
@@ -434,14 +487,14 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
       <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4 px-2">
         <div className="flex items-center gap-1">
           <button
-            className="p-2 rounded border hover:bg-gray-100 disabled:opacity-50"
+            className="p-2 rounded border disabled:opacity-50"
             onClick={() => table.setPageIndex(0)}
             disabled={!table.getCanPreviousPage()}
           >
             <ChevronsLeft className="h-4 w-4" />
           </button>
           <button
-            className="p-2 rounded border hover:bg-gray-100 disabled:opacity-50"
+            className="p-2 rounded border disabled:opacity-50"
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
           >
@@ -452,14 +505,14 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
             {table.getPageCount()}
           </span>
           <button
-            className="p-2 rounded border hover:bg-gray-100 disabled:opacity-50"
+            className="p-2 rounded border disabled:opacity-50"
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
           >
             <ChevronRight className="h-4 w-4" />
           </button>
           <button
-            className="p-2 rounded border hover:bg-gray-100 disabled:opacity-50"
+            className="p-2 rounded border  disabled:opacity-50"
             onClick={() => table.setPageIndex(table.getPageCount() - 1)}
             disabled={!table.getCanNextPage()}
           >
@@ -472,7 +525,7 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
           <Input
             type="number"
             placeholder="Page"
-            className="w-16 px-2 py-1 border rounded text-sm"
+            className="w-16 px-2 py-1 text-sm"
             min="1"
             max={table.getPageCount()}
             defaultValue={table.getState().pagination.pageIndex + 1}
@@ -504,14 +557,14 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
       </div>
 
       <DocumentFormModal
-        modalRefForm={modalRefForm}
+        formModalRef={formModalRef}
         selectedDocument={selectedDocument}
         onUploadSuccess={fetchDocsMasterList}
       />
 
       {/* Modal for Document Upload */}
       <DocumentUploadModal
-        modalRefUpload={modalRefUpload}
+        uploadModalRef={uploadModalRef}
         selectedDocument={selectedDocument}
         onUploadSuccess={fetchDocsMasterList}
       />

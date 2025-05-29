@@ -53,8 +53,8 @@ const TaskView = () => {
     setLoadingTasks(true);
     try {
       const response = await getUserTasks(
-        userData.currentUserName,
-        userData.currentUserLogin,
+        userData.userName,
+        userData.userEmail,
         userData.clientURL
       );
 
@@ -69,7 +69,7 @@ const TaskView = () => {
           try {
             const imageData = await getEmployeeImage(
               task.ASSIGNED_EMP_NO,
-              userData.currentUserLogin,
+              userData.userEmail,
               userData.clientURL
             );
 
@@ -100,7 +100,7 @@ const TaskView = () => {
     } finally {
       setLoadingTasks(false);
     }
-  }, [userData.currentUserLogin, userData.currentUserName, userData.clientURL]);
+  }, [userData.userEmail, userData.userName, userData.clientURL]);
 
   useEffect(() => {
     fetchUserTasks();
@@ -124,9 +124,9 @@ const TaskView = () => {
       // Filter by assignment filter
       let assignmentMatch = true;
       if (assignmentFilter === "assignedByMe") {
-        assignmentMatch = task.CREATED_USER === userData.currentUserName;
+        assignmentMatch = task.CREATED_USER === userData.userName;
       } else if (assignmentFilter === "assignedToMe") {
-        assignmentMatch = task.ASSIGNED_USER === userData.currentUserName;
+        assignmentMatch = task.ASSIGNED_USER === userData.userName;
       }
 
       // Filter by search text: search in TASK_NAME and TASK_INFO (case-insensitive)
@@ -141,7 +141,7 @@ const TaskView = () => {
     statusFilter,
     assignmentFilter,
     globalFilter,
-    userData.currentUserName,
+    userData.userName,
   ]);
 
   // Sort tasks based on sortOrder.
@@ -189,12 +189,12 @@ const TaskView = () => {
         taskStatus: status,
         statusDateTime: date || formatDateTime(new Date()),
         reason: remarks,
-        userName: userData.currentUserName,
+        userName: userData.userName,
       };
 
       const updateResponse = await updateUserTasks(
         updateUserTasksPayload,
-        userData.currentUserLogin,
+        userData.userEmail,
         userData.clientURL
       );
     } catch (error) {
@@ -208,7 +208,7 @@ const TaskView = () => {
     try {
       const transferUserTasksPayload = {
         taskID: selectedTask.TASK_ID,
-        userName: userData.currentUserName,
+        userName: userData.userName,
         notCompletionReason: transferTaskData.NotCompletionReason,
         subject: selectedTask.TASK_NAME,
         details: selectedTask.TASK_INFO,
@@ -222,7 +222,7 @@ const TaskView = () => {
 
       const transferUserTasksResponse = await transferUserTasks(
         transferUserTasksPayload,
-        userData.currentUserLogin,
+        userData.userEmail,
         userData.clientURL
       );
     } catch (error) {
@@ -240,21 +240,21 @@ const TaskView = () => {
 
   const getButtons = (task) => {
     if (task.STATUS === "NEW")
-      if (task.ASSIGNED_USER === userData.currentUserName) {
+      if (task.ASSIGNED_USER === userData.userName) {
         return (
           <Button onClick={() => handleAcceptAndDeclineTask(task)}>
             Accept / Decline
           </Button>
         );
-      } else if (task.CREATED_USER === userData.currentUserName) {
+      } else if (task.CREATED_USER === userData.userName) {
         return <Button onClick={() => handleUpdateTask(task)}>Update</Button>;
       }
 
     if (task.STATUS === "ACCEPTED") {
-      if (task.ASSIGNED_USER === userData.currentUserName) {
+      if (task.ASSIGNED_USER === userData.userName) {
         return <Button onClick={() => handleUpdateTask(task)}>Update</Button>;
       }
-      if (task.CREATED_USER === userData.currentUserName) {
+      if (task.CREATED_USER === userData.userName) {
         return (
           <>
             <Button onClick={() => handleUpdateTask(task)}>Update</Button>
@@ -368,18 +368,18 @@ const TaskView = () => {
                       </div>
                       <div className="flex justify-between items-start gap-1 w-full">
                         <div className="flex-1">
-                          {userData.currentUserName.toUpperCase() ===
+                          {userData.userName.toUpperCase() ===
                           task.ASSIGNED_USER.toUpperCase() ? (
                             <>
                               {/* When current user is the ASSIGNED_USER, display the CREATED_USER */}
                               <span className="text-xs font-medium text-gray-500 leading-none flex items-center gap-1">
                                 {task.CREATED_USER.toUpperCase() ===
-                                userData.currentUserName.toUpperCase()
+                                userData.userName.toUpperCase()
                                   ? "Self Assigned" // Both created and assigned by current user
                                   : "Assigned to Me"}{" "}
                                 {/* Current user is the assignee but not the creator */}
                                 {task.CREATED_USER.toUpperCase() ===
-                                userData.currentUserName.toUpperCase() ? (
+                                userData.userName.toUpperCase() ? (
                                   <IterationCwIcon className="h-4 w-4 text-indigo-500" />
                                 ) : (
                                   <ArrowDownLeft className="h-4 w-4 text-teal-500" />
@@ -389,7 +389,7 @@ const TaskView = () => {
                                 {capitalizeFirstLetter(task.CREATED_USER)}
                               </h2>
                             </>
-                          ) : userData.currentUserName.toUpperCase() ===
+                          ) : userData.userName.toUpperCase() ===
                             task.CREATED_USER.toUpperCase() ? (
                             <>
                               {/* When current user is the creator but not the assignee, show the assigned user */}

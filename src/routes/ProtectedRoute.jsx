@@ -4,8 +4,11 @@ import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
 const ProtectedRoute = () => {
-    const { auth } = useAuth();
-    return auth.token ? <Outlet /> : <Navigate to="/login" replace />;
+  const { userData, loading } = useAuth();
+
+  if (loading) return null;
+
+  return userData?.userEmail ? <Outlet /> : <Navigate to="/login" replace />;
 };
 
 export default ProtectedRoute;

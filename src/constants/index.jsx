@@ -12,7 +12,7 @@ import {
   Users,
 } from "lucide-react";
 
-export const navbarLinks = [
+export const getNavbarLinks = (isAdmin) => [
   {
     title: "Main",
     links: [
@@ -21,11 +21,15 @@ export const navbarLinks = [
         icon: Home,
         path: "/",
       },
-      {
-        label: "Teams",
-        icon: Users,
-        path: "/teams",
-      },
+      ...(isAdmin
+        ? [
+            {
+              label: "Teams",
+              icon: Users,
+              path: "/teams",
+            },
+          ]
+        : []),
       {
         label: "Categories",
         icon: LayoutGrid,
@@ -68,40 +72,49 @@ export const navbarLinks = [
       },
     ],
   },
-  {
-    title: "Access Control",
-    links: [
-      {
-        label: "User Administration",
-        icon: ShieldUser,
-        children: [
-          {
-            label: "User Role",
-            icon: LibraryBig,
-            path: "/user-role",
-          },
-          {
-            label: "User Access Rights",
-            icon: LibraryBig,
-            path: "/user-access-rights",
-          },
-          {
-            label: "Role Access Rights",
-            icon: LibraryBig,
-            path: "/role-access-rights",
-          },
-          {
-            label: "Category Access",
-            icon: LibraryBig,
-            path: "/category-access",
-          },
-        ],
-      },
-      {
-        label: "Category Access Rights",
-        icon: LibraryBig,
-        path: "/category-list",
-      },
-    ],
-  },
+  ...(isAdmin
+    ? [
+        {
+          title: "Access Control",
+          links: [
+            {
+              label: "User Administration",
+              icon: ShieldUser,
+              children: [
+                {
+                  label: "Users",
+                  icon: LibraryBig,
+                  path: "/users",
+                },
+                {
+                  label: "User Role",
+                  icon: LibraryBig,
+                  path: "/user-role",
+                },
+                {
+                  label: "User Access Rights",
+                  icon: LibraryBig,
+                  path: "/user-access-rights",
+                },
+                {
+                  label: "Role Access Rights",
+                  icon: LibraryBig,
+                  path: "/role-access-rights",
+                },
+                {
+                  label: "Category Access",
+                  icon: LibraryBig,
+                  path: "/category-access",
+                },
+              ],
+            },
+            {
+              label: "Category Access Rights",
+              icon: LibraryBig,
+              path: "/category-list",
+            },
+          ],
+        },
+      ]
+    : []),
 ];

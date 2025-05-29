@@ -1,13 +1,15 @@
 import GlobalSearchInput from "@/components/GlobalSearchInput";
+import { useToast } from "@/hooks/use-toast";
 import { useEffect, useState } from "react";
 import { BarLoader } from "react-spinners";
 import TeamProfileCard from "../components/TeamProfileCard";
 import { useAuth } from "../contexts/AuthContext";
-import { getAllDmsActiveUser } from "../services/dashboardService";
 import { getEmployeeImage } from "../services/employeeService";
+import { callSoapService } from "@/services/callSoapService";
 
 const TeamsPage = () => {
   const { userData } = useAuth();
+  const { toast } = useToast();
 
   const [usersData, setUsersData] = useState([]);
   const [globalFilter, setGlobalFilter] = useState("");
@@ -16,11 +18,18 @@ const TeamsPage = () => {
   useEffect(() => {
     const fetchUsersAndImages = async () => {
       try {
-        const userDetails = await getAllDmsActiveUser(
-          "",
-          userData.currentUserLogin,
-          userData.clientURL
+        const payloadUserName = userData.isAdmin ? "" : userData.userName;
+        
+        const payload = {
+          UserName: payloadUserName,
+        };
+
+        const userDetails = await callSoapService(
+          userData.clientURL,
+          "DMS_Get_All_ActiveUsers",
+          payload
         );
+
         let usersArray = [];
 
         if (userDetails && Array.isArray(userDetails)) {
@@ -32,10 +41,14 @@ const TeamsPage = () => {
         const usersWithImages = await Promise.all(
           usersArray.map(async (user) => {
             try {
-              const imageData = await getEmployeeImage(
-                user.emp_no,
-                userData.currentUserLogin,
-                userData.clientURL
+              const payload = {
+                EmpNo: user.emp_no,
+              };
+
+              const imageData = await callSoapService(
+                userData.clientURL,
+                "getpic_bytearray",
+                payload
               );
 
               return {
@@ -61,13 +74,17 @@ const TeamsPage = () => {
         setUsersData(usersWithImages);
       } catch (error) {
         console.error("Failed to fetch users:", error);
+        toast({
+          variant: "destructive",
+          title: error,
+        });
       } finally {
         setLoading(false);
       }
     };
 
     fetchUsersAndImages();
-  }, [userData.currentUserLogin]);
+  }, [userData.userEmail]);
 
   const filteredUsersData = usersData.filter((user) => {
     const search = globalFilter.toLowerCase();

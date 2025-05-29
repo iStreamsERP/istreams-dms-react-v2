@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
+import { callSoapService } from "@/services/callSoapService";
 import { getDashboardOverallSummary } from "@/services/dashboardService";
 import {
   CheckCircle,
@@ -12,7 +13,7 @@ import { useEffect, useState } from "react";
 
 const DocumentSummaryCard = ({ daysCount = 30 }) => {
   const [summaryData, setSummaryData] = useState(null);
-  const { userData, auth } = useAuth();
+  const { userData } = useAuth();
 
   // Fetch dashboard summary data
   useEffect(() => {
@@ -20,14 +21,20 @@ const DocumentSummaryCard = ({ daysCount = 30 }) => {
     const fetchSummary = async () => {
       try {
         if (!userData) return;
+
+        const payloadForTheUser = userData.isAdmin
+          ? ""
+          : `${userData.userName}`;
+
         const payload = {
           NoOfDays: daysCount,
-          ForTheUser: `${auth.isAdmin ? "" : userData.currentUserName}`,
+          ForTheUser: payloadForTheUser,
         };
-        const response = await getDashboardOverallSummary(
-          payload,
-          userData.currentUserLogin,
-          userData.clientURL
+
+        const response = await callSoapService(
+          userData.clientURL,
+          "DMS_GetDashboard_OverallSummary",
+          payload
         );
 
         const summaryObj = response.reduce((acc, item) => {

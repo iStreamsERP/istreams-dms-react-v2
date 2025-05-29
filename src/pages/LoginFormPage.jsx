@@ -1,23 +1,22 @@
 import logoDark from "@/assets/logo-dark.png";
 import logoLight from "@/assets/logo-light.png";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/contexts/AuthContext";
-import { Eye, EyeOff, Loader2, MailOpen } from "lucide-react";
-import { useCallback, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { verifyauthentication } from "../services/authenticationService";
-import { getDefaultCompanyName } from "../services/dmsService";
-import {
-  getEmployeeImage,
-  getEmployeeNameAndId,
-} from "../services/employeeService";
-import { doConnectionPublic, getServiceURL } from "../services/publicService";
-import { getNameFromEmail } from "../utils/emailHelpers";
-import { Checkbox } from "@/components/ui/checkbox";
-import Lottie from "react-lottie";
 import animationData from "@/lotties/crm-animation-lotties.json";
+import { callSoapService } from "@/services/callSoapService";
+import { Eye, EyeOff, Loader2, MailOpen } from "lucide-react";
+import { useCallback, useState } from "react";
+import Lottie from "react-lottie";
+import { Link, useNavigate } from "react-router-dom";
+import { getNameFromEmail } from "../utils/emailHelpers";
+
+// Use the proxy path for the public service.
+const PUBLIC_SERVICE_URL = import.meta.env.VITE_SOAP_ENDPOINT;
+const DEFAULT_AVATAR_URL =
+  "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTbBa24AAg4zVSuUsL4hJnMC9s3DguLgeQmZA&s";
 
 const LoginFormPage = () => {
   const navigate = useNavigate();
@@ -27,6 +26,7 @@ const LoginFormPage = () => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -56,85 +56,129 @@ const LoginFormPage = () => {
         return;
       }
 
+      let userName = "";
+      let clientURL = "";
+
+      const doConnectionPayload = {
+        LoginUserName: email,
+      };
+
+localStorage.setItem("doConnectionPayload", JSON.stringify(doConnectionPayload));
       try {
         // Step 1: Connect to public service.
-        const publicConnection = await doConnectionPublic(email);
-        if (publicConnection === "Invalid domain on Client Connection Data") {
-          setError(publicConnection);
-          setLoading(false);
-          return;
-        }
-
-        // Step 2: Retrieve dynamic client URL.
-        const clientURL = await getServiceURL(email);
-        if (!clientURL || !clientURL.startsWith("http")) {
-          setError("Failed to retrieve a valid client URL.");
-          setLoading(false);
-          return;
-        }
-
-        // Step 2: Verify authentication.
-        const userName = getNameFromEmail(email);
-        const userDetails = { User: userName, Pass: password };
-        const authentication = await verifyauthentication(
-          userDetails,
-          email,
-          clientURL
+        const publicDoConnectionResponse = await callSoapService(
+          PUBLIC_SERVICE_URL,
+          "doConnection",
+          doConnectionPayload
         );
 
-        if (authentication !== "Authetication passed") {
-          setError(authentication);
-          setLoading(false);
-          return;
+        if (publicDoConnectionResponse === "SUCCESS") {
+          // Step 2: Get client URL.
+          clientURL = await callSoapService(
+            PUBLIC_SERVICE_URL,
+            "GetServiceURL",
+            doConnectionPayload
+          );
+
+          const clientDoConnectionResponse = await callSoapService(
+            clientURL,
+            "doConnection",
+            doConnectionPayload
+          );
+
+          if (clientDoConnectionResponse === "SUCCESS") {
+            // Step 1.1: Verify authentication.
+            userName = getNameFromEmail(email);
+
+            const authenticationPayload = {
+              username: userName,
+              password: password,
+            };
+
+            const authenticationResponse = await callSoapService(
+              clientURL,
+              "verifyauthentication",
+              authenticationPayload
+            );
+
+            if (authenticationResponse === "Authetication passed") {
+              // Step 1.2: Authentication passed, proceed to get employee details.
+              let employeeNo = "";
+              let employeeImage = null;
+
+              const clientEmpDetailsPayload = {
+                userfirstname: userName,
+              };
+
+              const getClientEmpDetails = await callSoapService(
+                clientURL,
+                "getemployeename_and_id",
+                clientEmpDetailsPayload
+              );
+
+              employeeNo = getClientEmpDetails[0]?.EMP_NO;
+
+              if (employeeNo) {
+                const getEmployeeImagePayload = {
+                  EmpNo: employeeNo,
+                };
+
+                const employeeImageResponse = await callSoapService(
+                  clientURL,
+                  "getpic_bytearray",
+                  getEmployeeImagePayload
+                );
+
+                employeeImage = employeeImageResponse
+                  ? `data:image/jpeg;base64,${employeeImageResponse}`
+                  : DEFAULT_AVATAR_URL;
+              }
+
+              const organizationPayload = {
+                CompanyCode: 1,
+                BranchCode: 1,
+              };
+
+              const getOrganization = await callSoapService(
+                clientURL,
+                "General_Get_DefaultCompanyName",
+                organizationPayload
+              );
+
+              const isAdminPayload = {
+                UserName: getClientEmpDetails[0]?.USER_NAME,
+              };
+
+              const isAdminResponse = await callSoapService(
+                clientURL,
+                "DMS_Is_Admin_User",
+                isAdminPayload
+              );
+
+              let isAdmin = isAdminResponse === "Yes";
+
+              const payload = {
+                organizationName: getOrganization,
+                userEmail: email,
+                userName: getClientEmpDetails[0]?.USER_NAME,
+                userEmployeeNo: getClientEmpDetails[0]?.EMP_NO,
+                userAvatar: employeeImage,
+                clientURL: clientURL,
+                isAdmin,
+              };
+
+              login(payload, rememberMe);
+
+              navigate("/");
+            } else {
+              setError(authenticationResponse);
+            }
+          } else {
+            setError(clientDoConnectionResponse);
+          }
+        } else {
+          setError(publicDoConnectionResponse);
         }
-
-        // Optionally update userData with the client URL immediately.
-        setUserData((prev) => ({ ...prev, clientURL: clientURL }));
-
-        const employeeData = await getEmployeeNameAndId(
-          userName,
-          email,
-          clientURL
-        );
-
-        if (!employeeData || !employeeData.length) {
-          setError("Employee details not found.");
-          setLoading(false);
-          return;
-        }
-
-        const empNo = employeeData[0].EMP_NO;
-
-        let employeeImage = null;
-        if (empNo) {
-          employeeImage = await getEmployeeImage(empNo, email, clientURL);
-        }
-
-        const organization = await getDefaultCompanyName("", email, clientURL);
-
-        const isAdmin = true;
-
-        const payload = {
-          token: "dummy-token",
-          email,
-          organization: organization,
-          currentUserLogin: email,
-          currentUserName: employeeData[0].USER_NAME,
-          currentUserEmpNo: empNo,
-          currentUserImageData:
-            employeeImage !== null
-              ? `data:image/jpeg;base64,${employeeImage}`
-              : "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTbBa24AAg4zVSuUsL4hJnMC9s3DguLgeQmZA&s",
-
-          clientURL: clientURL,
-          isAdmin,
-        };
-
-        // Call login from context, passing rememberMe so AuthContext
-        // knows whether to persist in localStorage or sessionStorage
-        login(payload, rememberMe);
-
-        navigate("/");
       } catch (err) {
         console.error("Login error:", err);
         setError("Login failed. Please try again.");
@@ -167,11 +211,11 @@ const LoginFormPage = () => {
 
         <div>
           <blockquote className="space-y-2">
-           <p className="text-lg">
-  &ldquo;Manage your documents efficiently and streamline your
-  business operations with our powerful Document Management System.&rdquo;
-</p>
-
+            <p className="text-lg">
+              &ldquo;Manage your documents efficiently and streamline your
+              business operations with our powerful Document Management
+              System.&rdquo;
+            </p>
 
             <footer className="text-sm text-gray-400">
               - iStreams ERP Solutions

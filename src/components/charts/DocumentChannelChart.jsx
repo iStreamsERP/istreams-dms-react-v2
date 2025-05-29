@@ -14,28 +14,30 @@ import { getDashboardChannelSummary } from "../../services/dashboardService";
 
 const DocumentChannelChart = ({ daysCount = 30 }) => {
   const [channelData, setChannelData] = useState([]);
-  const { userData, auth } = useAuth();
+  const { userData } = useAuth();
 
   const COLORS = ["#6366F1", "#8B5CF6", "#EC4899", "#10B981", "#F59E0B"];
 
   useEffect(() => {
     const fetchData = async () => {
       try {
+         const payloadForTheUser = userData.isAdmin ? "" : `${userData.userName}`;
+
         const payload = {
           NoOfDays: daysCount,
-          ForTheUser: `${auth.isAdmin ? "" : userData.currentUserName}`,
+          ForTheUser: payloadForTheUser,
         };
 
         const data = await getDashboardChannelSummary(
           payload,
-          userData.currentUserLogin,
+          userData.userEmail,
           userData.clientURL
         );
 
         const formattedData = data.map((item) => ({
           Name:
             item.CHANNEL_SOURCE === " "
-              ? userData.organization
+              ? userData.organizationName
               : item.CHANNEL_SOURCE,
           Counts: Number(item.total_count) || 0,
         }));

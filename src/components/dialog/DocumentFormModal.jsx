@@ -1,11 +1,3 @@
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -36,21 +28,23 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { updateDmsVerifiedBy } from "../../services/dmsService";
-import staticCategoryData from "../../staticCategoryData";
 import { convertServiceDate } from "../../utils/dateUtils";
 import DocumentPreview from "../DocumentPreview";
 import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
 import RejectModal from "./RejectModal";
+import { callSoapService } from "@/services/callSoapService";
 
 const DocumentFormModal = ({
-  modalRefForm,
+  formModalRef,
   selectedDocument,
   docMode,
   onSuccess,
   onUploadSuccess,
 }) => {
   const { userData } = useAuth();
+  const { toast } = useToast();
+  const rejectModalRef = useRef(null);
 
   // Centralized initial form state
   const initialFormState = {
@@ -61,7 +55,7 @@ const DocumentFormModal = ({
     DOC_RELATED_TO: "",
     DOC_RELATED_CATEGORY: "",
     DOC_REF_VALUE: "",
-    USER_NAME: userData.currentUserName,
+    USER_NAME: userData.userName,
     COMMENTS: "",
     DOC_TAGS: "",
     FOR_THE_USERS: "",
@@ -69,27 +63,34 @@ const DocumentFormModal = ({
     REF_TASK_ID: 0,
   };
 
-  const { toast } = useToast();
-  const modalRefReject = useRef(null);
-
   const [formData, setFormData] = useState(initialFormState);
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [categoryData, setCategoryData] = useState([]);
-  const [dmsMasterData, setDmsMasterData] = useState([]);
-  const [isLoadingDocs, setIsLoadingDocs] = useState(false);
+  const [categoryList, setCategoryList] = useState([]);
+  // const [dmsMasterData, setDmsMasterData] = useState([]);
+
   const [existingDocs, setExistingDocs] = useState([]);
+  const [isLoadingDocs, setIsLoadingDocs] = useState(false);
   const [isReadOnly, setIsReadOnly] = useState(false);
+
   const [showRejectModal, setShowRejectModal] = useState(false);
 
   const [dynamicFields, setDynamicFields] = useState([]);
   const [isLoadingDynamicFields, setIsLoadingDynamicFields] = useState(false);
 
-  const [vendorData, setVendorData] = useState([]);
-  const [clientData, setClientData] = useState([]);
+  const [vendorData, setVendorData] = useState({
+    list: [],
+    selectedVendor: null,
+  });
+
+  const [clientData, setClientData] = useState({
+    list: [],
+    selectedClient: null,
+  });
 
   const [currentPreviewUrl, setCurrentPreviewUrl] = useState(null);
 
+  // Set the input fields based on the document mode
   useEffect(() => {
     if (docMode === "view" || docMode === "verify") {
       setIsReadOnly(true);
@@ -110,148 +111,139 @@ const DocumentFormModal = ({
         EXPIRY_DATE: convertedExpiryDate,
       }));
     }
-  }, [selectedDocument, userData.currentUserName]);
+  }, [selectedDocument, userData.userName]);
 
-  // Fetch category data on component mount
   useEffect(() => {
-    const fetchCategoryDataModel = async () => {
-      try {
-        const response = await getDataModelService(
-          {
-            DataModelName: "SYNM_DMS_DOC_CATEGORIES",
-            WhereCondition: "",
-            Orderby: "",
-          },
-          userData.currentUserLogin,
-          userData.clientURL
-        );
-
-        // Ensure the data is an array.
-        let data = Array.isArray(response) ? response : response.data;
-        if (!Array.isArray(data)) {
-          data = [data];
-        }
-        if (!data || data.length === 0) {
-          setCategoryData(staticCategoryData);
-        } else {
-          setCategoryData(data);
-        }
-      } catch (err) {
-        console.error("Error fetching data model:", err);
-      }
-    };
-    fetchCategoryDataModel();
+    fetchCategoryList();
+    // fetchDmsMasterDataModel();
   }, []);
 
-  // Fetch category data on component mount
-  useEffect(() => {
-    const fetchDmsMasterDataModel = async () => {
-      try {
-        const response = await getDataModelService(
-          {
-            DataModelName: "SYNM_DMS_MASTER",
-            WhereCondition: "",
-            Orderby: "",
-          },
-          userData.currentUserLogin,
-          userData.clientURL
-        );
-        setDmsMasterData(response);
-      } catch (err) {
-        console.error("Error fetching data model:", err);
-      }
-    };
-    fetchDmsMasterDataModel();
-  }, [userData.currentUserLogin]);
+  // Fetch category list on component mount
+  const fetchCategoryList = async () => {
+    try {
+      const payload = {
+        UserName: userData.userName,
+      };
+
+      const response = await callSoapService(
+        userData.clientURL,
+        "DMS_Get_Allowed_DocCategories",
+        payload
+      );
+
+      setCategoryList(response || []);
+    } catch (err) {
+      toast({
+        title: "Failed to load categories.",
+        description: err.message || "Error",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // const fetchDmsMasterDataModel = async () => {
+  //   try {
+  //     const response = await getDataModelService(
+  //       {
+  //         DataModelName: "SYNM_DMS_MASTER",
+  //         WhereCondition: "",
+  //         Orderby: "",
+  //       },
+  //       userData.userEmail,
+  //       userData.clientURL
+  //     );
+  //     setDmsMasterData(response);
+  //   } catch (err) {
+  //     console.error("Error fetching data model:", err);
+  //   }
+  // };
 
   // Fetch existing documents and categories
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!selectedDocument?.REF_SEQ_NO) return;
 
+  useEffect(() => {
+    fetchExistingDocument();
+  }, [selectedDocument?.REF_SEQ_NO, userData.userEmail]);
+
+  const fetchExistingDocument = async () => {
+    if (!selectedDocument?.REF_SEQ_NO) return;
+    try {
       setIsLoadingDocs(true);
+      const payload = {
+        DataModelName: "SYNM_DMS_DETAILS",
+        WhereCondition: `REF_SEQ_NO = ${selectedDocument.REF_SEQ_NO}`,
+        Orderby: "",
+      };
 
-      try {
-        // Fetch existing documents
-        const docsResponse = await getDataModelService(
-          {
-            DataModelName: "SYNM_DMS_DETAILS",
-            WhereCondition: `REF_SEQ_NO = ${selectedDocument.REF_SEQ_NO}`,
-            Orderby: "",
-          },
-          userData.currentUserLogin,
-          userData.clientURL
-        );
+      const response = await callSoapService(
+        userData.clientURL,
+        "DataModel_GetData",
+        payload
+      );
 
-        // Handle different response formats
-        const receivedDocs = Array.isArray(docsResponse)
-          ? docsResponse
-          : docsResponse?.Data || [];
-
-        setExistingDocs(receivedDocs);
-      } catch (err) {
-        console.error("Fetch error:", err);
-        // setFetchError("Failed to load documents");
-      } finally {
-        setIsLoadingDocs(false);
-      }
-    };
-
-    fetchData();
-  }, [selectedDocument?.REF_SEQ_NO, userData.currentUserLogin]);
+      setExistingDocs(response || []);
+    } catch (err) {
+      toast({
+        title: "Failed to fetch existing documents.",
+        description: err.message || "Error",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingDocs(false);
+    }
+  };
 
   useEffect(() => {
-    const loadInitialDynamicFields = async () => {
-      if (selectedDocument?.DOC_RELATED_CATEGORY) {
-        try {
-          setIsLoadingDynamicFields(true);
-          const payload = {
-            SQLQuery: `SELECT INCLUDE_CUSTOM_COLUMNS FROM SYNM_DMS_DOC_CATEGORIES WHERE CATEGORY_NAME = '${selectedDocument.DOC_RELATED_CATEGORY}'`,
-          };
-
-          const response = await getDataModelFromQueryService(
-            payload,
-            userData.currentUserLogin,
-            userData.clientURL
-          );
-
-          const raw = Array.isArray(response) ? response : response?.Data || [];
-          const commaText = raw[0]?.INCLUDE_CUSTOM_COLUMNS || "";
-          const fields = commaText
-            .split(",")
-            .map((col) => col.trim())
-            .filter((col) => col !== "")
-            .map((col) => ({
-              COLUMN_NAME: col,
-              COLUMN_LABEL: col
-                .replace(/_/g, " ")
-                .replace(/\b\w/g, (c) => c.toUpperCase()),
-              INPUT_TYPE: "text",
-              REQUIRED: true,
-            }));
-
-          setDynamicFields(fields);
-
-          setFormData((prev) => ({
-            ...prev,
-            ...dynamicFields.reduce(
-              (acc, field) => ({
-                ...acc,
-                [field.COLUMN_NAME]: selectedDocument[field.COLUMN_NAME] || "",
-              }),
-              {}
-            ),
-          }));
-        } catch (error) {
-          console.error("Error loading initial dynamic fields:", error);
-          setDynamicFields([]);
-        } finally {
-          setIsLoadingDynamicFields(false);
-        }
-      }
-    };
     loadInitialDynamicFields();
   }, [selectedDocument?.DOC_RELATED_CATEGORY]);
+
+  const loadInitialDynamicFields = async () => {
+    if (selectedDocument?.DOC_RELATED_CATEGORY) {
+      try {
+        setIsLoadingDynamicFields(true);
+        const payload = {
+          SQLQuery: `SELECT INCLUDE_CUSTOM_COLUMNS FROM SYNM_DMS_DOC_CATEGORIES WHERE CATEGORY_NAME = '${selectedDocument.DOC_RELATED_CATEGORY}'`,
+        };
+
+        const response = await callSoapService(
+          userData.clientURL,
+          "DataModel_GetDataFrom_Query",
+          payload
+        );
+
+        const commaText = response[0]?.INCLUDE_CUSTOM_COLUMNS || "";
+        const fields = commaText
+          .split(",")
+          .map((col) => col.trim())
+          .filter((col) => col !== "")
+          .map((col) => ({
+            COLUMN_NAME: col,
+            COLUMN_LABEL: col
+              .replace(/_/g, " ")
+              .replace(/\b\w/g, (c) => c.toUpperCase()),
+            INPUT_TYPE: "text",
+            REQUIRED: true,
+          }));
+
+        setDynamicFields(fields);
+
+        setFormData((prev) => ({
+          ...prev,
+          ...dynamicFields.reduce(
+            (acc, field) => ({
+              ...acc,
+              [field.COLUMN_NAME]: selectedDocument[field.COLUMN_NAME] || "",
+            }),
+            {}
+          ),
+        }));
+      } catch (error) {
+        console.error("Error loading initial dynamic fields:", error);
+        setDynamicFields([]);
+      } finally {
+        setIsLoadingDynamicFields(false);
+      }
+    }
+  };
 
   const fetchVendorData = useCallback(async () => {
     try {
@@ -261,11 +253,14 @@ const DocumentFormModal = ({
 
       const response = await getDataModelFromQueryService(
         payload,
-        userData.currentUserLogin,
+        userData.userEmail,
         userData.clientURL
       );
 
-      setVendorData(response || []);
+      setVendorData({
+        list: response || [],
+        selectedVendor: null,
+      });
     } catch (error) {
       toast({
         title: "Error",
@@ -273,7 +268,7 @@ const DocumentFormModal = ({
         variant: "destructive",
       });
     }
-  }, [userData.currentUserLogin, userData.clientURL, toast]);
+  }, [userData.userEmail, userData.clientURL, toast]);
 
   const fetchClientData = useCallback(async () => {
     try {
@@ -283,19 +278,22 @@ const DocumentFormModal = ({
 
       const response = await getDataModelFromQueryService(
         payload,
-        userData.currentUserLogin,
+        userData.userEmail,
         userData.clientURL
       );
 
-      setClientData(response || []);
+      setClientData({
+        list: response || [],
+        selectedVendor: null,
+      });
     } catch (error) {
       toast({
-        title: "Error",
+        title: "Failed to ",
         description: error,
         variant: "destructive",
       });
     }
-  }, [userData.currentUserLogin, userData.clientURL, toast]);
+  }, [userData.userEmail, userData.clientURL, toast]);
 
   useEffect(() => {
     const hasVendorField = dynamicFields.some(
@@ -322,7 +320,7 @@ const DocumentFormModal = ({
       };
       const response = await getDataModelFromQueryService(
         payload,
-        userData.currentUserLogin,
+        userData.userEmail,
         userData.clientURL
       );
 
@@ -386,20 +384,77 @@ const DocumentFormModal = ({
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+
+    setFormData((prev) => {
+      // start with whatever field just changed
+      const next = { ...prev, [name]: value };
+
+      // if it’s a vendor field, find that vendor and sync both ID+NAME
+      if (name === "X_VENDOR_ID" || name === "X_VENDOR_NAME") {
+        const selectedVendor =
+          name === "X_VENDOR_ID"
+            ? vendorData.list.find((v) => v.VENDOR_ID === Number(value))
+            : vendorData.list.find((v) => v.VENDOR_NAME === value);
+
+        next.X_VENDOR_ID = selectedVendor?.VENDOR_ID?.toString() || "";
+        next.X_VENDOR_NAME = selectedVendor?.VENDOR_NAME || "";
+      }
+
+      // if it’s a client field, do the same for client
+      if (name === "X_CLIENT_ID" || name === "X_CLIENT_NAME") {
+        const selectedClient =
+          name === "X_CLIENT_ID"
+            ? clientData.list.find((c) => c.CLIENT_ID === Number(value))
+            : clientData.list.find((c) => c.CLIENT_NAME === value);
+
+        next.X_CLIENT_ID = selectedClient?.CLIENT_ID?.toString() || "";
+        next.X_CLIENT_NAME = selectedClient?.CLIENT_NAME || "";
+      }
+
+      return next;
+    });
+
+    // also keep your vendorData.selectedVendor / clientData.selectedClient in sync
+    if (name === "X_VENDOR_ID" || name === "X_VENDOR_NAME") {
+      const selectedVendor =
+        name === "X_VENDOR_ID"
+          ? vendorData.list.find((v) => v.VENDOR_ID === Number(value))
+          : vendorData.list.find((v) => v.VENDOR_NAME === value);
+
+      setVendorData((prev) => ({
+        ...prev,
+        selectedVendor: selectedVendor || null,
+      }));
+    }
+
+    if (name === "X_CLIENT_ID" || name === "X_CLIENT_NAME") {
+      const selectedClient =
+        name === "X_CLIENT_ID"
+          ? clientData.list.find((c) => c.CLIENT_ID === Number(value))
+          : clientData.list.find((c) => c.CLIENT_NAME === value);
+
+      setClientData((prev) => ({
+        ...prev,
+        selectedClient: selectedClient || null,
+      }));
+    }
+
+    // clear any validation error
     setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
   const handleViewDocs = async (selectedDocs) => {
     try {
-      const response = await getDataModelService(
-        {
-          DataModelName: "SYNM_DMS_DETAILS",
-          WhereCondition: `REF_SEQ_NO = ${selectedDocs.REF_SEQ_NO} AND SERIAL_NO = ${selectedDocs.SERIAL_NO}`,
-          Orderby: "",
-        },
-        userData.currentUserLogin,
-        userData.clientURL
+      const payload = {
+        DataModelName: "SYNM_DMS_DETAILS",
+        WhereCondition: `REF_SEQ_NO = ${selectedDocs.REF_SEQ_NO} AND SERIAL_NO = ${selectedDocs.SERIAL_NO}`,
+        Orderby: "",
+      };
+
+      const response = await callSoapService(
+        userData.clientURL,
+        "DataModel_GetData",
+        payload
       );
 
       if (!response?.length) {
@@ -456,19 +511,19 @@ const DocumentFormModal = ({
 
   const handleVerifyApprove = async () => {
     try {
-      const verifyDmsPayload = {
-        userName: userData.currentUserName,
-        refSeqNo: selectedDocument.REF_SEQ_NO,
+      const payload = {
+        USER_NAME: userData.userName,
+        REF_SEQ_NO: selectedDocument.REF_SEQ_NO,
       };
 
-      const verifyResponse = await updateDmsVerifiedBy(
-        verifyDmsPayload,
-        userData.currentUserLogin,
-        userData.clientURL
+      const response = await callSoapService(
+        userData.clientURL,
+        "DMS_Update_VerifiedBy",
+        payload
       );
 
-      if (verifyResponse === "SUCCESS") {
-        onSuccess(selectedDocument.REF_SEQ_NO, userData.currentUserName);
+      if (response === "SUCCESS") {
+        onSuccess(selectedDocument.REF_SEQ_NO, userData.userName);
       }
     } catch (error) {
       console.error("Verification failed:", error);
@@ -481,15 +536,15 @@ const DocumentFormModal = ({
 
   // Once the RejectModal is mounted, open it automatically
   useEffect(() => {
-    if (showRejectModal && modalRefReject.current) {
-      modalRefReject.current.showModal();
+    if (showRejectModal && rejectModalRef.current) {
+      rejectModalRef.current.showModal();
     }
   }, [showRejectModal]);
 
   const canCurrentUserEdit = (doc) => {
     if (!doc) return "";
 
-    if (doc?.USER_NAME !== userData.currentUserName)
+    if (doc?.USER_NAME !== userData.userName)
       return "Access Denied:This document is created by another user.";
 
     const status = doc?.DOCUMENT_STATUS?.toUpperCase();
@@ -516,25 +571,25 @@ const DocumentFormModal = ({
     const formErrors = validateForm();
     if (Object.keys(formErrors).length > 0) {
       setErrors(formErrors);
-      return; // Do not submit if there are errors
+      return;
     }
     setIsSubmitting(true);
 
     try {
       const convertedDataModel = convertDataModelToStringData(
-        "synm_dms_master",
+        "SYNM_DMS_MASTER",
         formData
       );
 
       const payload = {
-        UserName: userData.currentUserLogin,
+        UserName: userData.userEmail,
         DModelData: convertedDataModel,
       };
 
-      const response = await saveDataService(
-        payload,
-        userData.currentUserLogin,
-        userData.clientURL
+      const response = await callSoapService(
+        userData.clientURL,
+        "DataModel_SaveData",
+        payload
       );
 
       // Reset form but retain the next reference number
@@ -545,7 +600,7 @@ const DocumentFormModal = ({
 
       if (onUploadSuccess) onUploadSuccess();
 
-      modalRefForm.current?.close();
+      formModalRef.current?.close();
       setFormData(initialFormState);
     } catch (error) {
       toast({
@@ -561,35 +616,37 @@ const DocumentFormModal = ({
   return (
     <>
       <dialog
-        ref={modalRefForm}
+        ref={formModalRef}
         id="document-form"
         name="document-form"
         className="relative"
       >
         <div
-          className="fixed inset-0 bg-black/50 z-40"
+          className="fixed inset-0 bg-black/50"
           aria-hidden="true"
           style={{ isolation: "isolate" }}
         />
 
         <div className="fixed inset-0 flex items-center justify-center p-4 z-50">
-          <div className="bg-white shadow-xl dark:bg-gray-800 text-gray-900 dark:text-gray-100 p-6 rounded-lg w-full max-w-5xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between gap-2 mb-4">
-              <h3 className="text-xl font-semibold">
+          <div className="bg-white shadow-xl dark:bg-slate-950 text-gray-900 dark:text-gray-100 p-6 rounded-lg w-full max-w-5xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold">
                 Reference ID:
-                <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm">
+                <span className="ml-2 px-2 py-0 bg-blue-100 text-blue-800 rounded-full text-sm">
                   {formData.REF_SEQ_NO === -1 ? "(New)" : formData.REF_SEQ_NO}
                 </span>
               </h3>
 
               <button
-                className="hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full btn-ghost"
-                onClick={() => modalRefForm.current.close()}
+                className="text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                onClick={() => formModalRef.current.close()}
                 type="button"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
+
+            <Separator className="my-4" />
 
             <form
               onSubmit={handleSubmit}
@@ -734,14 +791,14 @@ const DocumentFormModal = ({
                           disabled
                           className="text-gray-400 dark:text-gray-500"
                         >
-                          Select related to
+                          Select category
                         </option>
                         <optgroup label="Categories" className="font-semibold">
-                          {Array.isArray(categoryData) &&
-                            categoryData.map((category) =>
+                          {Array.isArray(categoryList) &&
+                            categoryList.map((category, index) =>
                               category?.CATEGORY_NAME ? (
                                 <option
-                                  key={category.CATEGORY_NAME}
+                                  key={`${category.CATEGORY_NAME}-${index}`}
                                   value={category.CATEGORY_NAME}
                                 >
                                   {category.CATEGORY_NAME}
@@ -785,10 +842,10 @@ const DocumentFormModal = ({
                                 <option value="">
                                   Select {field.COLUMN_LABEL}
                                 </option>
-                                {vendorData.map((vendor) => (
+                                {vendorData.list.map((vendor) => (
                                   <option
                                     key={vendor.VENDOR_ID}
-                                    value={field.VENDOR_ID}
+                                    value={vendor.VENDOR_ID}
                                   >
                                     {vendor.VENDOR_ID}
                                   </option>
@@ -819,7 +876,7 @@ const DocumentFormModal = ({
                                 <option value="">
                                   Select {field.COLUMN_LABEL}
                                 </option>
-                                {vendorData.map((vendor) => (
+                                {vendorData.list.map((vendor) => (
                                   <option
                                     key={vendor.VENDOR_ID}
                                     value={vendor.VENDOR_NAME}
@@ -853,7 +910,7 @@ const DocumentFormModal = ({
                                 <option value="">
                                   Select {field.COLUMN_LABEL}
                                 </option>
-                                {clientData.map((client) => (
+                                {clientData.list.map((client) => (
                                   <option
                                     key={client.CLIENT_ID}
                                     value={client.CLIENT_ID}
@@ -887,7 +944,7 @@ const DocumentFormModal = ({
                                 <option value="">
                                   Select {field.COLUMN_LABEL}
                                 </option>
-                                {clientData.map((client, index) => (
+                                {clientData.list.map((client, index) => (
                                   <option
                                     key={`${client.CLIENT_ID}-${index}`}
                                     value={client.CLIENT_NAME}
@@ -1006,7 +1063,7 @@ const DocumentFormModal = ({
                       </div>
                       <span className="text-sm font-medium">
                         {formData.REF_SEQ_NO === -1
-                          ? userData.currentUserName
+                          ? userData.userName
                           : selectedDocument.USER_NAME}
                       </span>
                     </div>
@@ -1185,7 +1242,7 @@ const DocumentFormModal = ({
 
       {showRejectModal && (
         <RejectModal
-          modalRefReject={modalRefReject}
+          rejectModalRef={rejectModalRef}
           selectedDocument={selectedDocument}
           onClose={() => setShowRejectModal(false)}
         />

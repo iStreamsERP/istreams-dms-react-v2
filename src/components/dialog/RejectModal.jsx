@@ -3,7 +3,8 @@ import { updateRejectDmsDetails } from "../../services/dmsService";
 import { useAuth } from "../../contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
-const RejectModal = ({ modalRefReject, selectedDocument, onClose }) => {
+
+const RejectModal = ({ rejectModalRef, selectedDocument, onClose }) => {
   const { userData } = useAuth();
   const { toast } = useToast();
 
@@ -30,7 +31,7 @@ const RejectModal = ({ modalRefReject, selectedDocument, onClose }) => {
     try {
       const updateRejectPayload = {
         ref_Seq_No: selectedDocument?.REF_SEQ_NO,
-        currentUserName: userData?.currentUserName,
+        currentUserName: userData?.userName,
         documentDescription: selectedDocument?.DOCUMENT_DESCRIPTION,
         documentUserName: selectedDocument?.USER_NAME,
         rejectionRemarks: remarks,
@@ -38,13 +39,13 @@ const RejectModal = ({ modalRefReject, selectedDocument, onClose }) => {
 
       const rejectionResponse = await updateRejectDmsDetails(
         updateRejectPayload,
-        userData?.currentUserLogin,
+        userData?.userEmail,
         userData.clientURL
       );
 
       if (rejectionResponse) {
         alert("Document rejected successfully!");
-        modalRefReject?.current?.close();
+        rejectModalRef?.current?.close();
         setRemarks("");
       } else {
         setError("Failed to reject document. Please try again.");
@@ -60,7 +61,7 @@ const RejectModal = ({ modalRefReject, selectedDocument, onClose }) => {
 
   return (
     <dialog
-      ref={modalRefReject}
+      ref={rejectModalRef}
       id="reject-document"
       className="modal modal-bottom sm:modal-middle rounded-2xl bg-white dark:bg-gray-800 backdrop-blur-sm"
     >
