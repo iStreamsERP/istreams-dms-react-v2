@@ -96,11 +96,11 @@ const DocumentCard = memo(
     return (
       <Card className="col-span-2 md:col-span-2 lg:col-span-1">
         <CardContent className="p-4">
-          <div className="flex items-start justify-between gap-2 w-full mb-4">
+          <div className="flex items-start gap-2 w-full mb-4">
             <div className="bg-neutral-100 p-2 rounded-lg ">
               <FileSearch className="w-4 h-4 text-neutral-900" />
             </div>
-            <div className="flex justify-between items-start">
+            <div className="flex justify-between items-start gap-2 w-full">
               <div className="truncate">
                 <h2
                   className="text-lg font-semibold leading-tight mb-1 truncate w-full"
@@ -112,7 +112,7 @@ const DocumentCard = memo(
                   {doc.DOCUMENT_NO}
                 </p>
               </div>
-              <span className="text-xs badge badge-primary">
+              <span className="text-xs font-bold text-blue-600">
                 {doc.REF_SEQ_NO}
               </span>
             </div>
