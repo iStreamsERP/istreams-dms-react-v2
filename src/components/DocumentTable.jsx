@@ -108,7 +108,7 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
     }
   };
 
-  const canCurrentUserEdit = (doc) => {
+const canCurrentUserEdit = (doc) => {
     if (doc?.USER_NAME !== userData.userName)
       return "Access Denied: This document is created by another user.";
 
@@ -213,10 +213,10 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
             title={row.getValue("DOCUMENT_DESCRIPTION")}
           >
             <div>
-              <p className="text-[10px] font-semibold text-gray-500 truncate">
+              <p className="text-[10px] text-gray-500 truncate">
                 {row.original.DOCUMENT_NO}
               </p>
-              <p className="text-xs font-semibold truncate">
+              <p className="text-xs truncate">
                 {row.getValue("DOCUMENT_DESCRIPTION")}
               </p>
             </div>
@@ -233,7 +233,7 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
             title={row.getValue("USER_NAME")}
           >
             <div>
-              <p className="text-xs font-semibold truncate">
+              <p className="text-xs truncate">
                 {row.getValue("USER_NAME")}
               </p>
             </div>
@@ -245,7 +245,7 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
         accessorKey: "CHANNEL_SOURCE",
         cell: ({ row }) => (
           <p
-            className="text-xs font-semibold truncate"
+            className="text-xs truncate"
             style={{ width: 100 }}
             title={row.getValue("CHANNEL_SOURCE")}
           >
@@ -324,7 +324,7 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
       },
       {
         header: () => (
-          <p className="text-xs font-semibold text-gray-600 text-right w-full">
+          <p className="text-xs text-gray-600 text-right w-full">
             Docs
           </p>
         ),
@@ -453,7 +453,7 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
               table.getRowModel().rows.map((row) => (
                 <tr
                   key={row.original.REF_SEQ_NO}
-                  className="hover:bg-slate-200 cursor-pointer dark:hover:bg-slate-900"
+                  className="hover:bg-slate-200 dark:hover:bg-slate-900"
                 >
                   {row.getVisibleCells().map((cell) => (
                     <td

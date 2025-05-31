@@ -974,58 +974,67 @@ export default function TimeSheetPage() {
     return date > today;
   };
 
-  const handleComplete = (eventId, isChecked) => {
-    const event = events.find((e) => e.id === eventId);
-    if (!event) return;
+  const handleComplete = (taskId, isChecked) => {
+    // Find the task in events
+    const taskIndex = events.findIndex((e) => e.id === taskId);
+    if (taskIndex === -1) return;
 
-    alert(
-      isChecked
-        ? `Task "${event.TASK_NAME}" marked as Completed!`
-        : `Task "${event.TASK_NAME}" marked as Pending.`
-    );
+    // Create updated task
+    const updatedTask = {
+      ...events[taskIndex],
+      status: isChecked ? "Completed" : "Pending",
+    };
 
-    const updatedEvent = { ...event, isCompleted: isChecked };
+    // Update events state
+    const updatedEvents = [...events];
+    updatedEvents[taskIndex] = updatedTask;
+    setEvents(updatedEvents);
 
-    setEvents((prev) => prev.map((e) => (e.id === eventId ? updatedEvent : e)));
-
+    // Update timesheetsByDate
     const dateKey = formatDateKey(selectedDate);
     setTimesheetsByDate((prev) => ({
       ...prev,
-      [dateKey]: (prev[dateKey] || []).map((e) =>
-        e.id === eventId ? updatedEvent : e
-      ),
+      [dateKey]: updatedEvents.filter((e) => e.date === dateKey),
     }));
 
+    // Update tasks state
     setTasks((prevTasks) => {
-      const taskExists = prevTasks.some((t) => t.TASK_NAME === event.TASK_NAME);
+      const existingTaskIndex = prevTasks.findIndex(
+        (t) => t.TASK_ID === updatedTask.TASK_ID
+      );
 
-      if (isChecked) {
-        return taskExists
-          ? prevTasks.map((task) =>
-              task.TASK_NAME === event.TASK_NAME
-                ? { ...task, status: "Completed" }
-                : task
-            )
-          : [
-              ...prevTasks,
-              {
-                TASK_ID: event.TASK_ID,
-                TASK_NAME: event.TASK_NAME,
-                dmsNo: event.dmsNo,
-                status: "Completed",
-                PROJECT_NO: event.PROJECT_NO,
-              },
-            ];
-      } else {
-        return taskExists
-          ? prevTasks.map((task) =>
-              task.TASK_NAME === event.TASK_NAME
-                ? { ...task, status: "Pending" }
-                : task
-            )
-          : prevTasks;
+      if (existingTaskIndex >= 0) {
+        // Update existing task
+        return prevTasks.map((task, index) =>
+          index === existingTaskIndex
+            ? { ...task, status: updatedTask.status }
+            : task
+        );
+      } else if (isChecked) {
+        // Add new completed task
+        return [
+          ...prevTasks,
+          {
+            TASK_ID: updatedTask.TASK_ID,
+            TASK_NAME: updatedTask.TASK_NAME,
+            dmsNo: updatedTask.dmsNo,
+            status: "Completed",
+            PROJECT_NO: updatedTask.PROJECT_NO,
+          },
+        ];
       }
+      return prevTasks;
     });
+
+    // Update taskDetails if it's the current task
+    if (taskDetails.id === taskId) {
+      setTaskDetails((prev) => ({
+        ...prev,
+        status: updatedTask.status,
+      }));
+    }
+
+    alert(`Task "${updatedTask.TASK_NAME}" marked as ${updatedTask.status}`);
   };
 
   return (
@@ -1066,17 +1075,17 @@ export default function TimeSheetPage() {
       `}</style>
 
       <form>
-        <div className="flex flex-col md:flex-row">
+        <div className="flex flex-col md:flex-row w-full h-[80vh]">
           {/* Sidebar: Pending & Completed Tasks */}
-          <div className="w-full md:w-[20%] h-[70vh] text-xs overflow-y-scroll">
-            <div className="mt-4 mb-2 w-full sticky top-0 z-10 md:w-[100%]">
+          <div className="w-full md:w-[20%] h-full overflow-y-auto">
+            <div className="mt-4 mb-2 w-full sticky top-0 z-10">
               <h3 className="text-sm rounded font-bold bg-orange-100 text-center border text-black border-gray-300 p-2">
                 Pending Task
               </h3>
             </div>
             {tasks.filter((task) => task.status !== "Completed").length ===
             0 ? (
-              <div className="p-4 text-center text-gray-500">
+              <div className="p-4 text-center text-sm text-gray-500">
                 No pending tasks
               </div>
             ) : (
@@ -1091,13 +1100,13 @@ export default function TimeSheetPage() {
                   >
                     <div className="flex items-center gap-2">
                       <div className="w-3 h-3 rounded-full bg-blue-500 animate-pulse" />
-                      <p className="font-medium">{task.TASK_NAME}</p>
+                      <p className="font-medium text-sm">{task.TASK_NAME}</p>
                     </div>
                   </div>
                 ))
             )}
 
-            <div className="mt-4 mb-2 w-full sticky top-0 z-10 md:w-[100%]">
+            <div className="mt-4 mb-2 w-full sticky top-0 z-10">
               <h3 className="text-sm rounded font-bold bg-green-100 text-center border text-black border-gray-300 p-2">
                 Completed Task
               </h3>
@@ -1117,7 +1126,7 @@ export default function TimeSheetPage() {
                   >
                     <div className="flex items-center gap-2">
                       <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
-                      <p className="font-medium ">{task.TASK_NAME}</p>
+                      <p className="font-medium text-sm">{task.TASK_NAME}</p>
                     </div>
                   </div>
                 ))
@@ -1125,7 +1134,7 @@ export default function TimeSheetPage() {
           </div>
 
           {/* Main Content */}
-          <div className="w-full md:w-[80%] bg-transparent">
+          <div className="w-full bg-transparent h-full">
             <div className="flex border-b border-gray-300">
               <input
                 type="radio"
@@ -1168,13 +1177,13 @@ export default function TimeSheetPage() {
 
             {/* Timesheet Tab Content */}
             <div
-              className={`tab-content ${
+              className={`tab-content h-[calc(100%-40px)] ${
                 activeTab !== "timesheet-tab" ? "hidden" : ""
               }`}
             >
-              <div className="flex w-full flex-col md:flex-row">
-                <div className="flex-1 h-[70vh] overflow-y-scroll">
-                  <div className="rounded-xl w-[960px] overflow-x-scroll p-2 relative">
+              <div className="flex w-full h-full">
+                <div className="w-full h-full overflow-auto">
+                  <div className="rounded-xl w-full p-2 relative h-full">
                     <div className="flex items-center justify-between gap-2 mb-1">
                       <h2 className="text-xl tracking-wider font-bold">
                         Time Sheet -{" "}
@@ -1262,17 +1271,16 @@ export default function TimeSheetPage() {
                     </div>
 
                     <div className="flex mb-2">
-                      <div className="w-[100px]" />
-                      <p className="w-[100px] absolute text-center left-1 bg-gradient-to-r from-cyan-400 to-blue-600 text-white border border-blue-300 font-semibold text-xs p-1 rounded">
+                      <p className="w-[10%]  absolute text-center left-1 bg-gradient-to-r from-cyan-400 to-blue-600 text-white border border-blue-300 font-semibold text-xs p-1 rounded">
                         Time
                       </p>
-                      <div className="flex-1 grid grid-cols-4 gap-1">
+                      <div className="w-[100%] flex flex-row  gap-1 ml-[10%]">
                         {minutes.map((min, index) => {
                           const nextMin = minutes[index + 1] || "60";
                           return (
                             <div
                               key={min}
-                              className="text-center border border-gray-400 font-semibold text-xs p-1 rounded"
+                              className="text-center w-[100%] border border-gray-400 font-semibold text-xs p-1 rounded"
                             >
                               {min}m - {nextMin}m
                             </div>
@@ -1281,7 +1289,7 @@ export default function TimeSheetPage() {
                       </div>
                     </div>
 
-                    <div className="relative rounded-xl p-1">
+                    <div className="relative rounded-xl p-1 h-[calc(100%-50px)]">
                       {hours.map((hour) => (
                         <div
                           key={hour}
@@ -1293,11 +1301,11 @@ export default function TimeSheetPage() {
                           onDragOver={(e) => e.preventDefault()}
                           onDrop={(e) => handleDrop(e, hour)}
                         >
-                          <div className="w-[100px] flex items-center justify-center text-sm font-semibold text-gray-600">
+                          <div className="w-[10%] flex items-center justify-center text-sm font-semibold text-gray-600">
                             {formatTime(hour, "00")}
                           </div>
 
-                          <div className="flex-1 grid grid-cols-4 gap-1">
+                          <div className="w-[100%] grid grid-cols-4 gap-1 ">
                             {minutes.map((_, i) => (
                               <div
                                 key={i}
@@ -1316,7 +1324,7 @@ export default function TimeSheetPage() {
                             event.startMinute,
                             event.END_TIME,
                             event.endMinute
-                          ) <= 15; // Check if event is 15 minutes or less
+                          ) <= 15;
 
                         return blocks.map((block, blockIndex) => {
                           const isResizing =
@@ -1341,7 +1349,7 @@ export default function TimeSheetPage() {
                             `}
                               style={{
                                 top: `${block.top + 8}px`,
-                                left: `calc(100px + ${block.left}%)`,
+                                left: `calc(10% + ${block.left}%)`,
                                 width: `${block.width - 0.4}%`,
                                 height: `${block.height - 8}px`,
                                 transform: isResizing
@@ -1392,8 +1400,8 @@ export default function TimeSheetPage() {
                                   if (e.detail > 1) return;
                                 }}
                               >
-                                <div className="flex items-center gap-1">
-                                  <span className="text-xs font-semibold text-gray-900 truncate">
+                                <div className="flex items-center whitespace-wrap gap-1">
+                                  <span className="text-xs font-semibold  text-gray-900 truncate">
                                     {event.TASK_NAME}
                                   </span>
                                   {!isShortEvent && (
@@ -1440,16 +1448,6 @@ export default function TimeSheetPage() {
                                     className="hover:bg-red-100 rounded-full p-0.5 transition-all"
                                   />
                                 </button>
-                                <div className="flex items-center justify-center">
-                                  <input
-                                    type="checkbox"
-                                    className="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-blue-500 h-3 w-3"
-                                    checked={event.isCompleted}
-                                    onChange={(e) =>
-                                      handleComplete(event.id, e.target.checked)
-                                    }
-                                  />
-                                </div>
                               </div>
 
                               {/* Resize handles with improved visual feedback */}
@@ -1491,12 +1489,12 @@ export default function TimeSheetPage() {
 
             {/* Table Tab Content */}
             <div
-              className={`tab-content ${
+              className={`tab-content h-[calc(100%-40px)] ${
                 activeTab !== "table-tab" ? "hidden" : ""
               }`}
             >
-              <div className="h-[63vh] overflow-y-auto">
-                <table className="min-w-full ">
+              <div className="h-full overflow-auto">
+                <table className="min-w-full">
                   <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -1630,7 +1628,7 @@ export default function TimeSheetPage() {
         {/* Popup for Add/Edit Task */}
         {showPopup && (
           <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-4 w-full max-w-sm h-[480px] overflow-y-scroll">
+            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-4 w-full max-w-sm h-[80vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="font-bold text-sm">
                   {taskDetails.id ? "Update Task" : "Add Task"}
@@ -1904,27 +1902,40 @@ export default function TimeSheetPage() {
                   </div>
                 </div>
               </div>
-              <div className="flex gap-2 mt-8 justify-end">
-                {taskDetails.id && (
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2 justify-center">
+                  <input
+                    type="checkbox"
+                    className="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-blue-500 h-3 w-3"
+                    checked={taskDetails.status === "Completed"}
+                    onChange={(e) =>
+                      handleComplete(taskDetails.id, e.target.checked)
+                    }
+                  />
+                  <span className="text-sm">Click To Complete Task</span>
+                </div>
+                <div className="flex gap-2 mt-8 justify-end">
+                  {taskDetails.id && (
+                    <button
+                      className="px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600"
+                      onClick={() => handleDelete(taskDetails.id)}
+                    >
+                      Delete
+                    </button>
+                  )}
                   <button
-                    className="px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600"
-                    onClick={() => handleDelete(taskDetails.id)}
+                    className="px-3 py-1 border border-gray-300 text-xs rounded hover:bg-gray-100"
+                    onClick={() => setShowPopup(false)}
                   >
-                    Delete
+                    Cancel
                   </button>
-                )}
-                <button
-                  className="px-3 py-1 border border-gray-300 text-xs rounded hover:bg-gray-100"
-                  onClick={() => setShowPopup(false)}
-                >
-                  Cancel
-                </button>
-                <button
-                  className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
-                  onClick={handleSave}
-                >
-                  {taskDetails.id ? "Update" : "Save"}
-                </button>
+                  <button
+                    className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
+                    onClick={handleSave}
+                  >
+                    {taskDetails.id ? "Update" : "Save"}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
