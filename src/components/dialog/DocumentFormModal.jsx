@@ -55,12 +55,13 @@ const DocumentFormModal = ({
     DOC_RELATED_TO: "",
     DOC_RELATED_CATEGORY: "",
     DOC_REF_VALUE: "",
-    USER_NAME: userData.userName,
-    COMMENTS: "",
     DOC_TAGS: "",
-    FOR_THE_USERS: "",
-    EXPIRY_DATE: new Date().toISOString().split("T")[0],
+    COMMENTS: "",
+    EXPIRY_DATE: "",
+    ENT_DATE: new Date().toISOString().split("T")[0],
     REF_TASK_ID: 0,
+    FOR_THE_USERS: "",
+    USER_NAME: userData.userName,
   };
 
   const [formData, setFormData] = useState(initialFormState);
@@ -819,41 +820,7 @@ const DocumentFormModal = ({
                       <Loader2 className="h-5 w-5 animate-spin" />
                     ) : (
                       dynamicFields.map((field) => {
-                        if (field.COLUMN_NAME === "X_VENDOR_ID") {
-                          return (
-                            <div key={field.COLUMN_NAME} className="space-y-2">
-                              <div className="flex items-center gap-2 text-sm">
-                                <FileText className="h-4 w-4 text-gray-600" />
-                                <Label htmlFor={field.COLUMN_NAME}>
-                                  {field.COLUMN_LABEL}
-                                  {field.REQUIRED && (
-                                    <span className="text-red-500 ml-1">*</span>
-                                  )}
-                                </Label>
-                              </div>
-                              <select
-                                name={field.COLUMN_NAME}
-                                id={field.COLUMN_NAME}
-                                value={formData[field.COLUMN_NAME] || ""}
-                                onChange={handleChange}
-                                disabled={isReadOnly}
-                                className="w-full rounded-md border border-gray-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
-                              >
-                                <option value="">
-                                  Select {field.COLUMN_LABEL}
-                                </option>
-                                {vendorData.list.map((vendor) => (
-                                  <option
-                                    key={vendor.VENDOR_ID}
-                                    value={vendor.VENDOR_ID}
-                                  >
-                                    {vendor.VENDOR_ID}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                          );
-                        } else if (field.COLUMN_NAME === "X_VENDOR_NAME") {
+                        if (field.COLUMN_NAME === "X_VENDOR_NAME") {
                           return (
                             <div key={field.COLUMN_NAME} className="space-y-2">
                               <div className="flex items-center gap-2 text-sm">
@@ -882,40 +849,6 @@ const DocumentFormModal = ({
                                     value={vendor.VENDOR_NAME}
                                   >
                                     {vendor.VENDOR_NAME}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                          );
-                        } else if (field.COLUMN_NAME === "X_CLIENT_ID") {
-                          return (
-                            <div key={field.COLUMN_NAME} className="space-y-2">
-                              <div className="flex items-center gap-2 text-sm">
-                                <FileText className="h-4 w-4 text-gray-600" />
-                                <Label htmlFor={field.COLUMN_NAME}>
-                                  {field.COLUMN_LABEL}
-                                  {field.REQUIRED && (
-                                    <span className="text-red-500 ml-1">*</span>
-                                  )}
-                                </Label>
-                              </div>
-                              <select
-                                name={field.COLUMN_NAME}
-                                id={field.COLUMN_NAME}
-                                value={formData[field.COLUMN_NAME] || ""}
-                                onChange={handleChange}
-                                disabled={isReadOnly}
-                                className="w-full rounded-md border border-gray-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
-                              >
-                                <option value="">
-                                  Select {field.COLUMN_LABEL}
-                                </option>
-                                {clientData.list.map((client) => (
-                                  <option
-                                    key={client.CLIENT_ID}
-                                    value={client.CLIENT_ID}
-                                  >
-                                    {client.CLIENT_ID}
                                   </option>
                                 ))}
                               </select>
@@ -1000,20 +933,39 @@ const DocumentFormModal = ({
                       />
                     </div>
 
-                    {/* Document Reference Value */}
+                    {/* Document Reference For */}
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-sm">
                         <LocateFixed className="h-4 w-4 text-gray-600" />
                         <Label htmlFor="DOC_REF_VALUE">
-                          Document Reference Value
+                          Document Reference For
                         </Label>
                       </div>
                       <Input
                         type="text"
                         name="DOC_REF_VALUE"
                         id="DOC_REF_VALUE"
-                        placeholder="Enter docs ref no"
+                        placeholder="ex: emp no, project no etc."
                         value={formData.DOC_REF_VALUE}
+                        onChange={handleChange}
+                        readOnly={isReadOnly}
+                      />
+                    </div>
+
+                    {/* Document Tags */}
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm">
+                        <LocateFixed className="h-4 w-4 text-gray-600" />
+                        <Label htmlFor="DOC_TAGS">
+                          Document Tags For Filter
+                        </Label>
+                      </div>
+                      <Input
+                        type="text"
+                        name="DOC_TAGS"
+                        id="DOC_TAGS"
+                        placeholder="Enter docs ref no"
+                        value={formData.DOC_TAGS}
                         onChange={handleChange}
                         readOnly={isReadOnly}
                       />
