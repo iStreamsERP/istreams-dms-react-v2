@@ -273,7 +273,12 @@ const TaskView = () => {
       <div className="flex flex-col lg:flex-row md:justify-between gap-4">
         {/* Search and Sorting Inputs */}
         <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
-          <GlobalSearchInput value={globalFilter} onChange={setGlobalFilter} />
+         <div className="w-full lg:w-1/2">
+            <GlobalSearchInput
+              value={globalFilter}
+              onChange={setGlobalFilter}
+            />
+          </div>
 
           <Select value={sortOrder} onValueChange={setSortOrder}>
             <SelectTrigger className="w-[180px]">

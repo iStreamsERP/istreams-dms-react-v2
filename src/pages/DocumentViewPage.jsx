@@ -499,11 +499,13 @@ export default function DocumentViewPage() {
       <div className="grid grid-cols-1 gap-4">
         {/* Search and status */}
         <div className="relative">
-          <GlobalSearchInput 
-            value={globalFilter} 
-            onChange={setGlobalFilter}
-            disabled={isSearchPending}
-          />
+          <div className="w-full lg:w-1/2">
+            <GlobalSearchInput
+              value={globalFilter}
+              onChange={setGlobalFilter}
+              disabled={isSearchPending}
+            />
+          </div>
 
           {/* Simplified status indicators */}
           <div className="flex items-center gap-3 mt-2 min-h-[20px]">

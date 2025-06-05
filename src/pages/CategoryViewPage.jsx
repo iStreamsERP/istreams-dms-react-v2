@@ -52,7 +52,12 @@ const CategoryViewPage = () => {
       {/* CONTROLS ROW */}
       <div className="flex flex-col md:flex-row md:justify-between items-stretch gap-2">
         {/* Search */}
-        <GlobalSearchInput value={globalFilter} onChange={setGlobalFilter} />
+        <div className="w-full lg:w-1/2">
+            <GlobalSearchInput
+              value={globalFilter}
+              onChange={setGlobalFilter}
+            />
+          </div>
 
         {/* Filter dropdown */}
         <div className="flex-shrink-0">
