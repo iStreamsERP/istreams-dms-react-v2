@@ -8,7 +8,7 @@ export default defineConfig({
     port: 3000,
     proxy: {
       "/public": {
-        target: "https://cloud.istreams-erp.com:4439/iStreamsSmartPublic.asmx",
+        target: "https://apps.istreams-erp.com:4439/iStreamsSmartPublic.asmx",
         changeOrigin: true,
         secure: false,
         rewrite: (path) => path.replace(/^\/public/, ""),

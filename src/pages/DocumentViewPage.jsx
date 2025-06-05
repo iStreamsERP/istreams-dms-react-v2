@@ -308,6 +308,9 @@ export default function DocumentViewPage() {
         userData.clientURL
       );
 
+      console.log(response);
+      
+
       if (!Array.isArray(response) || !response.length) {
         setError("No documents available.");
         setAllDocs([]);
