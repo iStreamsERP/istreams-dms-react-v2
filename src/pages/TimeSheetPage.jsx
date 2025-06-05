@@ -1472,13 +1472,13 @@ const handleSave = (e) => {
                             ? task.color
                             : "bg-transparent"
                         }
-                        flex items-center mb-1 justify-between text-black dark:text-slate-400 p-3 border border-gray-400
+                        flex items-center mb-1 justify-between text-black dark:text-white dark:hover:bg-gray-800  p-3 border border-gray-400
                         hover:bg-blue-100 transition-all duration-300 rounded-md shadow-sm hover:shadow-md cursor-pointer
                       `}
                       draggable
                       onDragStart={(e) => handleDragStart(e, task)}
                     >
-                      <div className="flex text-xs  items-center gap-2">
+                      <div className="flex text-xs text-gray-500  dark:text-gray-600  items-center gap-2">
                         <div className="w-3 h-3 rounded-full text-xs animate-pulse bg-blue-500" />
                         <p className="font-medium">{task.TASK_NAME}</p>
                       </div>
@@ -1506,8 +1506,8 @@ const handleSave = (e) => {
                     key={task.TASK_ID}
                     className="flex items-center text-xs mb-1 justify-between p-3 border border-gray-400 hover:bg-green-50 transition-all duration-300 rounded-md shadow-sm hover:shadow-md cursor-pointer"
                   >
-                    <div className="flex items-center text-xs gap-2">
-                      <div className="w-3 h-3  rounded-full bg-green-500 animate-pulse" />
+                    <div className="flex items-center text-gray-500  dark:text-gray-600  text-xs gap-2">
+                      <div className="w-3 h-3  rounded-full text-xs  bg-green-500 animate-pulse" />
                       <p className="font-medium ">{task.TASK_NAME}</p>
                     </div>
                   </div>
@@ -1585,7 +1585,7 @@ const handleSave = (e) => {
                     </h2>
                     <button
                       type="button"
-                      className="mt-1 text-xs shadow-lg border border-gray-300 rounded px-3 py-1 hover:bg-gray-100"
+                      className="mt-1 text-xs shadow-lg border border-gray-300 rounded px-3 py-1 dark:hover:bg-gray-800 hover:bg-gray-100"
                       onClick={openDatePicker}
                     >
                       Change Date{" "}
@@ -1596,16 +1596,16 @@ const handleSave = (e) => {
                       ref={datePickerRef}
                       className="fixed z-10 inset-0 overflow-y-auto"
                     >
-                      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center">
+                      <div className="flex items-center bg-black bg-opacity-50 dark:bg-opacity-100 justify-center overflow-y-auto overflow-x-auto h-[68vh] p-2 text-center">
                         <div
-                          className="fixed inset-0 transition-opacity"
+                          className="fixed inset-0 transition-opacity "
                           onClick={() => datePickerRef.current.close()}
                         >
-                          <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+                          <div className="absolute inset-0 bg-gray-500 dark:bg-gray-900 opacity-75"></div>
                         </div>
-                        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-                          <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                            <div className="sm:flex sm:items-start">
+                        <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                          <div className="bg-white dark:bg-gray-800 text-black dark:text-gray-100 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                            <div className="sm:flex bg-white dark:bg-gray-800 sm:items-start">
                               <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
                                 <div className="flex justify-end">
                                   <button
@@ -1943,7 +1943,7 @@ const handleSave = (e) => {
                               return (
                                 <tr
                                   key={`${date}-${block.id}`}
-                                  className="hover:bg-gray-50"
+                                  className="hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-400"
                                 >
                                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                     {date}
