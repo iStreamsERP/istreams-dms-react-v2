@@ -11,7 +11,8 @@ import { NavLink } from "react-router-dom";
 export const Sidebar = forwardRef(({ collapsed }, ref) => {
   const { userData } = useAuth();
   const [expandedMenu, setExpandedMenu] = React.useState(null);
-  const navbarLinks = getNavbarLinks(userData.isAdmin);
+  // const navbarLinks = getNavbarLinks(userData.isAdmin);
+  const navbarLinks = getNavbarLinks(true);
 
   const toggleMenu = (label) => {
     setExpandedMenu((current) => (current === label ? null : label));
