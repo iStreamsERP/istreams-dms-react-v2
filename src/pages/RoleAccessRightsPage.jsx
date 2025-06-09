@@ -1,3 +1,4 @@
+import AccessDenied from "@/components/AccessDenied";
 import { Button } from "@/components/ui/button";
 import {
     Command,
@@ -746,6 +747,11 @@ const RoleAccessRightsPage = () => {
     setRoleDetails({ roleName: "", roleId: "", description: "" });
     setSelectedForms([]);
   };
+
+  
+     if (!userData?.isAdmin) {
+      return <AccessDenied />;
+    }
 
   return (
     <div className="flex flex-col gap-3">

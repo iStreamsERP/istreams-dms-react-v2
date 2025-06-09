@@ -1,3 +1,4 @@
+import AccessDenied from "@/components/AccessDenied";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardTitle } from "@/components/ui/card";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -438,6 +439,10 @@ const UserRole = () => {
   };
 
   const canSaveConfiguration = isRoleSaved && selectedUsers.length > 0;
+
+     if (!userData?.isAdmin) {
+    return <AccessDenied />;
+  }
 
   return (
     <div className="flex flex-col gap-6">

@@ -1,3 +1,4 @@
+import AccessDenied from "@/components/AccessDenied";
 import UserCreateModal from "@/components/dialog/UserCreateModal";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -306,6 +307,10 @@ const UserListPage = () => {
       rowSelection,
     },
   });
+
+     if (!userData?.isAdmin) {
+    return <AccessDenied />;
+  }
 
   return (
     <div className="flex flex-col gap-y-4">

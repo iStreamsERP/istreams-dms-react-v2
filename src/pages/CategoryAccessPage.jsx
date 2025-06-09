@@ -1,3 +1,4 @@
+import AccessDenied from "@/components/AccessDenied";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -280,6 +281,11 @@ const CategoryAccessPage = () => {
     setSelectedCategory(null);
     setSelectedCategoryItems([]);
   };
+
+  
+     if (!userData?.isAdmin) {
+      return <AccessDenied />;
+    }
 
   return (
     <div className="flex flex-col gap-3">

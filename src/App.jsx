@@ -47,14 +47,12 @@ const App = () => {
           children: [
             { index: true, element: <DashboardPage /> },
 
-            ...(userData.isAdmin
-              ? [{ path: "/teams", element: <TeamsPage /> }]
-              : []),
+            { path: "/teams", element: <TeamsPage /> },
             { path: "/category-view", element: <CategoryViewPage /> },
             { path: "/document-list", element: <DocumentListPage /> },
             { path: "/document-view", element: <DocumentViewPage /> },
-
             { path: "task-view", element: <TaskView /> },
+            
             { path: "time-sheet", element: <TimeSheetPage /> },
             { path: "task", element: <TaskPage /> },
             { path: "users", element: <UserListPage /> },
