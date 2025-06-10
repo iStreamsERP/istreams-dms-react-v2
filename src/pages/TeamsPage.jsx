@@ -6,9 +6,11 @@ import TeamProfileCard from "../components/TeamProfileCard";
 import { useAuth } from "../contexts/AuthContext";
 import { getEmployeeImage } from "../services/employeeService";
 import { callSoapService } from "@/services/callSoapService";
+import AccessDenied from "@/components/AccessDenied";
 
 const TeamsPage = () => {
   const { userData } = useAuth();
+  const [userRights, setUserRights] = useState("");
   const { toast } = useToast();
 
   const [usersData, setUsersData] = useState([]);
@@ -16,89 +18,109 @@ const TeamsPage = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchUsersAndImages = async () => {
-      try {
-        const payloadUserName = userData.isAdmin ? "" : userData.userName;
-        
-        const payload = {
-          UserName: payloadUserName,
-        };
+    fetchUsersAndImages();
+    fetchUserRights();
+  }, [userData.userEmail]);
 
-        const userDetails = await callSoapService(
-          userData.clientURL,
-          "DMS_Get_All_ActiveUsers",
-          payload
-        );
+  const fetchUsersAndImages = async () => {
+    try {
+      const payloadUserName = userData.isAdmin ? "" : userData.userName;
 
-        let usersArray = [];
+      const payload = {
+        UserName: payloadUserName,
+      };
 
-        if (userDetails && Array.isArray(userDetails)) {
-          usersArray = userDetails;
-        } else {
-          usersArray = userDetails ? [userDetails] : [];
-        }
+      const userDetails = await callSoapService(
+        userData.clientURL,
+        "DMS_Get_All_ActiveUsers",
+        payload
+      );
 
-        const usersWithImages = await Promise.all(
-          usersArray.map(async (user) => {
-            try {
-              const payload = {
-                EmpNo: user.emp_no,
-              };
+      let usersArray = [];
 
-              const imageData = await callSoapService(
-                userData.clientURL,
-                "getpic_bytearray",
-                payload
-              );
-
-              return {
-                ...user,
-                image: imageData
-                  ? `data:image/jpeg;base64,${imageData}`
-                  : "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTbBa24AAg4zVSuUsL4hJnMC9s3DguLgeQmZA&s",
-              };
-            } catch (error) {
-              console.error(
-                `Error fetching image for user ${user.emp_no}:`,
-                error
-              );
-              return {
-                ...user,
-                image:
-                  "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTbBa24AAg4zVSuUsL4hJnMC9s3DguLgeQmZA&s",
-              };
-            }
-          })
-        );
-
-        setUsersData(usersWithImages);
-      } catch (error) {
-        console.error("Failed to fetch users:", error);
-        toast({
-          variant: "destructive",
-          title: error,
-        });
-      } finally {
-        setLoading(false);
+      if (userDetails && Array.isArray(userDetails)) {
+        usersArray = userDetails;
+      } else {
+        usersArray = userDetails ? [userDetails] : [];
       }
+
+      const usersWithImages = await Promise.all(
+        usersArray.map(async (user) => {
+          try {
+            const payload = {
+              EmpNo: user.emp_no,
+            };
+
+            const imageData = await callSoapService(
+              userData.clientURL,
+              "getpic_bytearray",
+              payload
+            );
+
+            return {
+              ...user,
+              image: imageData
+                ? `data:image/jpeg;base64,${imageData}`
+                : "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTbBa24AAg4zVSuUsL4hJnMC9s3DguLgeQmZA&s",
+            };
+          } catch (error) {
+            console.error(
+              `Error fetching image for user ${user.emp_no}:`,
+              error
+            );
+            return {
+              ...user,
+              image:
+                "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTbBa24AAg4zVSuUsL4hJnMC9s3DguLgeQmZA&s",
+            };
+          }
+        })
+      );
+
+      setUsersData(usersWithImages);
+    } catch (error) {
+      console.error("Failed to fetch users:", error);
+      toast({
+        variant: "destructive",
+        title: error,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchUserRights = async () => {
+    const userType = userData.isAdmin ? "ADMINISTRATOR" : "USER";
+    const payload = {
+      UserName: userData.userName,
+      FormName: "DMS-DashboardAdmin",
+      FormDescription: "Dashboard Full View",
+      UserType: userType,
     };
 
-    fetchUsersAndImages();
-  }, [userData.userEmail]);
+    const response = await callSoapService(
+      userData.clientURL,
+      "DMS_CheckRights_ForTheUser",
+      payload
+    );
+
+    setUserRights(response);
+  };
 
   const filteredUsersData = usersData.filter((user) => {
     const search = globalFilter.toLowerCase();
     return user.user_name.toLowerCase().includes(search);
   });
 
+  if (userRights !== "Allowed") {
+    return <AccessDenied />;
+  }
+
   return (
     <div className="grid grid-cols-1 gap-4">
       <div className="w-full lg:w-1/2">
-            <GlobalSearchInput
-              value={globalFilter}
-              onChange={setGlobalFilter}
-            />
-          </div>
+        <GlobalSearchInput value={globalFilter} onChange={setGlobalFilter} />
+      </div>
 
       {loading ? (
         <div className="flex justify-center items-start">

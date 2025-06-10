@@ -10,7 +10,7 @@ const AccessDenied = () => {
         </div>
         <h2 className="text-2xl font-bold text-gray-800 mb-2">Access Restricted</h2>
         <p className="text-gray-600 text-sm mb-6">
-          You don’t have permission to access this section. Please contact the admin if you need access.
+          You don’t have permission to access this feature. Please contact the admin if you need access.
         </p>
         <Button variant="destructive">
           Request Access

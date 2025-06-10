@@ -1,6 +1,7 @@
+import AccessDenied from "@/components/AccessDenied";
+import GlobalSearchInput from "@/components/GlobalSearchInput";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -9,6 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { callSoapService } from "@/services/callSoapService";
 import { ArrowDownLeft, ArrowUpRight, IterationCwIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { BarLoader } from "react-spinners";
@@ -28,10 +30,12 @@ import {
   formatDateTime,
 } from "../utils/dateUtils";
 import { capitalizeFirstLetter } from "../utils/stringUtils";
-import GlobalSearchInput from "@/components/GlobalSearchInput";
 
 const TaskView = () => {
   const { userData } = useAuth();
+
+  const [userRights, setUserRights] = useState("");
+
   const [statusFilter, setStatusFilter] = useState("all");
   // New assignment filter: "all", "assignedByMe", "assignedToMe"
   const [assignmentFilter, setAssignmentFilter] = useState("all");
@@ -104,6 +108,7 @@ const TaskView = () => {
 
   useEffect(() => {
     fetchUserTasks();
+    fetchUserRights();
   }, [fetchUserTasks]);
 
   // Filter tasks based on search text, status filter, and assignment filter.
@@ -267,13 +272,35 @@ const TaskView = () => {
     return null; // No buttons if conditions don't match
   };
 
+  const fetchUserRights = async () => {
+    const userType = userData.isAdmin ? "ADMINISTRATOR" : "USER";
+    const payload = {
+      UserName: userData.userName,
+      FormName: "DMS-TASKVIEW",
+      FormDescription: "Task View",
+      UserType: userType,
+    };
+
+    const response = await callSoapService(
+      userData.clientURL,
+      "DMS_CheckRights_ForTheUser",
+      payload
+    );
+
+    setUserRights(response);
+  };
+
+  if (userRights !== "Allowed") {
+    return <AccessDenied />;
+  }
+
   return (
     <div className="container mx-auto space-y-6">
       {/* Controls */}
       <div className="flex flex-col lg:flex-row md:justify-between gap-4">
         {/* Search and Sorting Inputs */}
         <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
-         <div className="w-full lg:w-1/2">
+          <div className="w-full lg:w-1/2">
             <GlobalSearchInput
               value={globalFilter}
               onChange={setGlobalFilter}

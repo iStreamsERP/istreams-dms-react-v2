@@ -1,3 +1,4 @@
+import AccessDenied from "@/components/AccessDenied";
 import { CategoryAccessRightsModal } from "@/components/dialog/CategoryAccessRightsModal";
 import GlobalSearchInput from "@/components/GlobalSearchInput";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ import {
 } from "@/components/ui/table";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { callSoapService } from "@/services/callSoapService";
 import {
   deleteDataModelService,
   getDataModelService,
@@ -48,6 +50,8 @@ const CategoryListPage = () => {
   const { userData } = useAuth();
   const { toast } = useToast();
 
+  const [userRights, setUserRights] = useState("");
+
   const [tableList, setTableList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -63,6 +67,7 @@ const CategoryListPage = () => {
 
   useEffect(() => {
     fetchAllProductsData();
+    fetchUserRights();
   }, []);
 
   const fetchAllProductsData = async () => {
@@ -293,6 +298,28 @@ const CategoryListPage = () => {
       globalFilter,
     },
   });
+
+  const fetchUserRights = async () => {
+    const userType = userData.isAdmin ? "ADMINISTRATOR" : "USER";
+    const payload = {
+      UserName: userData.userName,
+      FormName: "DMS-CATEGORYMASTER",
+      FormDescription: "Categories Master",
+      UserType: userType,
+    };
+
+    const response = await callSoapService(
+      userData.clientURL,
+      "DMS_CheckRights_ForTheUser",
+      payload
+    );
+
+    setUserRights(response);
+  };
+
+  if (userRights !== "Allowed") {
+    return <AccessDenied />;
+  }
 
   return (
     <div className="flex flex-col gap-y-4">

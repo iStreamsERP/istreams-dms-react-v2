@@ -9,7 +9,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { FileSearch } from "lucide-react";
-import { memo, useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { useLocation } from "react-router-dom";
 import DocumentFormModal from "../components/dialog/DocumentFormModal";
 import TaskForm from "../components/TaskForm";
@@ -18,6 +26,7 @@ import { getAllDmsActiveUser } from "../services/dashboardService";
 import { getDocMasterList, updateDmsAssignedTo } from "../services/dmsService";
 import { formatDateTime } from "../utils/dateUtils";
 import { callSoapService } from "@/services/callSoapService";
+import AccessDenied from "@/components/AccessDenied";
 
 // Custom hook for debounced search with transition
 const useDebounceWithTransition = (value, delay) => {
@@ -69,131 +78,153 @@ const DocumentSkeleton = memo(() => (
 DocumentSkeleton.displayName = "DocumentSkeleton";
 
 // Heavily optimized DocumentCard with minimal re-renders
-const DocumentCard = memo(({
-  doc,
-  assignedUser,
-  verifyEnabled,
-  onVerify,
-  onView,
-  onEmployeeSelect,
-  users,
-  usersLoading,
-}) => {
-  const handleEmployeeChange = useCallback((value) => {
-    onEmployeeSelect(doc.REF_SEQ_NO, value);
-  }, [doc.REF_SEQ_NO, onEmployeeSelect]);
+const DocumentCard = memo(
+  ({
+    doc,
+    assignedUser,
+    verifyEnabled,
+    onVerify,
+    onView,
+    onEmployeeSelect,
+    users,
+    usersLoading,
+  }) => {
+    const handleEmployeeChange = useCallback(
+      (value) => {
+        onEmployeeSelect(doc.REF_SEQ_NO, value);
+      },
+      [doc.REF_SEQ_NO, onEmployeeSelect]
+    );
 
-  const handleVerifyClick = useCallback(() => {
-    onVerify(doc);
-  }, [doc, onVerify]);
+    const handleVerifyClick = useCallback(() => {
+      onVerify(doc);
+    }, [doc, onVerify]);
 
-  const handleViewClick = useCallback(() => {
-    onView(doc);
-  }, [doc, onView]);
+    const handleViewClick = useCallback(() => {
+      onView(doc);
+    }, [doc, onView]);
 
-  const isAssigned = Boolean(assignedUser);
-  const isVerified = Boolean(doc.VERIFIED_BY);
-  const canVerify = verifyEnabled && !isVerified;
+    const isAssigned = Boolean(assignedUser);
+    const isVerified = Boolean(doc.VERIFIED_BY);
+    const canVerify = verifyEnabled && !isVerified;
 
-  return (
-    <Card className="col-span-1">
-      <CardContent className="p-4">
-        <div className="flex items-start gap-2 w-full mb-4">
-          <div className="bg-neutral-100 p-2 rounded-lg shrink-0">
-            <FileSearch className="w-4 h-4 text-neutral-900" />
-          </div>
-          <div className="flex justify-between items-start gap-2 w-full min-w-0">
-            <div className="truncate flex-1">
-              <h2
-                className="text-lg font-semibold leading-tight mb-1 truncate"
-                title={doc.DOCUMENT_DESCRIPTION}
-              >
-                {doc.DOCUMENT_DESCRIPTION}
-              </h2>
-              <p className="text-xs text-gray-500 leading-none truncate">
-                {doc.DOCUMENT_NO}
-              </p>
+    return (
+      <Card className="col-span-1">
+        <CardContent className="p-4">
+          <div className="flex items-start gap-2 w-full mb-4">
+            <div className="bg-neutral-100 p-2 rounded-lg shrink-0">
+              <FileSearch className="w-4 h-4 text-neutral-900" />
             </div>
-            <span className="text-xs font-bold text-blue-600 shrink-0">
-              {doc.REF_SEQ_NO}
-            </span>
-          </div>
-        </div>
-        
-        <div className="space-y-3">
-          <div className="flex justify-between items-center">
-            <span className="text-sm font-medium truncate">{doc.USER_NAME}</span>
-            <span className="text-sm text-gray-500 shrink-0">
-              {doc.NO_OF_DOCUMENTS} File(s)
-            </span>
-          </div>
-          
-          <p className="text-sm font-medium">
-            Category: <span className="text-gray-500">{doc.DOC_RELATED_CATEGORY}</span>
-          </p>
-          
-          <div className="flex items-end justify-between gap-2">
-            <div className="flex-1">
-              <div className="mb-3">
-                {isVerified ? (
-                  <span className={`text-xs ${
-                    doc.DOCUMENT_STATUS === "Rejected" ? "text-red-500" : "text-gray-500"
-                  }`}>
-                    {doc.DOCUMENT_STATUS === "Rejected" ? "Rejected by" : "Verified by"}
-                  </span>
-                ) : (
-                  <span className="text-xs badge badge-error badge-outline px-1">
-                    Unverified
-                  </span>
-                )}
+            <div className="flex justify-between items-start gap-2 w-full min-w-0">
+              <div className="truncate flex-1">
+                <h2
+                  className="text-lg font-semibold leading-tight mb-1 truncate"
+                  title={doc.DOCUMENT_DESCRIPTION}
+                >
+                  {doc.DOCUMENT_DESCRIPTION}
+                </h2>
+                <p className="text-xs text-gray-500 leading-none truncate">
+                  {doc.DOCUMENT_NO}
+                </p>
               </div>
+              <span className="text-xs font-bold text-blue-600 shrink-0">
+                {doc.REF_SEQ_NO}
+              </span>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex justify-between items-center">
+              <span className="text-sm font-medium truncate">
+                {doc.USER_NAME}
+              </span>
+              <span className="text-sm text-gray-500 shrink-0">
+                {doc.NO_OF_DOCUMENTS} File(s)
+              </span>
+            </div>
+
+            <p className="text-sm font-medium">
+              Category:{" "}
+              <span className="text-gray-500">{doc.DOC_RELATED_CATEGORY}</span>
+            </p>
+
+            <div className="flex items-end justify-between gap-2">
+              <div className="flex-1">
+                <div className="mb-3">
+                  {isVerified ? (
+                    <span
+                      className={`text-xs ${
+                        doc.DOCUMENT_STATUS === "Rejected"
+                          ? "text-red-500"
+                          : "text-gray-500"
+                      }`}
+                    >
+                      {doc.DOCUMENT_STATUS === "Rejected"
+                        ? "Rejected by"
+                        : "Verified by"}
+                    </span>
+                  ) : (
+                    <span className="text-xs badge badge-error badge-outline px-1">
+                      Unverified
+                    </span>
+                  )}
+                </div>
+                <Button
+                  className={`btn btn-xs w-full ${
+                    canVerify ? "btn-success" : "btn-ghost btn-active"
+                  }`}
+                  onClick={canVerify ? handleVerifyClick : undefined}
+                  disabled={!canVerify}
+                >
+                  {doc.VERIFIED_BY || "Verify"}
+                </Button>
+              </div>
+
+              <div className="flex-1">
+                <p className="text-sm text-gray-500 mb-3">Assign to</p>
+                <Select
+                  value={assignedUser || ""}
+                  onValueChange={handleEmployeeChange}
+                  disabled={isAssigned || isVerified || usersLoading}
+                >
+                  <SelectTrigger className="w-full text-center h-8 text-xs">
+                    <SelectValue
+                      placeholder={usersLoading ? "Loading..." : "Assign to"}
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {users.map((user, userIndex) => (
+                      <SelectItem
+                        key={`user-${user.user_name}-${userIndex}`}
+                        value={user.user_name}
+                      >
+                        {user.user_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <Button
-                className={`btn btn-xs w-full ${
-                  canVerify ? "btn-success" : "btn-ghost btn-active"
-                }`}
-                onClick={canVerify ? handleVerifyClick : undefined}
-                disabled={!canVerify}
+                variant="ghost"
+                onClick={handleViewClick}
+                className="shrink-0"
               >
-                {doc.VERIFIED_BY || "Verify"}
+                View
               </Button>
             </div>
-            
-            <div className="flex-1">
-              <p className="text-sm text-gray-500 mb-3">Assign to</p>
-              <Select
-                value={assignedUser || ""}
-                onValueChange={handleEmployeeChange}
-                disabled={isAssigned || isVerified || usersLoading}
-              >
-                <SelectTrigger className="w-full text-center h-8 text-xs">
-                  <SelectValue placeholder={usersLoading ? "Loading..." : "Assign to"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {users.map((user, userIndex) => (
-                    <SelectItem
-                      key={`user-${user.user_name}-${userIndex}`}
-                      value={user.user_name}
-                    >
-                      {user.user_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <Button variant="ghost" onClick={handleViewClick} className="shrink-0">
-              View
-            </Button>
           </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-});
+        </CardContent>
+      </Card>
+    );
+  }
+);
 
 DocumentCard.displayName = "DocumentCard";
 
 export default function DocumentViewPage() {
+  const [userRights, setUserRights] = useState("");
+
   // Core data states - simplified
   const [allDocs, setAllDocs] = useState([]);
   const [users, setUsers] = useState([]);
@@ -209,7 +240,7 @@ export default function DocumentViewPage() {
   const [error, setError] = useState(null);
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [docFormMode, setDocFormMode] = useState("view");
-  
+
   // Virtual scrolling
   const [visibleCount, setVisibleCount] = useState(24);
   const BATCH_SIZE = 24;
@@ -220,25 +251,61 @@ export default function DocumentViewPage() {
   const location = useLocation();
 
   // Optimized debounced search with transition
-  const [debouncedFilter, isSearchPending] = useDebounceWithTransition(globalFilter, 300);
+  const [debouncedFilter, isSearchPending] = useDebounceWithTransition(
+    globalFilter,
+    300
+  );
 
   // Memoized initial task data
-  const initialTaskData = useMemo(() => ({
-    userName: userData.userName,
-    taskName: "",
-    taskSubject: "",
-    relatedTo: "",
-    assignedTo: "",
-    creatorReminderOn: formatDateTime(new Date(Date.now() + 2 * 86400000)),
-    assignedDate: formatDateTime(new Date()),
-    targetDate: formatDateTime(new Date(Date.now() + 86400000)),
-    remindOnDate: formatDateTime(new Date()),
-    refTaskID: -1,
-    dmsSeqNo: 0,
-    verifiedBy: userData.userName,
-  }), [userData.userName]);
+  const initialTaskData = useMemo(
+    () => ({
+      userName: userData.userName,
+      taskName: "",
+      taskSubject: "",
+      relatedTo: "",
+      assignedTo: "",
+      creatorReminderOn: formatDateTime(new Date(Date.now() + 2 * 86400000)),
+      assignedDate: formatDateTime(new Date()),
+      targetDate: formatDateTime(new Date(Date.now() + 86400000)),
+      remindOnDate: formatDateTime(new Date()),
+      refTaskID: -1,
+      dmsSeqNo: 0,
+      verifiedBy: userData.userName,
+    }),
+    [userData.userName]
+  );
 
   const [taskData, setTaskData] = useState(initialTaskData);
+
+  // Fetch user rights - moved to top
+  useEffect(() => {
+    const fetchUserRights = async () => {
+      const userType = userData.isAdmin ? "ADMINISTRATOR" : "USER";
+      const payload = {
+        UserName: userData.userName,
+        FormName: "DMS-DOCUMENTVIEW",
+        FormDescription: "Document View",
+        UserType: userType,
+      };
+
+      const response = await callSoapService(
+        userData.clientURL,
+        "DMS_CheckRights_ForTheUser",
+        payload
+      );
+
+      console.log(response);
+      
+      setUserRights(response);
+    };
+
+    fetchUserRights();
+  }, [userData]); // Added dependency array
+
+  // Early return for access denied - BEFORE any other hooks
+  if (userRights !== "" && userRights !== "Allowed") {
+    return <AccessDenied />;
+  }
 
   // Handle location state
   useEffect(() => {
@@ -248,11 +315,14 @@ export default function DocumentViewPage() {
   }, [location.state]);
 
   // Optimized service call payload
-  const getDocMasterListPayload = useMemo(() => ({
-    WhereCondition: "",
-    Orderby: "REF_SEQ_NO DESC",
-    IncludeEmpImage: false,
-  }), []);
+  const getDocMasterListPayload = useMemo(
+    () => ({
+      WhereCondition: "",
+      Orderby: "REF_SEQ_NO DESC",
+      IncludeEmpImage: false,
+    }),
+    []
+  );
 
   // Highly optimized document filtering with memoization
   const filteredDocs = useMemo(() => {
@@ -260,39 +330,41 @@ export default function DocumentViewPage() {
     if (!debouncedFilter.trim()) return allDocs;
 
     const searchTerm = debouncedFilter.toLowerCase().trim();
-    
-    return allDocs.filter(doc => {
+
+    return allDocs.filter((doc) => {
       // Quick early returns for performance
       if (doc.REF_SEQ_NO?.toString().includes(searchTerm)) return true;
-      if (doc.DOCUMENT_DESCRIPTION?.toLowerCase().includes(searchTerm)) return true;
+      if (doc.DOCUMENT_DESCRIPTION?.toLowerCase().includes(searchTerm))
+        return true;
       if (doc.DOCUMENT_NO?.toLowerCase().includes(searchTerm)) return true;
       if (doc.USER_NAME?.toLowerCase().includes(searchTerm)) return true;
-      if (doc.DOC_RELATED_CATEGORY?.toLowerCase().includes(searchTerm)) return true;
+      if (doc.DOC_RELATED_CATEGORY?.toLowerCase().includes(searchTerm))
+        return true;
       if (doc.DOC_RELATED_TO?.toLowerCase().includes(searchTerm)) return true;
-      
+
       return false;
     });
   }, [allDocs, debouncedFilter]);
 
   // Virtualized visible documents
-  const visibleDocs = useMemo(() => 
-    filteredDocs.slice(0, visibleCount),
+  const visibleDocs = useMemo(
+    () => filteredDocs.slice(0, visibleCount),
     [filteredDocs, visibleCount]
   );
 
   // Optimized assignment processing
   const processInitialAssignments = useCallback((docs) => {
     const assignmentMap = new Map();
-    
-    docs.forEach(doc => {
+
+    docs.forEach((doc) => {
       if (doc.ASSIGNED_USER) {
         assignmentMap.set(doc.REF_SEQ_NO, {
           user: doc.ASSIGNED_USER,
-          canVerify: true
+          canVerify: true,
         });
       }
     });
-    
+
     return assignmentMap;
   }, []);
 
@@ -308,9 +380,6 @@ export default function DocumentViewPage() {
         userData.clientURL
       );
 
-      console.log(response);
-      
-
       if (!Array.isArray(response) || !response.length) {
         setError("No documents available.");
         setAllDocs([]);
@@ -319,10 +388,9 @@ export default function DocumentViewPage() {
 
       // Process assignments once
       const assignmentMap = processInitialAssignments(response);
-      
+
       setAllDocs(response);
       setAssignments(assignmentMap);
-      
     } catch (err) {
       console.error("Error fetching documents:", err);
       setError(err.message || "Error fetching documents.");
@@ -330,7 +398,12 @@ export default function DocumentViewPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [getDocMasterListPayload, userData.userEmail, userData.clientURL, processInitialAssignments]);
+  }, [
+    getDocMasterListPayload,
+    userData.userEmail,
+    userData.clientURL,
+    processInitialAssignments,
+  ]);
 
   // Fetch users - optimized
   const fetchUsers = useCallback(async () => {
@@ -352,7 +425,7 @@ export default function DocumentViewPage() {
 
   // Load more documents - simplified
   const loadMoreDocs = useCallback(() => {
-    setVisibleCount(prev => Math.min(prev + BATCH_SIZE, filteredDocs.length));
+    setVisibleCount((prev) => Math.min(prev + BATCH_SIZE, filteredDocs.length));
   }, [filteredDocs.length]);
 
   // Initialize data
@@ -363,8 +436,8 @@ export default function DocumentViewPage() {
 
   // Event handlers - optimized
   const handleVerifySuccess = useCallback((refSeqNo, verifierName) => {
-    setAllDocs(prevDocs =>
-      prevDocs.map(doc =>
+    setAllDocs((prevDocs) =>
+      prevDocs.map((doc) =>
         doc.REF_SEQ_NO === refSeqNo
           ? { ...doc, VERIFIED_BY: verifierName }
           : doc
@@ -388,91 +461,108 @@ export default function DocumentViewPage() {
 
   // Optimized category fetching with caching
   const categoryCache = useRef(new Map());
-  
-  const fetchCategories = useCallback(async (userName) => {
-    if (categoryCache.current.has(userName)) {
-      return categoryCache.current.get(userName);
-    }
 
-    try {
-      const payload = { UserName: userName };
-      const response = await callSoapService(
-        userData.clientURL,
-        "DMS_Get_Allowed_DocCategories",
-        payload
-      );
-
-      const categories = response.map(category => category.CATEGORY_NAME);
-      categoryCache.current.set(userName, categories);
-      return categories;
-    } catch (error) {
-      console.error("Error fetching categories:", error);
-      return [];
-    }
-  }, [userData.clientURL]);
-
-  // Highly optimized employee selection
-  const handleEmployeeSelect = useCallback(async (refSeqNo, selectedUserName) => {
-    const isConfirm = window.confirm(
-      "Are you sure you want to assign? This action cannot be undone."
-    );
-    if (!isConfirm) return;
-
-    const doc = allDocs.find(d => d.REF_SEQ_NO === refSeqNo);
-    if (!doc) return;
-
-    try {
-      setIsProcessing(true);
-      
-      const categories = await fetchCategories(selectedUserName);
-      const hasAccess = categories.includes(doc.DOC_RELATED_CATEGORY);
-
-      if (!hasAccess) {
-        alert("Selected user does not have access to this category.");
-        return;
+  const fetchCategories = useCallback(
+    async (userName) => {
+      if (categoryCache.current.has(userName)) {
+        return categoryCache.current.get(userName);
       }
 
-      // Update task data
-      setTaskData(prev => ({
-        ...prev,
-        taskName: doc.DOCUMENT_DESCRIPTION,
-        relatedTo: doc.DOC_RELATED_TO,
-        refSeqNo: doc.REF_SEQ_NO,
-        dmsSeqNo: doc.REF_SEQ_NO,
-        verifiedBy: doc.VERIFIED_BY,
-        assignedTo: selectedUserName,
-      }));
+      try {
+        const payload = { UserName: userName };
+        const response = await callSoapService(
+          userData.clientURL,
+          "DMS_Get_Allowed_DocCategories",
+          payload
+        );
 
-      // Update assignment
-      const payload = {
-        USER_NAME: userData.userName,
-        ASSIGNED_TO: selectedUserName,
-        REF_SEQ_NO: doc.REF_SEQ_NO,
-      };
+        const categories = response.map((category) => category.CATEGORY_NAME);
+        categoryCache.current.set(userName, categories);
+        return categories;
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+        return [];
+      }
+    },
+    [userData.clientURL]
+  );
 
-      await updateDmsAssignedTo(payload, userData.userEmail, userData.clientURL);
-      
-      // Update local state
-      setAssignments(prev => new Map(prev).set(refSeqNo, {
-        user: selectedUserName,
-        canVerify: true
-      }));
+  // Highly optimized employee selection
+  const handleEmployeeSelect = useCallback(
+    async (refSeqNo, selectedUserName) => {
+      const isConfirm = window.confirm(
+        "Are you sure you want to assign? This action cannot be undone."
+      );
+      if (!isConfirm) return;
 
-    } catch (error) {
-      console.error("Error assigning document:", error);
-      alert("Failed to assign document. Please try again.");
-    } finally {
-      setIsProcessing(false);
-    }
-  }, [allDocs, fetchCategories, userData.userName, userData.userEmail, userData.clientURL]);
+      const doc = allDocs.find((d) => d.REF_SEQ_NO === refSeqNo);
+      if (!doc) return;
+
+      try {
+        setIsProcessing(true);
+
+        const categories = await fetchCategories(selectedUserName);
+        const hasAccess = categories.includes(doc.DOC_RELATED_CATEGORY);
+
+        if (!hasAccess) {
+          alert("Selected user does not have access to this category.");
+          return;
+        }
+
+        // Update task data
+        setTaskData((prev) => ({
+          ...prev,
+          taskName: doc.DOCUMENT_DESCRIPTION,
+          relatedTo: doc.DOC_RELATED_TO,
+          refSeqNo: doc.REF_SEQ_NO,
+          dmsSeqNo: doc.REF_SEQ_NO,
+          verifiedBy: doc.VERIFIED_BY,
+          assignedTo: selectedUserName,
+        }));
+
+        // Update assignment
+        const payload = {
+          USER_NAME: userData.userName,
+          ASSIGNED_TO: selectedUserName,
+          REF_SEQ_NO: doc.REF_SEQ_NO,
+        };
+
+        await updateDmsAssignedTo(
+          payload,
+          userData.userEmail,
+          userData.clientURL
+        );
+
+        // Update local state
+        setAssignments((prev) =>
+          new Map(prev).set(refSeqNo, {
+            user: selectedUserName,
+            canVerify: true,
+          })
+        );
+      } catch (error) {
+        console.error("Error assigning document:", error);
+        alert("Failed to assign document. Please try again.");
+      } finally {
+        setIsProcessing(false);
+      }
+    },
+    [
+      allDocs,
+      fetchCategories,
+      userData.userName,
+      userData.userEmail,
+      userData.clientURL,
+    ]
+  );
 
   const handleTaskChange = useCallback((e) => {
     const { name, value } = e.target;
-    setTaskData(prev => ({ ...prev, [name]: value }));
+    setTaskData((prev) => ({ ...prev, [name]: value }));
   }, []);
 
   const handleTaskCreated = useCallback((newTask) => {
-    setTaskData(prev => ({ ...prev, newTask }));
+    setTaskData((prev) => ({ ...prev, newTask }));
   }, []);
 
   // Show loading state
@@ -538,7 +628,7 @@ export default function DocumentViewPage() {
             {/* Documents grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
               {visibleDocs.length > 0 ? (
-                visibleDocs.map(doc => {
+                visibleDocs.map((doc) => {
                   const assignment = assignments.get(doc.REF_SEQ_NO);
                   return (
                     <DocumentCard
@@ -571,7 +661,12 @@ export default function DocumentViewPage() {
               ) : (
                 <div className="col-span-full text-center py-8">
                   <p className="text-gray-400">No documents available.</p>
-                  <Button onClick={fetchDocuments} variant="outline" size="sm" className="mt-2">
+                  <Button
+                    onClick={fetchDocuments}
+                    variant="outline"
+                    size="sm"
+                    className="mt-2"
+                  >
                     Refresh
                   </Button>
                 </div>
@@ -592,7 +687,8 @@ export default function DocumentViewPage() {
               <div className="text-center text-sm text-gray-500 py-2">
                 Showing {showingCount} of {filteredDocs.length} documents
                 {debouncedFilter && ` (filtered by "${debouncedFilter}")`}
-                {filteredDocs.length !== allDocs.length && ` from ${allDocs.length} total`}
+                {filteredDocs.length !== allDocs.length &&
+                  ` from ${allDocs.length} total`}
               </div>
             )}
           </>

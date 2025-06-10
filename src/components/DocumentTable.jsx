@@ -37,10 +37,13 @@ import DocumentFormModal from "./dialog/DocumentFormModal";
 import DocumentUploadModal from "./dialog/DocumentUploadModal";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
+import AccessDenied from "./AccessDenied";
 
 const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
   const { userData } = useAuth();
   const { toast } = useToast();
+
+  const [userEditRights, setUserEditRights] = useState("");
 
   const formModalRef = useRef(null);
   const uploadModalRef = useRef(null);
@@ -88,9 +91,16 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
   }, [userData.userEmail, userData.clientURL]);
 
   // Initial data load
-  useEffect(() => {
-    fetchDocsMasterList();
-  }, [fetchDocsMasterList]);
+useEffect(() => {
+  fetchDocsMasterList();
+
+  const getEditRights = async () => {
+    await fetchUserEditRights();
+  };
+
+  getEditRights();
+}, [fetchDocsMasterList]);
+
 
   // Expose fetch function to parent via ref for external refresh
   useEffect(() => {
@@ -98,6 +108,24 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
       fetchDataRef.current = fetchDocsMasterList;
     }
   }, [fetchDataRef, fetchDocsMasterList]);
+
+  const fetchUserEditRights = async () => {
+    const userType = userData.isAdmin ? "ADMINISTRATOR" : "USER";
+    const payload = {
+      UserName: userData.userName,
+      FormName: "DMS-DOCUMENTLISTEDITALL",
+      FormDescription: "Edit Rights For All Documents",
+      UserType: userType,
+    };
+
+    const response = await callSoapService(
+      userData.clientURL,
+      "DMS_CheckRights_ForTheUser",
+      payload
+    );
+
+    setUserEditRights(response);
+  };
 
   const onUploadSuccess = () => {
     fetchDocsMasterList();
@@ -108,7 +136,7 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
     }
   };
 
-const canCurrentUserEdit = (doc) => {
+  const canCurrentUserEdit = (doc) => {
     if (doc?.USER_NAME !== userData.userName)
       return "Access Denied: This document is created by another user.";
 
@@ -125,13 +153,24 @@ const canCurrentUserEdit = (doc) => {
   };
 
   const handleOpenUpload = useCallback((doc) => {
+    const hasAccess = String(userEditRights).toLowerCase() === "allowed";
+
+    if (!hasAccess) {
+      toast({
+        variant: "destructive",
+        title: "Permission Denied",
+        description: "You don't have permission to upload documents.",
+      });
+      return;
+    }
+
     setSelectedDocument(doc);
     if (uploadModalRef?.current) {
       uploadModalRef.current.showModal();
     } else {
       console.error("Form modal element not found");
     }
-  }, []);
+  }, [userEditRights, toast]);
 
   const handleOpenForm = useCallback((doc) => {
     setSelectedDocument(doc);
@@ -233,9 +272,7 @@ const canCurrentUserEdit = (doc) => {
             title={row.getValue("USER_NAME")}
           >
             <div>
-              <p className="text-xs truncate">
-                {row.getValue("USER_NAME")}
-              </p>
+              <p className="text-xs truncate">{row.getValue("USER_NAME")}</p>
             </div>
           </div>
         ),
@@ -324,9 +361,7 @@ const canCurrentUserEdit = (doc) => {
       },
       {
         header: () => (
-          <p className="text-xs text-gray-600 text-right w-full">
-            Docs
-          </p>
+          <p className="text-xs text-gray-600 text-right w-full">Docs</p>
         ),
         accessorKey: "NO_OF_DOCUMENTS",
         cell: (info) => {
