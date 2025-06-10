@@ -1,17 +1,18 @@
+import AccessDenied from "@/components/AccessDenied";
 import GlobalSearchInput from "@/components/GlobalSearchInput";
 import { useToast } from "@/hooks/use-toast";
+import { callSoapService } from "@/services/callSoapService";
 import { useEffect, useState } from "react";
 import { BarLoader } from "react-spinners";
 import TeamProfileCard from "../components/TeamProfileCard";
 import { useAuth } from "../contexts/AuthContext";
-import { getEmployeeImage } from "../services/employeeService";
-import { callSoapService } from "@/services/callSoapService";
-import AccessDenied from "@/components/AccessDenied";
 
 const TeamsPage = () => {
   const { userData } = useAuth();
-  const [userRights, setUserRights] = useState("");
   const { toast } = useToast();
+
+  const [userRights, setUserRights] = useState("");
+  const [rightsChecked, setRightsChecked] = useState(false);
 
   const [usersData, setUsersData] = useState([]);
   const [globalFilter, setGlobalFilter] = useState("");
@@ -90,21 +91,31 @@ const TeamsPage = () => {
   };
 
   const fetchUserRights = async () => {
-    const userType = userData.isAdmin ? "ADMINISTRATOR" : "USER";
-    const payload = {
-      UserName: userData.userName,
-      FormName: "DMS-DashboardAdmin",
-      FormDescription: "Dashboard Full View",
-      UserType: userType,
-    };
+    try {
+      const userType = userData.isAdmin ? "ADMINISTRATOR" : "USER";
+      const payload = {
+        UserName: userData.userName,
+        FormName: "DMS-TEAMSFULLVIEW",
+        FormDescription: "Teams All Users",
+        UserType: userType,
+      };
 
-    const response = await callSoapService(
-      userData.clientURL,
-      "DMS_CheckRights_ForTheUser",
-      payload
-    );
+      const response = await callSoapService(
+        userData.clientURL,
+        "DMS_CheckRights_ForTheUser",
+        payload
+      );
 
-    setUserRights(response);
+      setUserRights(response);
+    } catch (error) {
+      console.error("Failed to fetch user rights:", error);
+      toast({
+        variant: "destructive",
+        title: error,
+      });
+    } finally {
+      setRightsChecked(true);
+    }
   };
 
   const filteredUsersData = usersData.filter((user) => {
@@ -112,20 +123,18 @@ const TeamsPage = () => {
     return user.user_name.toLowerCase().includes(search);
   });
 
-  if (userRights !== "Allowed") {
-    return <AccessDenied />;
-  }
-
   return (
     <div className="grid grid-cols-1 gap-4">
       <div className="w-full lg:w-1/2">
         <GlobalSearchInput value={globalFilter} onChange={setGlobalFilter} />
       </div>
 
-      {loading ? (
+      {!rightsChecked || loading ? (
         <div className="flex justify-center items-start">
           <BarLoader color="#36d399" height={2} width="100%" />
         </div>
+      ) : userRights !== "Allowed" ? (
+        <AccessDenied />
       ) : usersData.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {filteredUsersData.map((user, index) => (

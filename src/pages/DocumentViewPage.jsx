@@ -26,7 +26,6 @@ import { getAllDmsActiveUser } from "../services/dashboardService";
 import { getDocMasterList, updateDmsAssignedTo } from "../services/dmsService";
 import { formatDateTime } from "../utils/dateUtils";
 import { callSoapService } from "@/services/callSoapService";
-import AccessDenied from "@/components/AccessDenied";
 
 // Custom hook for debounced search with transition
 const useDebounceWithTransition = (value, delay) => {
@@ -223,8 +222,6 @@ const DocumentCard = memo(
 DocumentCard.displayName = "DocumentCard";
 
 export default function DocumentViewPage() {
-  const [userRights, setUserRights] = useState("");
-
   // Core data states - simplified
   const [allDocs, setAllDocs] = useState([]);
   const [users, setUsers] = useState([]);
@@ -276,36 +273,6 @@ export default function DocumentViewPage() {
   );
 
   const [taskData, setTaskData] = useState(initialTaskData);
-
-  // Fetch user rights - moved to top
-  useEffect(() => {
-    const fetchUserRights = async () => {
-      const userType = userData.isAdmin ? "ADMINISTRATOR" : "USER";
-      const payload = {
-        UserName: userData.userName,
-        FormName: "DMS-DOCUMENTVIEW",
-        FormDescription: "Document View",
-        UserType: userType,
-      };
-
-      const response = await callSoapService(
-        userData.clientURL,
-        "DMS_CheckRights_ForTheUser",
-        payload
-      );
-
-      console.log(response);
-      
-      setUserRights(response);
-    };
-
-    fetchUserRights();
-  }, [userData]); // Added dependency array
-
-  // Early return for access denied - BEFORE any other hooks
-  if (userRights !== "" && userRights !== "Allowed") {
-    return <AccessDenied />;
-  }
 
   // Handle location state
   useEffect(() => {
@@ -379,6 +346,8 @@ export default function DocumentViewPage() {
         userData.userEmail,
         userData.clientURL
       );
+
+      console.log(response);
 
       if (!Array.isArray(response) || !response.length) {
         setError("No documents available.");

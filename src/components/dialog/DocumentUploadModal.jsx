@@ -71,21 +71,29 @@ const DocumentUploadModal = ({
   };
 
   const fetchUserViewRights = async () => {
-    const userType = userData.isAdmin ? "ADMINISTRATOR" : "USER";
-    const payload = {
-      UserName: userData.userName,
-      FormName: "DMS-DOCUMENTLISTVIEWALL",
-      FormDescription: "View Rights For All Documents",
-      UserType: userType,
-    };
+    try {
+      const userType = userData.isAdmin ? "ADMINISTRATOR" : "USER";
+      const payload = {
+        UserName: userData.userName,
+        FormName: "DMS-DOCUMENTLISTVIEWALL",
+        FormDescription: "View Rights For All Documents",
+        UserType: userType,
+      };
 
-    const response = await callSoapService(
-      userData.clientURL,
-      "DMS_CheckRights_ForTheUser",
-      payload
-    );
+      const response = await callSoapService(
+        userData.clientURL,
+        "DMS_CheckRights_ForTheUser",
+        payload
+      );
 
-    setUserViewRights(response);
+      setUserViewRights(response);
+    } catch (error) {
+      console.error("Failed to fetch user rights:", error);
+      toast({
+        variant: "destructive",
+        title: error,
+      });
+    }
   };
 
   const allowedMimeTypes = {
@@ -178,10 +186,10 @@ const DocumentUploadModal = ({
 
   // Download & view documents
   const handleViewDocs = async (selectedDocs) => {
-    const hasAccess = userViewRights === "Allowed";
+    const hasAccess = String(userViewRights).toLowerCase() === "allowed";
 
     if (!hasAccess) {
-      alert("Access Denied.");
+      alert("You don't have permission to view documents.");
       return;
     }
 

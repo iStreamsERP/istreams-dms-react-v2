@@ -91,16 +91,15 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
   }, [userData.userEmail, userData.clientURL]);
 
   // Initial data load
-useEffect(() => {
-  fetchDocsMasterList();
+  useEffect(() => {
+    fetchDocsMasterList();
 
-  const getEditRights = async () => {
-    await fetchUserEditRights();
-  };
+    const getEditRights = async () => {
+      await fetchUserEditRights();
+    };
 
-  getEditRights();
-}, [fetchDocsMasterList]);
-
+    getEditRights();
+  }, [fetchDocsMasterList]);
 
   // Expose fetch function to parent via ref for external refresh
   useEffect(() => {
@@ -110,21 +109,29 @@ useEffect(() => {
   }, [fetchDataRef, fetchDocsMasterList]);
 
   const fetchUserEditRights = async () => {
-    const userType = userData.isAdmin ? "ADMINISTRATOR" : "USER";
-    const payload = {
-      UserName: userData.userName,
-      FormName: "DMS-DOCUMENTLISTEDITALL",
-      FormDescription: "Edit Rights For All Documents",
-      UserType: userType,
-    };
+    try {
+      const userType = userData.isAdmin ? "ADMINISTRATOR" : "USER";
+      const payload = {
+        UserName: userData.userName,
+        FormName: "DMS-DOCUMENTLISTEDITALL",
+        FormDescription: "Edit Rights For All Documents",
+        UserType: userType,
+      };
 
-    const response = await callSoapService(
-      userData.clientURL,
-      "DMS_CheckRights_ForTheUser",
-      payload
-    );
+      const response = await callSoapService(
+        userData.clientURL,
+        "DMS_CheckRights_ForTheUser",
+        payload
+      );
 
-    setUserEditRights(response);
+      setUserEditRights(response);
+    } catch (error) {
+      console.error("Failed to fetch user rights:", error);
+      toast({
+        variant: "destructive",
+        title: error,
+      });
+    }
   };
 
   const onUploadSuccess = () => {
@@ -152,7 +159,30 @@ useEffect(() => {
     return "";
   };
 
-  const handleOpenUpload = useCallback((doc) => {
+  const handleOpenUpload = useCallback(
+    (doc) => {
+      const hasAccess = String(userEditRights).toLowerCase() === "allowed";
+
+      if (!hasAccess) {
+        toast({
+          variant: "destructive",
+          title: "Permission Denied",
+          description: "You don't have permission to upload documents.",
+        });
+        return;
+      }
+
+      setSelectedDocument(doc);
+      if (uploadModalRef?.current) {
+        uploadModalRef.current.showModal();
+      } else {
+        console.error("Form modal element not found");
+      }
+    },
+    [userEditRights, toast]
+  );
+
+  const handleOpenForm = useCallback((doc) => {
     const hasAccess = String(userEditRights).toLowerCase() === "allowed";
 
     if (!hasAccess) {
@@ -164,15 +194,6 @@ useEffect(() => {
       return;
     }
 
-    setSelectedDocument(doc);
-    if (uploadModalRef?.current) {
-      uploadModalRef.current.showModal();
-    } else {
-      console.error("Form modal element not found");
-    }
-  }, [userEditRights, toast]);
-
-  const handleOpenForm = useCallback((doc) => {
     setSelectedDocument(doc);
     if (formModalRef?.current) {
       formModalRef.current.showModal();

@@ -20,6 +20,7 @@ const CategoryViewPage = () => {
   const { userData } = useAuth();
 
   const [userRights, setUserRights] = useState("");
+  const [rightsChecked, setRightsChecked] = useState(false);
 
   const [categories, setCategories] = useState([]);
   const [filterDays, setFilterDays] = useState("365");
@@ -64,26 +65,32 @@ const CategoryViewPage = () => {
   };
 
   const fetchUserRights = async () => {
-    const userType = userData.isAdmin ? "ADMINISTRATOR" : "USER";
-    const payload = {
-      UserName: userData.userName,
-      FormName: "DMS-CATEGORIESFORM",
-      FormDescription: "Categories View",
-      UserType: userType,
-    };
+    try {
+      const userType = userData.isAdmin ? "ADMINISTRATOR" : "USER";
+      const payload = {
+        UserName: userData.userName,
+        FormName: "DMS-CATEGORIESFORM",
+        FormDescription: "Categories View",
+        UserType: userType,
+      };
 
-    const response = await callSoapService(
-      userData.clientURL,
-      "DMS_CheckRights_ForTheUser",
-      payload
-    );    
+      const response = await callSoapService(
+        userData.clientURL,
+        "DMS_CheckRights_ForTheUser",
+        payload
+      );
 
-    setUserRights(response);
+      setUserRights(response);
+    } catch (error) {
+      console.error("Failed to fetch user rights:", error);
+      toast({
+        variant: "destructive",
+        title: error,
+      });
+    } finally {
+      setRightsChecked(true);
+    }
   };
-
-  if (userRights !== "Allowed") {
-    return <AccessDenied />;
-  }
 
   return (
     <div className="space-y-4">
@@ -120,10 +127,12 @@ const CategoryViewPage = () => {
         </div>
       </div>
 
-      {loading ? (
+      {!rightsChecked || loading ? (
         <div className="flex justify-center items-center">
           <BarLoader color="#36d399" height={2} width="100%" />
         </div>
+      ) : userRights !== "Allowed" ? (
+        <AccessDenied />
       ) : categories.length === 0 ? (
         <p className="text-center text-sm">No data found...</p>
       ) : (
