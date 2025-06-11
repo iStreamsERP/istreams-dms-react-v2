@@ -16,7 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@radix-ui/react-popover
 import { AlertTriangle, Check, ChevronsUpDown, Edit, Search, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
-const UserRole = () => {
+const UserRolePage = () => {
   const [roleDetails, setRoleDetails] = useState({ ROLE_NAME: "", ROLE_ID: "New", ROLE_DESCRIPTION: "" });
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [rolesList, setRolesList] = useState([]);
@@ -778,4 +778,4 @@ const UserRole = () => {
   );
 };
 
-export default UserRole;
+export default UserRolePage;

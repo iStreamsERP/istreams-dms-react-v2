@@ -32,12 +32,10 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PacmanLoader } from "react-spinners";
 import { useAuth } from "../contexts/AuthContext";
-import { deleteDMSMaster } from "../services/dmsService";
 import DocumentFormModal from "./dialog/DocumentFormModal";
 import DocumentUploadModal from "./dialog/DocumentUploadModal";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
-import AccessDenied from "./AccessDenied";
 
 const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
   const { userData } = useAuth();
@@ -167,7 +165,7 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
         toast({
           variant: "destructive",
           title: "Permission Denied",
-          description: "You don't have permission to upload documents.",
+          description: "You don't have permission to edit documents.",
         });
         return;
       }
@@ -182,25 +180,28 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
     [userEditRights, toast]
   );
 
-  const handleOpenForm = useCallback((doc) => {
-    const hasAccess = String(userEditRights).toLowerCase() === "allowed";
+  const handleOpenForm = useCallback(
+    (doc) => {
+      const hasAccess = String(userEditRights).toLowerCase() === "allowed";
 
-    if (!hasAccess) {
-      toast({
-        variant: "destructive",
-        title: "Permission Denied",
-        description: "You don't have permission to upload documents.",
-      });
-      return;
-    }
+      if (!hasAccess) {
+        toast({
+          variant: "destructive",
+          title: "Permission Denied",
+          description: "You don't have permission to edit documents.",
+        });
+        return;
+      }
 
-    setSelectedDocument(doc);
-    if (formModalRef?.current) {
-      formModalRef.current.showModal();
-    } else {
-      console.error("Form modal element not found");
-    }
-  }, []);
+      setSelectedDocument(doc);
+      if (formModalRef?.current) {
+        formModalRef.current.showModal();
+      } else {
+        console.error("Form modal element not found");
+      }
+    },
+    [userEditRights, toast]
+  );
 
   const handleDelete = useCallback(
     async (doc) => {
@@ -222,10 +223,11 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
           USER_NAME: doc.USER_NAME,
           REF_SEQ_NO: doc.REF_SEQ_NO,
         };
-        const response = await deleteDMSMaster(
-          payload,
-          userData.userEmail,
-          userData.clientURL
+
+        const response = await callSoapService(
+          userData.clientURL,
+          "DMS_Delete_DMS_Master",
+          payload
         );
 
         setDocumentList((prevData) =>

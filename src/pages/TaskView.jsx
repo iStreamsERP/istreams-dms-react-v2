@@ -1,4 +1,3 @@
-import AccessDenied from "@/components/AccessDenied";
 import GlobalSearchInput from "@/components/GlobalSearchInput";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,20 +17,15 @@ import ConfirmationTaskModal from "../components/dialog/ConfirmationTaskModal";
 import TransferTaskModal from "../components/dialog/TransferTaskModal";
 import UpdateTaskModal from "../components/dialog/UpdateTaskModal";
 import { useAuth } from "../contexts/AuthContext";
-import { getEmployeeImage } from "../services/employeeService";
-import {
-  getUserTasks,
-  transferUserTasks,
-  updateUserTasks,
-} from "../services/taskService";
 import {
   convertServiceDate,
   formatDateParts,
   formatDateTime,
 } from "../utils/dateUtils";
 import { capitalizeFirstLetter } from "../utils/stringUtils";
+import AccessDenied from "@/components/AccessDenied";
 
-const TaskView = () => {
+const TaskViewPage = () => {
   const { userData } = useAuth();
 
   const [userRights, setUserRights] = useState("");
@@ -53,13 +47,35 @@ const TaskView = () => {
   const DEFAULT_IMAGE =
     "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTbBa24AAg4zVSuUsL4hJnMC9s3DguLgeQmZA&s";
 
+  const fetchUserRights = async () => {
+    const userType = userData.isAdmin ? "ADMINISTRATOR" : "USER";
+    const payload = {
+      UserName: userData.userName,
+      FormName: "DMS-TASKVIEW",
+      FormDescription: "Task View",
+      UserType: userType,
+    };
+
+    const response = await callSoapService(
+      userData.clientURL,
+      "DMS_CheckRights_ForTheUser",
+      payload
+    );
+
+    setUserRights(response);
+  };
+
   const fetchUserTasks = useCallback(async () => {
     setLoadingTasks(true);
     try {
-      const response = await getUserTasks(
-        userData.userName,
-        userData.userEmail,
-        userData.clientURL
+      const payload = {
+        UserName: userData.userName,
+      };
+
+      const response = await callSoapService(
+        userData.clientURL,
+        "IM_Get_User_Tasks",
+        payload
       );
 
       const taskDataArray = Array.isArray(response)
@@ -71,10 +87,14 @@ const TaskView = () => {
       const tasksWithImages = await Promise.all(
         taskDataArray.map(async (task) => {
           try {
-            const imageData = await getEmployeeImage(
-              task.ASSIGNED_EMP_NO,
-              userData.userEmail,
-              userData.clientURL
+            const payload = {
+              EmpNo: task.ASSIGNED_EMP_NO,
+            };
+
+            const imageData = await callSoapService(
+              userData.clientURL,
+              "getpic_bytearray",
+              payload
             );
 
             return {
@@ -107,8 +127,8 @@ const TaskView = () => {
   }, [userData.userEmail, userData.userName, userData.clientURL]);
 
   useEffect(() => {
-    fetchUserTasks();
     fetchUserRights();
+    fetchUserTasks();
   }, [fetchUserTasks]);
 
   // Filter tasks based on search text, status filter, and assignment filter.
@@ -189,18 +209,18 @@ const TaskView = () => {
   // Handle modal actions
   const handleAction = async ({ status, date = "", remarks = "" }) => {
     try {
-      const updateUserTasksPayload = {
-        taskID: selectedTask.TASK_ID,
-        taskStatus: status,
-        statusDateTime: date || formatDateTime(new Date()),
-        reason: remarks,
-        userName: userData.userName,
+      const payload = {
+        TaskID: selectedTask.TASK_ID,
+        TaskStatus: status,
+        StatusDateTime: date || formatDateTime(new Date()),
+        Reason: remarks,
+        UserName: userData.userName,
       };
 
-      const updateResponse = await updateUserTasks(
-        updateUserTasksPayload,
-        userData.userEmail,
-        userData.clientURL
+      const response = await callSoapService(
+        userData.clientURL,
+        "IM_Task_Update",
+        payload
       );
     } catch (error) {
       console.error("Task update failed:", error);
@@ -211,24 +231,24 @@ const TaskView = () => {
 
   const handleTransfer = async (transferTaskData) => {
     try {
-      const transferUserTasksPayload = {
-        taskID: selectedTask.TASK_ID,
-        userName: userData.userName,
-        notCompletionReason: transferTaskData.NotCompletionReason,
-        subject: selectedTask.TASK_NAME,
-        details: selectedTask.TASK_INFO,
-        relatedTo: selectedTask.RELATED_ON,
-        creatorReminderOn: transferTaskData.CreatorReminderOn,
-        startDate: transferTaskData.StartDate,
-        compDate: transferTaskData.CompDate,
-        remindTheUserOn: transferTaskData.RemindTheUserOn,
-        newUser: transferTaskData.NewUser,
+      const payload = {
+        TaskID: selectedTask.TASK_ID,
+        UserName: userData.userName,
+        NotCompletionReason: transferTaskData.NotCompletionReason,
+        Subject: selectedTask.TASK_NAME,
+        Details: selectedTask.TASK_INFO,
+        RelatedTo: selectedTask.RELATED_ON,
+        CreatorReminderOn: transferTaskData.CreatorReminderOn,
+        StartDate: transferTaskData.StartDate,
+        CompDate: transferTaskData.CompDate,
+        RemindTheUserOn: transferTaskData.RemindTheUserOn,
+        NewUser: transferTaskData.NewUser,
       };
 
-      const transferUserTasksResponse = await transferUserTasks(
-        transferUserTasksPayload,
-        userData.userEmail,
-        userData.clientURL
+      const response = await callSoapService(
+        userData.clientURL,
+        "IM_Task_Transfer",
+        payload
       );
     } catch (error) {
       console.error("Task transfer failed:", error);
@@ -270,24 +290,6 @@ const TaskView = () => {
     }
 
     return null; // No buttons if conditions don't match
-  };
-
-  const fetchUserRights = async () => {
-    const userType = userData.isAdmin ? "ADMINISTRATOR" : "USER";
-    const payload = {
-      UserName: userData.userName,
-      FormName: "DMS-TASKVIEW",
-      FormDescription: "Task View",
-      UserType: userType,
-    };
-
-    const response = await callSoapService(
-      userData.clientURL,
-      "DMS_CheckRights_ForTheUser",
-      payload
-    );
-
-    setUserRights(response);
   };
 
   if (userRights !== "Allowed") {
@@ -525,4 +527,4 @@ const TaskView = () => {
   );
 };
 
-export default TaskView;
+export default TaskViewPage;

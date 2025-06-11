@@ -1,35 +1,31 @@
 import AccessDenied from "@/components/AccessDenied";
 import { Button } from "@/components/ui/button";
 import {
-    Command,
-    CommandGroup,
-    CommandInput,
-    CommandItem,
-    CommandList
+  Command,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
 } from "@/components/ui/command";
 import { Label } from "@/components/ui/label";
 import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import {
-    deleteDataModelService,
-    getDataModelService,
-    saveDataService,
-} from "@/services/dataModelService";
+import { callSoapService } from "@/services/callSoapService";
 import { convertDataModelToStringData } from "@/utils/dataModelConverter";
 import {
-    Check,
-    CheckSquare,
-    ChevronDown,
-    ChevronRight,
-    ChevronsUpDown,
-    Square
+  Check,
+  CheckSquare,
+  ChevronDown,
+  ChevronRight,
+  ChevronsUpDown,
+  Square,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -398,11 +394,13 @@ const RoleAccessRightsPage = () => {
         WhereCondition: "IS_FOR_APPROVAL = 'F'",
         Orderby: "ROLE_ID",
       };
-      const response = await getDataModelService(
-        rolesdetailsData,
-        userData?.userEmail,
-        userData?.clientURL
+
+      const response = await callSoapService(
+        userData.clientURL,
+        "DataModel_GetData",
+        rolesdetailsData
       );
+
       const formattedRoles = response.map((role) => ({
         roleName: role.ROLE_NAME?.trim(),
         roleId: role.ROLE_ID.toString(),
@@ -429,10 +427,11 @@ const RoleAccessRightsPage = () => {
         WhereCondition: "",
         Orderby: "MODULE_NAME, FORM_TYPE",
       };
-      const response = await getDataModelService(
-        formsRequestData,
-        userData?.userEmail,
-        userData?.clientURL
+
+      const response = await callSoapService(
+        userData.clientURL,
+        "DataModel_GetData",
+        formsRequestData
       );
 
       const formsArray = Array.isArray(response)
@@ -462,10 +461,10 @@ const RoleAccessRightsPage = () => {
         Orderby: "MODULE_NAME, FORM_NAME",
       };
 
-      const rightsResponse = await getDataModelService(
-        rightRequestData,
-        userData?.userEmail,
-        userData?.clientURL
+      const rightsResponse = await callSoapService(
+        userData.clientURL,
+        "DataModel_GetData",
+        rightRequestData
       );
 
       if (!Array.isArray(rightsResponse)) {
@@ -498,10 +497,10 @@ const RoleAccessRightsPage = () => {
             Orderby: "MODULE_NAME, FORM_NAME",
           };
 
-          const formsResponse = await getDataModelService(
-            formsRequestData,
-            userData?.userEmail,
-            userData?.clientURL
+          const formsResponse = await callSoapService(
+            userData.clientURL,
+            "DataModel_GetData",
+            formsRequestData
           );
 
           if (Array.isArray(formsResponse)) {
@@ -606,16 +605,16 @@ const RoleAccessRightsPage = () => {
 
       if (roleDetails.roleId) {
         try {
-          const deletePayload = {
+          const payload = {
             UserName: userData.userEmail,
             DataModelName: "USER_RIGHTS_ROLES",
             WhereCondition: `ROLE_ID = '${roleDetails.roleId}' AND FORM_NAME = '${node.id}'`,
           };
 
-          await deleteDataModelService(
-            deletePayload,
-            userData.userEmail,
-            userData.clientURL
+          const response = await callSoapService(
+            userData.clientURL,
+            "DataModel_DeleteData",
+            payload
           );
         } catch (deleteError) {
           console.error("Error removing from database:", deleteError);
@@ -648,15 +647,16 @@ const RoleAccessRightsPage = () => {
       if (roleDetails.roleId) {
         for (const node of forms) {
           try {
-            const deletePayload = {
+            const payload = {
               UserName: userData.userEmail,
               DataModelName: "USER_RIGHTS_ROLES",
               WhereCondition: `ROLE_ID = '${roleDetails.roleId}' AND FORM_NAME = '${node.id}'`,
             };
-            await deleteDataModelService(
-              deletePayload,
-              userData.userEmail,
-              userData.clientURL
+
+            const response = await callSoapService(
+              userData.clientURL,
+              "DataModel_DeleteData",
+              payload
             );
           } catch (deleteError) {
             console.error(
@@ -705,13 +705,13 @@ const RoleAccessRightsPage = () => {
           UserName: userData.userEmail,
           DModelData: data,
         };
-        console.log(savePayload);
-        const saveResponse = await saveDataService(
-          savePayload,
-          userData.userEmail,
-          userData.clientURL
+
+        const saveResponse = await callSoapService(
+          userData.clientURL,
+          "DataModel_SaveData",
+          savePayload
         );
-        console.log(saveResponse);
+
         if (
           saveResponse === null ||
           saveResponse === undefined ||
@@ -748,7 +748,6 @@ const RoleAccessRightsPage = () => {
     setSelectedForms([]);
   };
 
-  
      if (!userData?.isAdmin) {
       return <AccessDenied />;
     }

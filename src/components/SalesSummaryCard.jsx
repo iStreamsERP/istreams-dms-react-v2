@@ -1,7 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { callSoapService } from "@/services/callSoapService";
-import { getDashboardOverallSummary } from "@/services/dashboardService";
 import {
   CheckCircle,
   ClipboardCheck,
@@ -11,49 +10,74 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
-const DocumentSummaryCard = ({ daysCount = 30 }) => {
+const SalesSummaryCard = ({ daysCount = 30 }) => {
   const [summaryData, setSummaryData] = useState(null);
+  const [userRights, setUserRights] = useState("");
   const { userData } = useAuth();
+
+  const fetchUserRights = async () => {
+    try {
+      const userType = userData.isAdmin ? "ADMINISTRATOR" : "USER";
+      const payload = {
+        UserName: userData.userName,
+        FormName: "DMS-DASHBOARDADMIN",
+        FormDescription: "Dashboard Full View",
+        UserType: userType,
+      };
+
+      const response = await callSoapService(
+        userData.clientURL,
+        "DMS_CheckRights_ForTheUser",
+        payload
+      );
+
+      setUserRights(response);
+    } catch (error) {
+      console.error("Failed to fetch user rights:", error);
+    }
+  };
+
+  const fetchData = async () => {
+    try {
+      const hasAccess = userData?.isAdmin || userRights === "Allowed";
+
+      const payloadForTheUser = hasAccess ? "" : userData.userName;
+
+      const payload = {
+        NoOfDays: daysCount,
+        ForTheUser: payloadForTheUser,
+      };
+
+      const response = await callSoapService(
+        userData.clientURL,
+        "DMS_GetDashboard_OverallSummary",
+        payload
+      );
+
+      const summaryObj = response.reduce((acc, item) => {
+        acc[item.CATEGORY] = Number(item.total_count);
+        return acc;
+      }, {});
+
+      setSummaryData(summaryObj);
+    } catch (error) {
+      console.error("Error fetching dashboard summary:", error);
+    }
+  };
 
   // Fetch dashboard summary data
   useEffect(() => {
-    let isMounted = true;
-    const fetchSummary = async () => {
-      try {
-        if (!userData) return;
-
-        const payloadForTheUser = userData.isAdmin
-          ? ""
-          : `${userData.userName}`;
-
-        const payload = {
-          NoOfDays: daysCount,
-          ForTheUser: payloadForTheUser,
-        };
-
-        const response = await callSoapService(
-          userData.clientURL,
-          "DMS_GetDashboard_OverallSummary",
-          payload
-        );
-
-        const summaryObj = response.reduce((acc, item) => {
-          acc[item.CATEGORY] = Number(item.total_count);
-          return acc;
-        }, {});
-
-        if (isMounted) setSummaryData(summaryObj);
-      } catch (error) {
-        if (isMounted)
-          console.error("Error fetching dashboard summary:", error);
-      }
+    const initialize = async () => {
+      await fetchUserRights(); // Only sets userRights, not summary
     };
-
-    if (daysCount != null) fetchSummary();
-    return () => {
-      isMounted = false;
-    };
+    initialize();
   }, [daysCount, userData]);
+
+  useEffect(() => {
+    if (userRights !== "") {
+      fetchData(); // This now runs *after* userRights is updated
+    }
+  }, [userRights]);
 
   const safePct = (value, total) => {
     if (typeof value !== "number" || typeof total !== "number" || total <= 0)
@@ -153,4 +177,4 @@ const DocumentSummaryCard = ({ daysCount = 30 }) => {
   );
 };
 
-export default DocumentSummaryCard;
+export default SalesSummaryCard;

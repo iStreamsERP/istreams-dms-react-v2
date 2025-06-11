@@ -109,9 +109,9 @@ export const getNavbarLinks = (isAdmin) => [
               ],
             },
             {
-              label: "Categories Master",
+              label: "Category Master",
               icon: LibraryBig,
-              path: "/categories-master",
+              path: "/category-master",
             },
           ],
         },

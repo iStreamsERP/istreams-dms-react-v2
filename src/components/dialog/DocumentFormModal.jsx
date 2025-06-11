@@ -2,11 +2,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import {
-  getDataModelFromQueryService,
-  getDataModelService,
-  saveDataService,
-} from "@/services/dataModelService";
+import { callSoapService } from "@/services/callSoapService";
 import { convertDataModelToStringData } from "@/utils/dataModelConverter";
 import { getFileIcon } from "@/utils/getFileIcon";
 import {
@@ -27,13 +23,11 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
-import { updateDmsVerifiedBy } from "../../services/dmsService";
 import { convertServiceDate } from "../../utils/dateUtils";
 import DocumentPreview from "../DocumentPreview";
 import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
 import RejectModal from "./RejectModal";
-import { callSoapService } from "@/services/callSoapService";
 
 const DocumentFormModal = ({
   formModalRef,
@@ -142,25 +136,6 @@ const DocumentFormModal = ({
     }
   };
 
-  // const fetchDmsMasterDataModel = async () => {
-  //   try {
-  //     const response = await getDataModelService(
-  //       {
-  //         DataModelName: "SYNM_DMS_MASTER",
-  //         WhereCondition: "",
-  //         Orderby: "",
-  //       },
-  //       userData.userEmail,
-  //       userData.clientURL
-  //     );
-  //     setDmsMasterData(response);
-  //   } catch (err) {
-  //     console.error("Error fetching data model:", err);
-  //   }
-  // };
-
-  // Fetch existing documents and categories
-
   useEffect(() => {
     fetchExistingDocument();
   }, [selectedDocument?.REF_SEQ_NO, userData.userEmail]);
@@ -252,10 +227,10 @@ const DocumentFormModal = ({
         SQLQuery: `SELECT VENDOR_ID, VENDOR_NAME FROM VENDOR_MASTER`,
       };
 
-      const response = await getDataModelFromQueryService(
-        payload,
-        userData.userEmail,
-        userData.clientURL
+      const response = await callSoapService(
+        userData.clientURL,
+        "DataModel_GetDataFrom_Query",
+        payload
       );
 
       setVendorData({
@@ -277,11 +252,11 @@ const DocumentFormModal = ({
         SQLQuery: `SELECT CLIENT_ID, CLIENT_NAME FROM CLIENT_MASTER`,
       };
 
-      const response = await getDataModelFromQueryService(
-        payload,
-        userData.userEmail,
-        userData.clientURL
-      );
+       const response = await callSoapService(
+          userData.clientURL,
+          "DataModel_GetDataFrom_Query",
+          payload
+        );
 
       setClientData({
         list: response || [],
@@ -319,11 +294,12 @@ const DocumentFormModal = ({
       const payload = {
         SQLQuery: `SELECT INCLUDE_CUSTOM_COLUMNS FROM SYNM_DMS_DOC_CATEGORIES WHERE CATEGORY_NAME = '${value}'`,
       };
-      const response = await getDataModelFromQueryService(
-        payload,
-        userData.userEmail,
-        userData.clientURL
-      );
+      
+       const response = await callSoapService(
+          userData.clientURL,
+          "DataModel_GetDataFrom_Query",
+          payload
+        );
 
       const raw = Array.isArray(response) ? response : response?.Data || [];
       const commaText = raw[0]?.INCLUDE_CUSTOM_COLUMNS || "";

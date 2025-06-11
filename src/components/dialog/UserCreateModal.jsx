@@ -13,7 +13,6 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { callSoapService } from "@/services/callSoapService";
-import { createNewUser } from "@/services/userManagementService";
 import { getDomainFromEmail } from "@/utils/emailHelpers";
 import axios from "axios";
 import { Check, UserPlus } from "lucide-react";
@@ -24,24 +23,25 @@ import { BeatLoader } from "react-spinners";
 const validateForm = (data) => {
   const errors = {};
 
-  if (!data.newUserName || data.newUserName.trim().length < 2) {
-    errors.newUserName = "Username must be at least 2 characters.";
+  if (!data.NEW_USER_NAME || data.NEW_USER_NAME.trim().length < 2) {
+    errors.NEW_USER_NAME = "Username must be at least 2 characters.";
   }
-  if (!data.password || data.password.trim().length < 6) {
-    errors.password = "Password must be at least 6 characters.";
+  // Only validate password when creating new user
+  if (!data.user && (!data.PASSWORD || data.PASSWORD.trim().length < 6)) {
+    errors.PASSWORD = "Password must be at least 6 characters.";
   }
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!data.emailAddress || !emailRegex.test(data.emailAddress)) {
-    errors.emailAddress = "Please enter a valid email address.";
+  if (!data.EMAIL_ADDRESS || !emailRegex.test(data.EMAIL_ADDRESS)) {
+    errors.EMAIL_ADDRESS = "Please enter a valid email address.";
   }
-  if (!data.mobileNumber || data.mobileNumber.trim().length < 10) {
-    errors.mobileNumber = "Mobile number must be at least 10 digits.";
+  if (!data.MOBILE_NUMBER || !/^\d{10}$/.test(data.MOBILE_NUMBER)) {
+    errors.MOBILE_NUMBER = "Mobile number must be exactly 10 digits.";
   }
-  if (!data.fullName || data.fullName.trim().length < 2) {
-    errors.fullName = "Full name is required.";
+  if (!data.FULL_NAME || data.FULL_NAME.trim().length < 2) {
+    errors.FULL_NAME = "Full name is required.";
   }
-  if (!data.empNo || data.empNo.trim().length < 2) {
-    errors.empNo = "Employee number is required.";
+  if (!data.EMP_NO || data.EMP_NO.trim().length < 2) {
+    errors.EMP_NO = "Employee number is required.";
   }
 
   return errors;
@@ -50,17 +50,17 @@ const validateForm = (data) => {
 // Validate a single field on blur.
 const validateInput = (name, value) => {
   switch (name) {
-    case "newUserName":
+    case "NEW_USER_NAME":
       if (!value || value.trim().length < 2) {
         return "Username must be at least 2 characters.";
       }
       break;
-    case "password":
+    case "PASSWORD":
       if (!value || value.trim().length < 6) {
         return "Password must be at least 6 characters.";
       }
       break;
-    case "emailAddress":
+    case "EMAIL_ADDRESS":
       {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!value || !emailRegex.test(value)) {
@@ -68,17 +68,17 @@ const validateInput = (name, value) => {
         }
       }
       break;
-    case "mobileNumber":
+    case "MOBILE_NUMBER":
       if (!value || !/^\d{10}$/.test(value)) {
         return "Mobile number must be exactly 10 digits.";
       }
       break;
-    case "fullName":
+    case "FULL_NAME":
       if (!value || value.trim().length < 2) {
         return "Full name must be at least 2 characters.";
       }
       break;
-    case "empNo":
+    case "EMP_NO":
       if (!value || value.trim().length < 2) {
         return "Employee number must be at least 2 characters.";
       }
@@ -92,22 +92,24 @@ const validateInput = (name, value) => {
 const UserCreateModal = ({ user, open, onClose }) => {
   const { userData } = useAuth();
   const { toast } = useToast();
+
   const DOMAIN_NAME = getDomainFromEmail(userData.currentUserLogin);
   const [loading, setLoading] = useState({});
   const [errors, setErrors] = useState({});
   const [previewUrl, setPreviewUrl] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const initialFormData = {
-    loginUserName: userData.currentUserName,
-    newUserName: "",
-    password: "",
+    LOGIN_USER_NAME: userData.currentUserName,
+    NEW_USER_NAME: "",
+    PASSWORD: "",
     isAdminUser: false,
-    emailAddress: "",
-    mobileNumber: "",
-    fullName: "",
-    empNo: "",
-    domainName: DOMAIN_NAME,
-    employeeImage: "",
+    EMAIL_ADDRESS: "",
+    MOBILE_NUMBER: "",
+    FULL_NAME: "",
+    EMP_NO: "",
+    DOMAIN_NAME: DOMAIN_NAME,
+    employeeImage: null,
     accountExpired: false,
     accountLocked: false,
   };
@@ -115,43 +117,46 @@ const UserCreateModal = ({ user, open, onClose }) => {
   const [formData, setFormData] = useState(initialFormData);
 
   const [isFocused, setIsFocused] = useState({
-    newUserName: false,
-    password: false,
+    NEW_USER_NAME: false,
+    PASSWORD: false,
     isAdminUser: false,
-    emailAddress: false,
-    mobileNumber: false,
-    fullName: false,
-    empNo: false,
+    EMAIL_ADDRESS: false,
+    MOBILE_NUMBER: false,
+    FULL_NAME: false,
+    EMP_NO: false,
     employeeImage: false,
     accountExpired: false,
     accountLocked: false,
   });
 
   useEffect(() => {
-    if (user) {
-      const DOMAIN_NAME = getDomainFromEmail(user?.EMAIL_ADDRESS);
+    if (user && open) {
+      const domain = getDomainFromEmail(user?.EMAIL_ADDRESS);
       setFormData({
-        loginUserName: userData.currentUserName,
-        newUserName: user?.USER_NAME || "",
-        password: "",
+        LOGIN_USER_NAME: userData.currentUserName,
+        NEW_USER_NAME: user?.USER_NAME || "",
+        PASSWORD: "",
         isAdminUser: user?.USER_TYPE || false,
-        emailAddress: user?.EMAIL_ADDRESS || "",
-        mobileNumber: user?.MOBILE_NO || "",
-        fullName: user?.FULL_NAME || "",
-        empNo: user?.EMP_NO || "",
-        domainName: DOMAIN_NAME,
-        employeeImage: user?.employeeImage || "",
+        DOMAIN_NAME: domain || DOMAIN_NAME,
+        EMAIL_ADDRESS: user?.EMAIL_ADDRESS || "",
+        MOBILE_NUMBER: user?.MOBILE_NO || "",
+        FULL_NAME: user?.FULL_NAME || "",
+        EMP_NO: user?.EMP_NO || "",
+        employeeImage: null,
         accountExpired: user?.ACCOUNT_EXPIRED || false,
         accountLocked: user?.ACCOUNT_LOCKED || false,
       });
       fetchUserImage();
     } else {
       setFormData(initialFormData);
+      setPreviewUrl(null);
     }
   }, [user, open]);
 
   const fetchUserImage = async () => {
     try {
+      if (!user?.EMP_NO) return;
+
       const response = await axios.get(
         `https://cloud.istreams-erp.com:4498/api/empImage/view?email=${encodeURIComponent(
           userData.currentUserLogin
@@ -162,30 +167,15 @@ const UserCreateModal = ({ user, open, onClose }) => {
       );
 
       const blob = response.data;
-
-      const mimeType = blob.type;
-      const extension = mimeType.split("/")[1] || "png";
-      const filename = `EMPLOYEE_IMAGE_${user.EMP_NO}.${extension}`;
-
-      const file = new File([blob], filename, { type: mimeType });
-
-      setFormData((prev) => ({
-        ...prev,
-        employeeImage: file,
-      }));
-
-      // Optional: Preview the image
-      const imagePreviewUrl = URL.createObjectURL(file);
+      const imagePreviewUrl = URL.createObjectURL(blob);
       setPreviewUrl(imagePreviewUrl);
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: `Error fetching user image: ${error.message}`,
-      });
+      console.error("Error fetching user image:", error);
+      setPreviewUrl(null);
     }
   };
 
-  const handleChange = async (eventOrValue, fieldName) => {
+  const handleChange = (eventOrValue, fieldName) => {
     if (eventOrValue && eventOrValue.target) {
       const { name, value, type, checked, files } = eventOrValue.target;
 
@@ -197,20 +187,20 @@ const UserCreateModal = ({ user, open, onClose }) => {
 
           setFormData((prevData) => ({
             ...prevData,
-            [name]: file,
+            employeeImage: file,
           }));
-
-          if (user) {
-            await handleUpdatedImage(formData.empNo);
-          }
         } else {
           setPreviewUrl(null);
+          setFormData((prevData) => ({
+            ...prevData,
+            employeeImage: null,
+          }));
         }
       } else {
         setFormData((prevData) => ({
           ...prevData,
           [name]:
-            name === "newUserName"
+            name === "NEW_USER_NAME"
               ? value.toUpperCase()
               : type === "checkbox"
               ? checked
@@ -222,11 +212,15 @@ const UserCreateModal = ({ user, open, onClose }) => {
         setIsFocused((prev) => ({ ...prev, [name]: true }));
       }
     } else {
-      // For custom components (like Select or toggle switch)
+      // For custom components
       setFormData((prevData) => ({
         ...prevData,
         [fieldName]: eventOrValue,
       }));
+
+      if (user) {
+        setIsFocused((prev) => ({ ...prev, [fieldName]: true }));
+      }
     }
   };
 
@@ -241,6 +235,13 @@ const UserCreateModal = ({ user, open, onClose }) => {
   };
 
   const handleUpdate = async (key, value) => {
+    // Validate before update
+    const errorMessage = validateInput(key, value);
+    if (errorMessage) {
+      setErrors((prev) => ({ ...prev, [key]: errorMessage }));
+      return;
+    }
+
     try {
       setLoading((prev) => ({ ...prev, [key]: true }));
       const payload = {
@@ -256,16 +257,13 @@ const UserCreateModal = ({ user, open, onClose }) => {
         payload
       );
 
-      console.log(response);
-
-      toast({
-        title: response,
-      });
+      toast({ title: response });
+      setErrors((prev) => ({ ...prev, [key]: "" }));
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Error updating user:",
-        error,
+        description: error.message,
       });
     } finally {
       setIsFocused((prev) => ({ ...prev, [key]: false }));
@@ -273,14 +271,13 @@ const UserCreateModal = ({ user, open, onClose }) => {
     }
   };
 
-  const handleUploadImage = async (empNo) => {
-    setLoading(true);
+  const handleUploadImage = async (EMP_NO) => {
+    if (!formData.employeeImage) return;
 
-    const file = formData.employeeImage;
     const form = new FormData();
-    form.append("file", file);
+    form.append("file", formData.employeeImage);
     form.append("email", userData.currentUserLogin);
-    form.append("fileName", `EMPLOYEE_IMAGE_${empNo}`);
+    form.append("fileName", `EMPLOYEE_IMAGE_${EMP_NO}`);
 
     try {
       const uploadUrl =
@@ -290,116 +287,90 @@ const UserCreateModal = ({ user, open, onClose }) => {
       });
 
       if (response.status === 200) {
-        toast({ title: "Employee saved and image uploaded!" });
-      } else {
-        toast({
-          variant: "destructive",
-          title: `Upload failed (status ${response.status})`,
-        });
+        toast({ title: "Image uploaded successfully!" });
       }
     } catch (error) {
       console.error("Image upload error:", error);
-
       toast({
         variant: "destructive",
         title: "Error saving image.",
-        description:
-          error?.response?.data?.message ||
-          error?.message ||
-          "Unknown error occurred.",
+        description: error.message,
       });
-    } finally {
-      setLoading(false);
     }
   };
 
-  const handleUpdatedImage = async (empNo) => {
-    setLoading(true);
+  const handleUpdatedImage = async () => {
+    if (!user?.EMP_NO || !formData.employeeImage) return;
 
-    const file = formData.employeeImage;
+    setLoading((prev) => ({ ...prev, image: true }));
+
+    const form = new FormData();
+    form.append("file", formData.employeeImage);
+    form.append("email", userData.currentUserLogin);
+    form.append("fileName", `EMPLOYEE_IMAGE_${user.EMP_NO}`);
 
     try {
-      const payload = new FormData();
-      payload.append("file", file);
-      payload.append("email", userData.currentUserLogin);
-      payload.append("fileName", `EMPLOYEE_IMAGE_${empNo}`);
-      console.log(
-        `https://cloud.istreams-erp.com:4498/api/empImage/update?email=${userData.currentUserLogin}&fileName=EMPLOYEE_IMAGE_${empNo}`
-      );
-
-      debugger;
-
       const response = await axios.put(
-        `https://cloud.istreams-erp.com:4498/api/empImage/update?email=${userData.currentUserLogin}&fileName=EMPLOYEE_IMAGE_${empNo}`,
-        payload,
+        `https://cloud.istreams-erp.com:4498/api/empImage/update`,
+        form,
         {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
+          headers: { "Content-Type": "multipart/form-data" },
         }
       );
 
       if (response.status === 200) {
-        toast({
-          title: "User saved and image updated!",
-        });
-      } else {
-        toast({
-          variant: "destructive",
-          title: `image update failed with status: ${response.status}`,
-        });
+        toast({ title: "Image updated successfully!" });
       }
     } catch (error) {
-      console.error("Image upload error:", error);
-
+      console.error("Image update error:", error);
       toast({
         variant: "destructive",
-        title: "Error saving image.",
-        description:
-          error?.response?.data?.message ||
-          error?.message ||
-          "Unknown error occurred.",
+        title: "Error updating image.",
+        description: error.message,
       });
     } finally {
-      setLoading(false);
+      setLoading((prev) => ({ ...prev, image: false }));
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const validationErrors = validateForm(formData);
+    const validationErrors = validateForm({ ...formData, user });
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       return;
     }
-    setErrors({});
 
-    setLoading(true);
+    setErrors({});
+    setIsSubmitting(true);
+
+    console.log(formData);
+    
     try {
-      const response = await createNewUser(
-        formData,
-        userData.userEmail,
-        userData.clientURL
+      const response = await callSoapService(
+        userData.clientURL,
+        "UM_Create_New_User",
+        formData
       );
 
-      if (!user) {
-        await handleUploadImage(formData.empNo);
+      // Upload image only for new users
+      if (formData.employeeImage) {
+        await handleUploadImage(formData.EMP_NO);
       }
 
-      toast({
-        title: "Employee saved successfully!",
-        description: response,
-      });
-
+      toast({ title: "User created successfully!" });
       setFormData(initialFormData);
+      setPreviewUrl(null);
       onClose();
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Error creating user:",
-        error,
+        description: error.message,
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -424,29 +395,31 @@ const UserCreateModal = ({ user, open, onClose }) => {
           {/* Left Side */}
           <div className="grid gap-2">
             <div className="grid grid-cols-1 gap-2">
-              <Label htmlFor="newUserName" className="text-left">
+              <Label htmlFor="NEW_USER_NAME" className="text-left">
                 User Name
               </Label>
               <div className="flex items-center gap-1">
                 <Input
-                  name="newUserName"
-                  id="newUserName"
+                  name="NEW_USER_NAME"
+                  id="NEW_USER_NAME"
                   type="text"
                   placeholder="Type username"
                   className="w-full"
-                  value={formData.newUserName}
+                  value={formData.NEW_USER_NAME}
                   onChange={handleChange}
                   onBlur={handleBlur}
                   tabIndex={-1}
                 />
-                {loading["USER_NAME"] || (isFocused.newUserName && user) ? (
+                {user &&
+                (loading["NEW_USER_NAME"] || isFocused.NEW_USER_NAME) ? (
                   <Button
                     className="flex w-[10%] min-w-[40px] items-center justify-center p-2 bg-green-500"
                     onMouseDown={() =>
-                      handleUpdate("USER_NAME", formData.newUserName)
+                      handleUpdate("USER_NAME", formData.NEW_USER_NAME)
                     }
+                    type="button"
                   >
-                    {loading["USER_NAME"] ? (
+                    {loading["NEW_USER_NAME"] ? (
                       <BeatLoader color="#000" size={8} />
                     ) : (
                       <Check className="h-5 w-5" />
@@ -454,46 +427,36 @@ const UserCreateModal = ({ user, open, onClose }) => {
                   </Button>
                 ) : null}
               </div>
-              {errors.newUserName && (
+              {errors.NEW_USER_NAME && (
                 <span className="text-xs text-red-500">
-                  {errors.newUserName}
+                  {errors.NEW_USER_NAME}
                 </span>
               )}
             </div>
 
-            <div className="grid grid-cols-1 gap-2">
-              <Label htmlFor="password" className="text-left">
-                Password
-              </Label>
-              <div className="flex items-center gap-1">
+            {!user && (
+              <div className="grid grid-cols-1 gap-2">
+                <Label htmlFor="PASSWORD" className="text-left">
+                  Password
+                </Label>
                 <Input
-                  name="password"
-                  id="password"
+                  name="PASSWORD"
+                  id="PASSWORD"
                   type="password"
                   placeholder="Type password"
                   className="w-full"
-                  value={formData.password}
+                  value={formData.PASSWORD}
                   onChange={handleChange}
                   onBlur={handleBlur}
                   tabIndex={-1}
                 />
-                {loading["password"] || (isFocused.password && user) ? (
-                  <Button
-                    className="flex w-[10%] min-w-[40px] items-center justify-center p-2 bg-green-500"
-                    onMouseDown={handleUpdate}
-                  >
-                    {loading["password"] ? (
-                      <BeatLoader color="#000" size={8} />
-                    ) : (
-                      <Check className="h-5 w-5" />
-                    )}
-                  </Button>
-                ) : null}
+                {errors.PASSWORD && (
+                  <span className="text-xs text-red-500">
+                    {errors.PASSWORD}
+                  </span>
+                )}
               </div>
-              {errors.password && (
-                <span className="text-xs text-red-500">{errors.password}</span>
-              )}
-            </div>
+            )}
 
             <div className="grid grid-cols-1 gap-2">
               <Label htmlFor="isAdminUser" className="text-left">
@@ -504,10 +467,7 @@ const UserCreateModal = ({ user, open, onClose }) => {
                   type="single"
                   value={formData.isAdminUser ? "true" : "false"}
                   onValueChange={(value) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      isAdminUser: value === "true",
-                    }))
+                    handleChange(value === "true", "isAdminUser")
                   }
                   className="flex justify-start"
                 >
@@ -518,12 +478,13 @@ const UserCreateModal = ({ user, open, onClose }) => {
                     Admin
                   </ToggleGroupItem>
                 </ToggleGroup>
-                {loading["USER_TYPE"] || (isFocused.isAdminUser && user) ? (
+                {user && (loading["USER_TYPE"] || isFocused.isAdminUser) ? (
                   <Button
                     className="flex w-[10%] min-w-[40px] items-center justify-center p-2 bg-green-500"
                     onMouseDown={() =>
                       handleUpdate("USER_TYPE", formData.isAdminUser)
                     }
+                    type="button"
                   >
                     {loading["USER_TYPE"] ? (
                       <BeatLoader color="#000" size={8} />
@@ -536,28 +497,29 @@ const UserCreateModal = ({ user, open, onClose }) => {
             </div>
 
             <div className="grid grid-cols-1 gap-2">
-              <Label htmlFor="emailAddress" className="text-left">
+              <Label htmlFor="EMAIL_ADDRESS" className="text-left">
                 Email Address
               </Label>
               <div className="flex items-center gap-1">
                 <Input
-                  name="emailAddress"
-                  id="emailAddress"
+                  name="EMAIL_ADDRESS"
+                  id="EMAIL_ADDRESS"
                   type="email"
                   placeholder="Enter email address"
                   className="w-full"
-                  value={formData.emailAddress}
+                  value={formData.EMAIL_ADDRESS}
                   onChange={handleChange}
                   onBlur={handleBlur}
                   tabIndex={-1}
                 />
-                {loading["EMAIL_ADDRESS"] ||
-                (isFocused.emailAddress && user) ? (
+                {user &&
+                (loading["EMAIL_ADDRESS"] || isFocused.EMAIL_ADDRESS) ? (
                   <Button
                     className="flex w-[10%] min-w-[40px] items-center justify-center p-2 bg-green-500"
                     onMouseDown={() =>
-                      handleUpdate("EMAIL_ADDRESS", formData.emailAddress)
+                      handleUpdate("EMAIL_ADDRESS", formData.EMAIL_ADDRESS)
                     }
+                    type="button"
                   >
                     {loading["EMAIL_ADDRESS"] ? (
                       <BeatLoader color="#000" size={8} />
@@ -567,36 +529,38 @@ const UserCreateModal = ({ user, open, onClose }) => {
                   </Button>
                 ) : null}
               </div>
-              {errors.emailAddress && (
+              {errors.EMAIL_ADDRESS && (
                 <span className="text-xs text-red-500">
-                  {errors.emailAddress}
+                  {errors.EMAIL_ADDRESS}
                 </span>
               )}
             </div>
 
             <div className="flex w-full items- gap-1">
               <div className="flex-grow">
-                <Label htmlFor="mobileNumber" className="text-left">
+                <Label htmlFor="MOBILE_NUMBER" className="text-left">
                   Mobile Number
                 </Label>
                 <div className="flex items-center gap-1">
                   <Input
-                    name="mobileNumber"
-                    id="mobileNumber"
+                    name="MOBILE_NUMBER"
+                    id="MOBILE_NUMBER"
                     type="text"
                     placeholder="Enter mobile number"
                     className="w-full"
-                    value={formData.mobileNumber}
+                    value={formData.MOBILE_NUMBER}
                     onChange={handleChange}
                     onBlur={handleBlur}
+                    maxLength={10}
                     tabIndex={-1}
                   />
-                  {loading["MOBILE_NO"] || (isFocused.mobileNumber && user) ? (
+                  {user && (loading["MOBILE_NO"] || isFocused.MOBILE_NUMBER) ? (
                     <Button
                       className="flex w-[10%] min-w-[40px] items-center justify-center p-2 bg-green-500"
                       onMouseDown={() =>
-                        handleUpdate("MOBILE_NO", formData.mobileNumber)
+                        handleUpdate("MOBILE_NO", formData.MOBILE_NUMBER)
                       }
+                      type="button"
                     >
                       {loading["MOBILE_NO"] ? (
                         <BeatLoader color="#000" size={8} />
@@ -606,36 +570,37 @@ const UserCreateModal = ({ user, open, onClose }) => {
                     </Button>
                   ) : null}
                 </div>
-                {errors.mobileNumber && (
+                {errors.MOBILE_NUMBER && (
                   <span className="text-xs text-red-500">
-                    {errors.mobileNumber}
+                    {errors.MOBILE_NUMBER}
                   </span>
                 )}
               </div>
             </div>
 
             <div className="grid grid-cols-1 gap-2">
-              <Label htmlFor="fullName" className="text-left">
+              <Label htmlFor="FULL_NAME" className="text-left">
                 Full Name
               </Label>
               <div className="flex items-center gap-1">
                 <Input
-                  name="fullName"
-                  id="fullName"
+                  name="FULL_NAME"
+                  id="FULL_NAME"
                   type="text"
                   placeholder="Enter full name"
                   className="w-full"
-                  value={formData.fullName}
+                  value={formData.FULL_NAME}
                   onChange={handleChange}
                   onBlur={handleBlur}
                   tabIndex={-1}
                 />
-                {loading["FULL_NAME"] || (isFocused.fullName && user) ? (
+                {user && (loading["FULL_NAME"] || isFocused.FULL_NAME) ? (
                   <Button
                     className="flex w-[10%] min-w-[40px] items-center justify-center p-2 bg-green-500"
                     onMouseDown={() =>
-                      handleUpdate("FULL_NAME", formData.fullName)
+                      handleUpdate("FULL_NAME", formData.FULL_NAME)
                     }
+                    type="button"
                   >
                     {loading["FULL_NAME"] ? (
                       <BeatLoader color="#000" size={8} />
@@ -645,31 +610,32 @@ const UserCreateModal = ({ user, open, onClose }) => {
                   </Button>
                 ) : null}
               </div>
-              {errors.fullName && (
-                <span className="text-xs text-red-500">{errors.fullName}</span>
+              {errors.FULL_NAME && (
+                <span className="text-xs text-red-500">{errors.FULL_NAME}</span>
               )}
             </div>
 
             <div className="grid grid-cols-1 gap-2">
-              <Label htmlFor="empNo" className="text-left">
+              <Label htmlFor="EMP_NO" className="text-left">
                 Employee Number
               </Label>
               <div className="flex items-center gap-1">
                 <Input
-                  name="empNo"
-                  id="empNo"
+                  name="EMP_NO"
+                  id="EMP_NO"
                   type="text"
                   placeholder="Enter employee number"
                   className="w-full"
-                  value={formData.empNo}
+                  value={formData.EMP_NO}
                   onChange={handleChange}
                   onBlur={handleBlur}
                   tabIndex={-1}
                 />
-                {loading["EMP_NO"] || (isFocused.empNo && user) ? (
+                {user && (loading["EMP_NO"] || isFocused.EMP_NO) ? (
                   <Button
                     className="flex w-[10%] min-w-[40px] items-center justify-center p-2 bg-green-500"
-                    onMouseDown={() => handleUpdate("EMP_NO", formData.empNo)}
+                    onMouseDown={() => handleUpdate("EMP_NO", formData.EMP_NO)}
+                    type="button"
                   >
                     {loading["EMP_NO"] ? (
                       <BeatLoader color="#000" size={8} />
@@ -679,8 +645,8 @@ const UserCreateModal = ({ user, open, onClose }) => {
                   </Button>
                 ) : null}
               </div>
-              {errors.empNo && (
-                <span className="text-xs text-red-500">{errors.empNo}</span>
+              {errors.EMP_NO && (
+                <span className="text-xs text-red-500">{errors.EMP_NO}</span>
               )}
             </div>
           </div>
@@ -695,10 +661,10 @@ const UserCreateModal = ({ user, open, onClose }) => {
                 htmlFor="employeeImage"
                 className="flex aspect-square h-[240px] w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg border-2 border-gray-300 bg-gray-100 hover:bg-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:hover:bg-gray-700"
               >
-                {formData.employeeImage ? (
+                {previewUrl ? (
                   <img
                     src={previewUrl}
-                    alt={formData.fullName}
+                    alt={formData.FULL_NAME || "Preview"}
                     className="h-full w-full object-cover"
                   />
                 ) : (
@@ -715,32 +681,37 @@ const UserCreateModal = ({ user, open, onClose }) => {
                 onChange={handleChange}
                 className="hidden"
               />
-              {errors.employeeImage && (
-                <p className="text-xs text-red-500">{errors.employeeImage}</p>
+              {user && formData.employeeImage && (
+                <div className="mt-2">
+                  <Button
+                    onClick={handleUpdatedImage}
+                    disabled={loading.image}
+                    type="button"
+                  >
+                    {loading.image ? (
+                      <BeatLoader color="#fff" size={8} />
+                    ) : (
+                      "Update Image"
+                    )}
+                  </Button>
+                </div>
               )}
             </div>
 
             <div>
-              <Label htmlFor="domainName" className="text-left">
+              <Label htmlFor="DOMAIN_NAME" className="text-left">
                 Domain Name
               </Label>
               <Input
-                name="domainName"
-                id="domainName"
+                name="DOMAIN_NAME"
+                id="DOMAIN_NAME"
                 type="text"
                 placeholder="Enter domain name"
                 className="w-full"
-                value={formData.domainName}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                readOnly={true}
+                value={formData.DOMAIN_NAME}
+                readOnly
                 tabIndex={-1}
               />
-              {errors.domainName && (
-                <span className="text-xs text-red-500">
-                  {errors.domainName}
-                </span>
-              )}
             </div>
 
             <div className="flex flex-col space-y-1">
@@ -761,41 +732,35 @@ const UserCreateModal = ({ user, open, onClose }) => {
                 </label>
               </div>
 
-              <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-x-2 sm:space-y-0">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    name="accountLocked"
-                    id="accountLocked"
-                    checked={formData.accountLocked}
-                    onCheckedChange={(checked) =>
-                      handleChange(checked, "accountLocked")
-                    }
-                  />
-                  <label
-                    htmlFor="accountLocked"
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                  >
-                    Account Locked
-                  </label>
-                </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  name="accountLocked"
+                  id="accountLocked"
+                  checked={formData.accountLocked}
+                  onCheckedChange={(checked) =>
+                    handleChange(checked, "accountLocked")
+                  }
+                />
+                <label
+                  htmlFor="accountLocked"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Account Locked
+                </label>
               </div>
             </div>
           </div>
         </div>
 
-        {!user ? (
-          <>
-            <Separator />
-            <div className="mt-2 flex justify-end gap-2">
-              <Button variant="outline" type="button" onClick={() => onClose()}>
-                Cancel
-              </Button>
-              <Button variant="default" type="submit">
-                Save
-              </Button>
-            </div>
-          </>
-        ) : null}
+        <Separator />
+        <div className="mt-4 flex justify-end gap-2">
+          <Button variant="outline" type="button" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="default" type="submit" disabled={isSubmitting}>
+            {isSubmitting ? <BeatLoader color="#fff" size={8} /> : "Save"}
+          </Button>
+        </div>
       </form>
     </DialogContent>
   );

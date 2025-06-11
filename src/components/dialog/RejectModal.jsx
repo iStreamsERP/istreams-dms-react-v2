@@ -1,8 +1,7 @@
-import { useEffect, useState } from "react";
-import { updateRejectDmsDetails } from "../../services/dmsService";
-import { useAuth } from "../../contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-
+import { callSoapService } from "@/services/callSoapService";
+import { useState } from "react";
+import { useAuth } from "../../contexts/AuthContext";
 
 const RejectModal = ({ rejectModalRef, selectedDocument, onClose }) => {
   const { userData } = useAuth();
@@ -18,7 +17,7 @@ const RejectModal = ({ rejectModalRef, selectedDocument, onClose }) => {
     );
 
     if (!isConfirmed) return;
-    
+
     if (!remarks.trim()) {
       toast({
         title: "Error",
@@ -29,21 +28,21 @@ const RejectModal = ({ rejectModalRef, selectedDocument, onClose }) => {
     }
     setIsLoading(true);
     try {
-      const updateRejectPayload = {
-        ref_Seq_No: selectedDocument?.REF_SEQ_NO,
-        currentUserName: userData?.userName,
-        documentDescription: selectedDocument?.DOCUMENT_DESCRIPTION,
-        documentUserName: selectedDocument?.USER_NAME,
-        rejectionRemarks: remarks,
+      const payload = {
+        REF_SEQ_NO: selectedDocument?.REF_SEQ_NO,
+        CURRENT_USER_NAME: userData?.userName,
+        DOCUMENT_DESCRIPTION: selectedDocument?.DOCUMENT_DESCRIPTION,
+        DOCUMENT_USER_NAME: selectedDocument?.USER_NAME,
+        REJECTION_REMARKS: remarks,
       };
 
-      const rejectionResponse = await updateRejectDmsDetails(
-        updateRejectPayload,
-        userData?.userEmail,
-        userData.clientURL
+      const response = await callSoapService(
+        userData.clientURL,
+        "DMS_Update_Rejection",
+        payload
       );
 
-      if (rejectionResponse) {
+      if (response) {
         alert("Document rejected successfully!");
         rejectModalRef?.current?.close();
         setRemarks("");

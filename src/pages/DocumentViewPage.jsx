@@ -8,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { callSoapService } from "@/services/callSoapService";
 import { FileSearch } from "lucide-react";
 import {
   memo,
@@ -22,10 +23,9 @@ import { useLocation } from "react-router-dom";
 import DocumentFormModal from "../components/dialog/DocumentFormModal";
 import TaskForm from "../components/TaskForm";
 import { useAuth } from "../contexts/AuthContext";
-import { getAllDmsActiveUser } from "../services/dashboardService";
-import { getDocMasterList, updateDmsAssignedTo } from "../services/dmsService";
 import { formatDateTime } from "../utils/dateUtils";
-import { callSoapService } from "@/services/callSoapService";
+import { useToast } from "@/hooks/use-toast";
+import AccessDenied from "@/components/AccessDenied";
 
 // Custom hook for debounced search with transition
 const useDebounceWithTransition = (value, delay) => {
@@ -238,6 +238,11 @@ export default function DocumentViewPage() {
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [docFormMode, setDocFormMode] = useState("view");
 
+   // User rights
+    const [userViewRights, setUserViewRights] = useState("");
+    const [userRights, setUserRights] = useState("");
+    const [rightsChecked, setRightsChecked] = useState(false);
+
   // Virtual scrolling
   const [visibleCount, setVisibleCount] = useState(24);
   const BATCH_SIZE = 24;
@@ -245,6 +250,7 @@ export default function DocumentViewPage() {
   const modalRefTask = useRef(null);
   const formModalRef = useRef(null);
   const { userData } = useAuth();
+   const { toast } = useToast();
   const location = useLocation();
 
   // Optimized debounced search with transition
@@ -256,17 +262,17 @@ export default function DocumentViewPage() {
   // Memoized initial task data
   const initialTaskData = useMemo(
     () => ({
-      userName: userData.userName,
-      taskName: "",
-      taskSubject: "",
-      relatedTo: "",
-      assignedTo: "",
-      creatorReminderOn: formatDateTime(new Date(Date.now() + 2 * 86400000)),
-      assignedDate: formatDateTime(new Date()),
-      targetDate: formatDateTime(new Date(Date.now() + 86400000)),
-      remindOnDate: formatDateTime(new Date()),
-      refTaskID: -1,
-      dmsSeqNo: 0,
+      UserName: userData.userName,
+      Subject: "",
+      Details: "",
+      RelatedTo: "",
+      AssignedUser: "",
+      CreatorReminderOn: formatDateTime(new Date(Date.now() + 2 * 86400000)),
+      StartDate: formatDateTime(new Date()),
+      CompDate: formatDateTime(new Date(Date.now() + 86400000)),
+      RemindTheUserOn: formatDateTime(new Date()),
+      RefTaskID: -1,
+      DMSSeqNo: 0,
       verifiedBy: userData.userName,
     }),
     [userData.userName]
@@ -341,13 +347,11 @@ export default function DocumentViewPage() {
       setIsLoading(true);
       setError(null);
 
-      const response = await getDocMasterList(
-        getDocMasterListPayload,
-        userData.userEmail,
-        userData.clientURL
+      const response = await callSoapService(
+        userData.clientURL,
+        "DMS_GetDocMaster_List",
+        getDocMasterListPayload
       );
-
-      console.log(response);
 
       if (!Array.isArray(response) || !response.length) {
         setError("No documents available.");
@@ -378,12 +382,18 @@ export default function DocumentViewPage() {
   const fetchUsers = useCallback(async () => {
     try {
       setIsLoadingUsers(true);
-      const userDetails = await getAllDmsActiveUser(
-        userData.userName,
-        userData.userEmail,
-        userData.clientURL
+      const payload = {
+        UserName: userData.userName,
+      };
+
+      const response = await callSoapService(
+        userData.clientURL,
+        "DMS_Get_All_ActiveUsers",
+        payload
       );
-      setUsers(Array.isArray(userDetails) ? userDetails : []);
+
+      setUsers(Array.isArray(response) ? response : []);
+      
     } catch (err) {
       console.error("Error fetching users:", err);
       setUsers([]);
@@ -391,6 +401,63 @@ export default function DocumentViewPage() {
       setIsLoadingUsers(false);
     }
   }, [userData.userEmail, userData.clientURL, userData.userName]);
+
+   const fetchUserViewRights = useCallback(async () => {
+      try {
+        const userType = userData.isAdmin ? "ADMINISTRATOR" : "USER";
+        const payload = {
+          UserName: userData.userName,
+          FormName: "DMS-DOCUMENTVIEWVIEWALL",
+          FormDescription: "View Rights For All Documents View",
+          UserType: userType,
+        };
+  
+        const response = await callSoapService(
+          userData.clientURL,
+          "DMS_CheckRights_ForTheUser",
+          payload
+        );
+  
+        console.log(response);
+        
+  
+        setUserViewRights(response);
+      } catch (error) {
+        console.error("Failed to fetch user rights:", error);
+        toast({
+          variant: "destructive",
+          title: error,
+        });
+      }
+    }, [userData.clientURL, userData.isAdmin, userData.userName]);
+  
+    const fetchUserRights = useCallback(async () => {
+      try {
+        const userType = userData.isAdmin ? "ADMINISTRATOR" : "USER";
+        const payload = {
+          UserName: userData.userName,
+          FormName: "DMS-DOCUMENTVIEW",
+          FormDescription: "Document View",
+          UserType: userType,
+        };
+  
+        const response = await callSoapService(
+          userData.clientURL,
+          "DMS_CheckRights_ForTheUser",
+          payload
+        );
+  
+        setUserRights(response);
+      } catch (error) {
+        console.error("Failed to fetch user rights:", error);
+        toast({
+          variant: "destructive",
+          title: error,
+        });
+      } finally {
+        setRightsChecked(true);
+      }
+    }, [userData.clientURL, userData.isAdmin, userData.userName]);
 
   // Load more documents - simplified
   const loadMoreDocs = useCallback(() => {
@@ -401,7 +468,9 @@ export default function DocumentViewPage() {
   useEffect(() => {
     fetchDocuments();
     fetchUsers();
-  }, [fetchDocuments, fetchUsers]);
+    fetchUserRights();
+    fetchUserViewRights();
+  }, [fetchDocuments, fetchUsers, fetchUserViewRights]);
 
   // Event handlers - optimized
   const handleVerifySuccess = useCallback((refSeqNo, verifierName) => {
@@ -423,6 +492,18 @@ export default function DocumentViewPage() {
   }, []);
 
   const handleView = useCallback((doc) => {
+     const hasAccess = String(userViewRights).toLowerCase() === "allowed";
+    
+          if (!hasAccess) {
+            toast({
+              variant: "destructive",
+              title: "Permission Denied",
+              description: "You don't have permission to view documents.",
+            });
+            return;
+          }
+    
+
     setSelectedDocument(doc);
     setDocFormMode("view");
     formModalRef.current?.showModal();
@@ -496,10 +577,10 @@ export default function DocumentViewPage() {
           REF_SEQ_NO: doc.REF_SEQ_NO,
         };
 
-        await updateDmsAssignedTo(
-          payload,
-          userData.userEmail,
-          userData.clientURL
+        const response = await callSoapService(
+          userData.clientURL,
+          "DMS_Update_AssignedTo",
+          payload
         );
 
         // Update local state
@@ -534,8 +615,8 @@ export default function DocumentViewPage() {
     setTaskData((prev) => ({ ...prev, newTask }));
   }, []);
 
-  // Show loading state
-  if (isLoading) {
+   // Show loading state
+  if (isLoading || !rightsChecked) {
     return (
       <div className="grid grid-cols-1 gap-4">
         <div className="relative">
@@ -550,6 +631,11 @@ export default function DocumentViewPage() {
     );
   }
 
+  // Check user rights
+  if (String(userRights).toLowerCase() !== "allowed") {
+    return <AccessDenied />;
+  }
+
   const hasMore = visibleCount < filteredDocs.length;
   const showingCount = Math.min(visibleDocs.length, visibleCount);
 
@@ -558,13 +644,11 @@ export default function DocumentViewPage() {
       <div className="grid grid-cols-1 gap-4">
         {/* Search and status */}
         <div className="relative">
-          <div className="w-full lg:w-1/2">
-            <GlobalSearchInput
-              value={globalFilter}
-              onChange={setGlobalFilter}
-              disabled={isSearchPending}
-            />
-          </div>
+          <GlobalSearchInput
+            value={globalFilter}
+            onChange={setGlobalFilter}
+            disabled={isSearchPending}
+          />
 
           {/* Simplified status indicators */}
           <div className="flex items-center gap-3 mt-2 min-h-[20px]">

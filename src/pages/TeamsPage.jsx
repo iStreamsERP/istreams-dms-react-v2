@@ -119,8 +119,8 @@ const TeamsPage = () => {
   };
 
   const filteredUsersData = usersData.filter((user) => {
-    const search = globalFilter.toLowerCase();
-    return user.user_name.toLowerCase().includes(search);
+    const search = globalFilter?.toLowerCase();
+    return user.user_name?.toLowerCase()?.includes(search);
   });
 
   return (

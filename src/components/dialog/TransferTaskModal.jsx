@@ -1,6 +1,6 @@
+import { callSoapService } from "@/services/callSoapService";
 import { CalendarDays, MessageSquare, User2, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { getAllDmsActiveUser } from "../../services/dashboardService";
 import { useAuth } from "../../contexts/AuthContext";
 
 const TransferTaskModal = ({ isOpen, onTransfer, onClose }) => {
@@ -17,12 +17,17 @@ const TransferTaskModal = ({ isOpen, onTransfer, onClose }) => {
 
   const fetchUsers = useCallback(async () => {
     try {
-      const userDetails = await getAllDmsActiveUser(
-        userData.userName,
-        userData.userEmail,
-        userData.clientURL
+      const payload = {
+        UserName: userData.userName,
+      };
+
+      const response = await callSoapService(
+        userData.clientURL,
+        "DMS_Get_All_ActiveUsers",
+        payload
       );
-      setUsers(Array.isArray(userDetails) ? userDetails : []);
+
+      setUsers(Array.isArray(response) ? response : []);
     } catch (err) {
       console.error("Error fetching all active users:", err);
       setUsers([]);

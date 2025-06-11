@@ -1,100 +1,133 @@
-import React, { useEffect, useState } from 'react';
 import {
-    BarChart,
-    Bar,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    Legend,
-    PieChart,
-    Pie,
-    Cell,
-    ResponsiveContainer,
-} from 'recharts';
+  ArrowUp,
+  Briefcase,
+  Trash2
+} from "lucide-react";
+import { useEffect, useState } from "react";
 import {
-    ArrowLeft,
-    ArrowUp,
-    Briefcase,
-    Calendar,
-    MoreHorizontal,
-    Trash2,
-} from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
-import { getDataModelFromQueryService } from '@/services/dataModelService';
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis
+} from "recharts";
+import { useAuth } from "../contexts/AuthContext";
 
 const TaskPage = () => {
-    const { userData } = useAuth();
+  const { userData } = useAuth();
 
-    // Filter state
-    const [tasks, setTasks] = useState([]);
-    const [location, setLocation] = useState('');
-    const [department, setDepartment] = useState('');
-    const [year, setYear] = useState('');
-    const [dateRange] = useState('01.01.2023 - 31.12.2023');
-    const [activeTab, setActiveTab] = useState(0);
+  // Filter state
+  const [tasks, setTasks] = useState([]);
+  const [location, setLocation] = useState("");
+  const [department, setDepartment] = useState("");
+  const [year, setYear] = useState("");
+  const [dateRange] = useState("01.01.2023 - 31.12.2023");
+  const [activeTab, setActiveTab] = useState(0);
 
-    // Stats for Total Tasks
-    const total = 190000;
-    const completed = 173372;
-    const percent = Math.min(100, Math.round((completed / total) * 100));
-    const delta = 2.6;
-    const deltaLabel = 'since last year';
+  // Stats for Total Tasks
+  const total = 190000;
+  const completed = 173372;
+  const percent = Math.min(100, Math.round((completed / total) * 100));
+  const delta = 2.6;
+  const deltaLabel = "since last year";
 
-    // Chart data
-    const doughnutData = [
-        { name: 'Management', value: 23 },
-        { name: 'Service', value: 19 },
-        { name: 'Küche', value: 30 },
-        { name: 'Housekeeping', value: 28 },
-    ];
-    const COLORS = ['#10B981', '#EF4444', '#3B82F6', '#A855F7'];
+  // Chart data
+  const doughnutData = [
+    { name: "Management", value: 23 },
+    { name: "Service", value: 19 },
+    { name: "Küche", value: 30 },
+    { name: "Housekeeping", value: 28 },
+  ];
+  const COLORS = ["#10B981", "#EF4444", "#3B82F6", "#A855F7"];
 
-    const barData = [
-        { month: 'Jan', Management: 4000, Service: 2000, Küche: 1000, Housekeeping: 1500 },
-        { month: 'Feb', Management: 3000, Service: 1800, Küche: 1200, Housekeeping: 1300 },
-        { month: 'Mar', Management: 3500, Service: 2200, Küche: 1400, Housekeeping: 1600 },
-        { month: 'Apr', Management: 3800, Service: 2400, Küche: 1600, Housekeeping: 1800 },
-        { month: 'May', Management: 4200, Service: 2600, Küche: 1800, Housekeeping: 2000 },
-        { month: 'Jun', Management: 4500, Service: 2800, Küche: 2000, Housekeeping: 2200 },
-    ];
+  const barData = [
+    {
+      month: "Jan",
+      Management: 4000,
+      Service: 2000,
+      Küche: 1000,
+      Housekeeping: 1500,
+    },
+    {
+      month: "Feb",
+      Management: 3000,
+      Service: 1800,
+      Küche: 1200,
+      Housekeeping: 1300,
+    },
+    {
+      month: "Mar",
+      Management: 3500,
+      Service: 2200,
+      Küche: 1400,
+      Housekeeping: 1600,
+    },
+    {
+      month: "Apr",
+      Management: 3800,
+      Service: 2400,
+      Küche: 1600,
+      Housekeeping: 1800,
+    },
+    {
+      month: "May",
+      Management: 4200,
+      Service: 2600,
+      Küche: 1800,
+      Housekeeping: 2000,
+    },
+    {
+      month: "Jun",
+      Management: 4500,
+      Service: 2800,
+      Küche: 2000,
+      Housekeeping: 2200,
+    },
+  ];
 
-    // Task list
-    // const tasks = [
-    //     { datetime: 'Mon, 25.09.2023 17:00', name: 'Task Name', desc: 'Task Description', employee: 'Floyd Miles', role: 'Plumber, 80%', type: 'Personal', status: 'Completed' },
-    //     { datetime: 'Tue, 26.09.2023 10:30', name: 'Task Name', desc: 'Task Description', employee: 'Jenny Wilson', role: 'Chef, 80%', type: 'Shift', status: 'Pending' },
-    //     { datetime: 'Wed, 27.09.2023 14:15', name: 'Task Name', desc: 'Task Description', employee: 'Esther Howard', role: 'Housekeeper, 100%', type: 'Shift', status: 'Pending' },
-    // ];
+  // Task list
+  // const tasks = [
+  //     { datetime: 'Mon, 25.09.2023 17:00', name: 'Task Name', desc: 'Task Description', employee: 'Floyd Miles', role: 'Plumber, 80%', type: 'Personal', status: 'Completed' },
+  //     { datetime: 'Tue, 26.09.2023 10:30', name: 'Task Name', desc: 'Task Description', employee: 'Jenny Wilson', role: 'Chef, 80%', type: 'Shift', status: 'Pending' },
+  //     { datetime: 'Wed, 27.09.2023 14:15', name: 'Task Name', desc: 'Task Description', employee: 'Esther Howard', role: 'Housekeeper, 100%', type: 'Shift', status: 'Pending' },
+  // ];
 
-    const tabLabels = ['All Tasks', 'Completed', 'Pending'];
-    const filteredTasks = tasks.filter((t) => {
-        if (activeTab === 1) return t.status === 'Completed';
-        if (activeTab === 2) return t.status !== 'Completed';
-        return true;
-    });
+  const tabLabels = ["All Tasks", "Completed", "Pending"];
+  const filteredTasks = tasks.filter((t) => {
+    if (activeTab === 1) return t.status === "Completed";
+    if (activeTab === 2) return t.status !== "Completed";
+    return true;
+  });
 
-    useEffect(() => {
-        fetchTasksList();
-    }, []);
+  useEffect(() => {
+    fetchTasksList();
+  }, []);
 
-    const fetchTasksList = async () => {
-        try {
-            const query = {
-                SQLQuery: `SELECT * FROM TASK_LIST`,
-            };
+  const fetchTasksList = async () => {
+    try {
+      const payload = {
+        SQLQuery: `SELECT * FROM TASK_LIST`,
+      };
 
+      const response = await callSoapService(
+        userData.clientURL,
+        "DataModel_GetDataFrom_Query",
+        payload
+      );
 
-            const response = await getDataModelFromQueryService(query, userData.userEmail, userData.clientURL);
-
-            setTasks(response);
-
-        } catch (err) {
-            console.log(err);
-        }
+      setTasks(response);
+    } catch (err) {
+      console.log(err);
     }
+  };
 
-    return (
-      <div className="space-y-6">
+  return (
+    <div className="space-y-6">
       <div className="bg-white dark:bg-gray-900 p-4 rounded-lg shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-end flex-wrap gap-3">
           <select
@@ -165,7 +198,7 @@ const TaskPage = () => {
             </div>
           </div>
         </div>
- 
+
         <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-6">
           <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4">
             Task Distribution
@@ -193,7 +226,7 @@ const TaskPage = () => {
                       border: "1px solid #e5e7eb",
                       borderRadius: "0.5rem",
                       boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-                      padding: "0.5rem",                      
+                      padding: "0.5rem",
                     }}
                     itemStyle={{ fontSize: "12px", color: "#e5e7eb" }}
                   />
@@ -221,7 +254,7 @@ const TaskPage = () => {
           </div>
         </div>
       </div>
- 
+
       <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -296,7 +329,7 @@ const TaskPage = () => {
           </ResponsiveContainer>
         </div>
       </div>
- 
+
       <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm overflow-hidden">
         <div className="border-b border-gray-200 dark:border-gray-700">
           <nav className="flex -mb-px">
@@ -407,7 +440,7 @@ const TaskPage = () => {
         </div>
       </div>
     </div>
-    );
+  );
 };
 
 export default TaskPage;

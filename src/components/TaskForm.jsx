@@ -1,13 +1,11 @@
 import { CalendarDays, Link, User2, X } from "lucide-react";
-import React from "react";
 import { useAuth } from "../contexts/AuthContext";
-import { updateDmsAssignedTo } from "../services/dmsService";
-import { createNewTask } from "../services/taskService";
-import { Input } from "./ui/input";
-import { Textarea } from "./ui/textarea";
-import { Label } from "./ui/label";
 import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
 import { Separator } from "./ui/separator";
+import { Textarea } from "./ui/textarea";
+import { callSoapService } from "@/services/callSoapService";
 
 const TaskForm = ({
   modalRefTask,
@@ -27,10 +25,15 @@ const TaskForm = ({
     e.preventDefault();
 
     try {
-      const createResponse = await createNewTask(
-        taskData,
-        userData.userEmail,
-        userData.clientURL
+      const payload = {
+        NoOfDays: daysCount,
+        ForTheUser: payloadForTheUser,
+      };
+
+      const createResponse = await callSoapService(
+        userData.clientURL,
+        "IM_Task_Create",
+        payload
       );
 
       onTaskCreated(taskData);
@@ -41,18 +44,17 @@ const TaskForm = ({
         taskData.refSeqNo !== 0 &&
         createResponse === "SUCCESS"
       ) {
-        const updatePayload = {
-          userName: userData.userName,
-          assignedTo: taskData.assignedTo,
-          refSeqNo: taskData.refSeqNo,
+        const payload = {
+          USER_NAME: userData.userName,
+          ASSIGNED_TO: taskData.AssignedUser,
+          REF_SEQ_NO: taskData.refSeqNo,
         };
 
-        const updateResponse = await updateDmsAssignedTo(
-          updatePayload,
-          userData.userEmail,
-          userData.clientURL
+        const response = await callSoapService(
+          userData.clientURL,
+          "DMS_Update_AssignedTo",
+          payload
         );
-
       }
     } catch (error) {
       console.error("❌ Error creating task:", error);
@@ -79,7 +81,7 @@ const TaskForm = ({
             <h3 className="font-semibold text-sm">
               Reference ID :
               <span className="ml-2 px-2 py-0 bg-blue-100 text-blue-800 rounded-full text-sm">
-                {taskData.refTaskID === -1 ? "(New)" : taskData.refTaskID}
+                {taskData.RefTaskID === -1 ? "(New)" : taskData.RefTaskID}
               </span>
             </h3>
             <div className="flex items-center gap-2">
@@ -107,19 +109,19 @@ const TaskForm = ({
                   {/* Task Name */}
                   <Input
                     type="text"
-                    name="taskName"
+                    name="Subject"
                     placeholder="Task Name"
-                    value={taskData.taskName}
+                    value={taskData.Subject}
                     onChange={handleChange}
                     className="my-2"
                   />
 
                   {/* Task Description */}
                   <Textarea
-                    type="text"
-                    name="taskSubject"
+                    name="Details"
                     placeholder="Task Subject"
-                    value={taskData.taskSubject}
+                    value={taskData.Details}
+                    type="text"
                     onChange={handleChange}
                     className="textarea textarea-bordered textarea-md w-full"
                   />
@@ -133,8 +135,8 @@ const TaskForm = ({
                         <Label className="text-xs">Assign to</Label>
                       </div>
                       <select
-                        name="assignedTo"
-                        value={taskData.assignedTo}
+                        name="AssignedUser"
+                        value={taskData.AssignedUser}
                         onChange={handleChange}
                         className="w-full rounded-md border border-gray-300 p-2 text-sm
             focus:ring-2 focus:ring-blue-500 focus:border-blue-500
@@ -162,9 +164,9 @@ const TaskForm = ({
                       </div>
 
                       <select
-                        name="relatedTo"
-                        id="relatedTo"
-                        value={taskData.relatedTo}
+                        name="RelatedTo"
+                        id="RelatedTo"
+                        value={taskData.RelatedTo}
                         onChange={handleChange}
                         className="w-full rounded-md border border-gray-300 p-2 text-sm
             focus:ring-2 focus:ring-blue-500 focus:border-blue-500
@@ -192,8 +194,8 @@ const TaskForm = ({
                       </div>
                       <Input
                         type="datetime-local"
-                        name="assignedDate"
-                        value={taskData.assignedDate}
+                        name="StartDate"
+                        value={taskData.StartDate}
                         onChange={handleChange}
                         className="my-2"
                       />
@@ -207,8 +209,8 @@ const TaskForm = ({
                       </div>
                       <Input
                         type="datetime-local"
-                        name="targetDate"
-                        value={taskData.targetDate}
+                        name="CompDate"
+                        value={taskData.CompDate}
                         onChange={handleChange}
                       />
                     </div>
@@ -220,8 +222,8 @@ const TaskForm = ({
                       </div>
                       <Input
                         type="datetime-local"
-                        name="remindOnDate"
-                        value={taskData.remindOnDate}
+                        name="RemindTheUserOn"
+                        value={taskData.RemindTheUserOn}
                         onChange={handleChange}
                       />
                     </div>
@@ -233,8 +235,8 @@ const TaskForm = ({
                       </div>
                       <Input
                         type="datetime-local"
-                        name="creatorReminderOn"
-                        value={taskData.creatorReminderOn}
+                        name="CreatorReminderOn"
+                        value={taskData.CreatorReminderOn}
                         onChange={handleChange}
                       />
                     </div>
