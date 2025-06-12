@@ -5,11 +5,21 @@ import { useEffect, useState } from "react";
 import { BarLoader } from "react-spinners";
 import TeamProfileCard from "../components/TeamProfileCard";
 import { useAuth } from "../contexts/AuthContext";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const TeamsPage = () => {
   const { userData } = useAuth();
   const { toast } = useToast();
 
+  const [assignmentFilter, setAssignmentFilter] = useState("All");
   const [usersData, setUsersData] = useState([]);
   const [globalFilter, setGlobalFilter] = useState("");
   const [loading, setLoading] = useState(true);
@@ -63,6 +73,8 @@ const TeamsPage = () => {
         "DMS_Get_All_ActiveUsers",
         payload
       );
+
+      console.log(userDetails[0]);
 
       let usersArray = [];
 
@@ -121,13 +133,41 @@ const TeamsPage = () => {
 
   const filteredUsersData = usersData.filter((user) => {
     const search = globalFilter?.toLowerCase();
-    return user.user_name?.toLowerCase()?.includes(search);
+    const matchesSearch = user.user_name?.toLowerCase()?.includes(search);
+
+    // Corrected assignment filter logic
+    let matchesAssignment = true;
+    if (assignmentFilter === "Assigned") {
+      matchesAssignment = Number(user.overall_total_tasks) > 0;
+    } else if (assignmentFilter === "Unassigned") {
+      matchesAssignment = Number(user.overall_total_tasks) === 0;
+    }
+
+    return matchesSearch && matchesAssignment;
   });
 
   return (
     <div className="grid grid-cols-1 gap-4">
-      <div className="w-full lg:w-1/2">
-        <GlobalSearchInput value={globalFilter} onChange={setGlobalFilter} />
+      <div className="flex flex-col md:flex-row gap-4">
+        <div className="w-full lg:w-1/2">
+          <GlobalSearchInput value={globalFilter} onChange={setGlobalFilter} />
+        </div>
+
+        <div className="w-full md:w-auto">
+          <Select value={assignmentFilter} onValueChange={setAssignmentFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Select filter" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {/* Added ALL option */}
+                <SelectItem value="All">All</SelectItem>
+                <SelectItem value="Assigned">Assigned</SelectItem>
+                <SelectItem value="Unassigned">Unassigned</SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {loading ? (
