@@ -391,7 +391,7 @@ const RoleAccessRightsPage = () => {
     try {
       const rolesdetailsData = {
         DataModelName: "general_roles_master",
-        WhereCondition: "IS_FOR_APPROVAL = 'F'",
+        WhereCondition: "NVL(IS_FOR_APPROVAL, 'F') = 'F'",
         Orderby: "ROLE_ID",
       };
 
@@ -424,7 +424,7 @@ const RoleAccessRightsPage = () => {
     try {
       const formsRequestData = {
         DataModelName: "FORMS_MASTER",
-        WhereCondition: "",
+        WhereCondition: "MODULE_NAME = 'DMS'",
         Orderby: "MODULE_NAME, FORM_TYPE",
       };
 
