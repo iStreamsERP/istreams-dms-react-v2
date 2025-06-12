@@ -1,4 +1,3 @@
-import AccessDenied from "@/components/AccessDenied";
 import GlobalSearchInput from "@/components/GlobalSearchInput";
 import { useToast } from "@/hooks/use-toast";
 import { callSoapService } from "@/services/callSoapService";
@@ -11,24 +10,52 @@ const TeamsPage = () => {
   const { userData } = useAuth();
   const { toast } = useToast();
 
-  const [userRights, setUserRights] = useState("");
-  const [rightsChecked, setRightsChecked] = useState(false);
-
   const [usersData, setUsersData] = useState([]);
   const [globalFilter, setGlobalFilter] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchUsersAndImages();
-    fetchUserRights();
+    const fetchData = async () => {
+      const rights = await fetchUserRights();
+      await fetchUsersAndImages(rights);
+    };
+
+    if (userData?.userEmail) {
+      fetchData();
+    }
   }, [userData.userEmail]);
 
-  const fetchUsersAndImages = async () => {
+  const fetchUserRights = async () => {
     try {
-      const payloadUserName = userData.isAdmin ? "" : userData.userName;
-
+      const userType = userData.isAdmin ? "ADMINISTRATOR" : "USER";
       const payload = {
-        UserName: payloadUserName,
+        UserName: userData.userName,
+        FormName: "DMS-TEAMSFULLVIEW",
+        FormDescription: "Teams All Users",
+        UserType: userType,
+      };
+
+      const response = await callSoapService(
+        userData.clientURL,
+        "DMS_CheckRights_ForTheUser",
+        payload
+      );
+
+      return response;
+    } catch (error) {
+      console.error("Failed to fetch user rights:", error);
+      toast({
+        variant: "destructive",
+        title: error,
+      });
+      return "";
+    }
+  };
+
+  const fetchUsersAndImages = async (rights) => {
+    try {
+      const payload = {
+        UserName: userData.userName,
       };
 
       const userDetails = await callSoapService(
@@ -39,10 +66,12 @@ const TeamsPage = () => {
 
       let usersArray = [];
 
-      if (userDetails && Array.isArray(userDetails)) {
-        usersArray = userDetails;
+      if (rights === "Allowed") {
+        usersArray = Array.isArray(userDetails) ? userDetails : [userDetails];
       } else {
-        usersArray = userDetails ? [userDetails] : [];
+        usersArray = (
+          Array.isArray(userDetails) ? userDetails : [userDetails]
+        ).filter((user) => user.user_name === userData.userName);
       }
 
       const usersWithImages = await Promise.all(
@@ -90,34 +119,6 @@ const TeamsPage = () => {
     }
   };
 
-  const fetchUserRights = async () => {
-    try {
-      const userType = userData.isAdmin ? "ADMINISTRATOR" : "USER";
-      const payload = {
-        UserName: userData.userName,
-        FormName: "DMS-TEAMSFULLVIEW",
-        FormDescription: "Teams All Users",
-        UserType: userType,
-      };
-
-      const response = await callSoapService(
-        userData.clientURL,
-        "DMS_CheckRights_ForTheUser",
-        payload
-      );
-
-      setUserRights(response);
-    } catch (error) {
-      console.error("Failed to fetch user rights:", error);
-      toast({
-        variant: "destructive",
-        title: error,
-      });
-    } finally {
-      setRightsChecked(true);
-    }
-  };
-
   const filteredUsersData = usersData.filter((user) => {
     const search = globalFilter?.toLowerCase();
     return user.user_name?.toLowerCase()?.includes(search);
@@ -129,12 +130,10 @@ const TeamsPage = () => {
         <GlobalSearchInput value={globalFilter} onChange={setGlobalFilter} />
       </div>
 
-      {!rightsChecked || loading ? (
+      {loading ? (
         <div className="flex justify-center items-start">
           <BarLoader color="#36d399" height={2} width="100%" />
         </div>
-      ) : userRights !== "Allowed" ? (
-        <AccessDenied />
       ) : usersData.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {filteredUsersData.map((user, index) => (
