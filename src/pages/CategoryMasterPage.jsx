@@ -218,6 +218,50 @@ const CategoryMasterPage = () => {
       ),
     },
     {
+      accessorKey: "MODULE_NAME",
+      header: () => (
+        <p className="truncate" style={{ width: 100 }}>
+          Module Name
+        </p>
+      ),
+      cell: ({ row }) => (
+        <div
+          className="capitalize"
+          style={{
+            width: 100,
+            overflow: "hidden",
+            whiteSpace: "nowrap",
+            textOverflow: "ellipsis",
+          }}
+          title={row.getValue("MODULE_NAME") || "-"}
+        >
+          {row.getValue("MODULE_NAME") || "-"}
+        </div>
+      ),
+    },
+    {
+      accessorKey: "INCLUDE_CUSTOM_COLUMNS",
+      header: () => (
+        <p className="truncate" style={{ width: 120 }}>
+          Custom Columns
+        </p>
+      ),
+      cell: ({ row }) => (
+        <div
+          className="capitalize"
+          style={{
+            width: 120,
+            overflow: "hidden",
+            whiteSpace: "nowrap",
+            textOverflow: "ellipsis",
+          }}
+          title={row.getValue("INCLUDE_CUSTOM_COLUMNS") || "-"}
+        >
+          {row.getValue("INCLUDE_CUSTOM_COLUMNS") || "-"}
+        </div>
+      ),
+    },
+    {
       accessorKey: "action",
       header: () => <div style={{ width: 40 }}>Action</div>,
       id: "actions",

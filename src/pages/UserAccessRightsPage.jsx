@@ -532,7 +532,7 @@ const UserAccessRightsPage = () => {
     try {
       const payload = {
         DataModelName: "FORMS_MASTER",
-        WhereCondition: "",
+        WhereCondition: "MODULE_NAME = 'DMS'",
         Orderby: "MODULE_NAME, FORM_TYPE",
       };
 
@@ -542,10 +542,7 @@ const UserAccessRightsPage = () => {
         payload
       );
 
-      const formsArray = Array.isArray(response)
-        ? response
-        : response?.data || [];
-      setFormsList(formsArray);
+      setFormsList(response);
     } catch (error) {
       setFormsList([]);
       toast({

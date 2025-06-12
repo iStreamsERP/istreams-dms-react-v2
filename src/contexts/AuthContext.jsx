@@ -14,13 +14,18 @@ const PUBLIC_SERVICE_URL = import.meta.env.VITE_SOAP_ENDPOINT;
 // Default userData object with standardized keys
 const defaultUserData = {
   serviceUrl: PUBLIC_SERVICE_URL,
-  organizationName: "",
   clientURL: "",
   userEmail: "",
   userName: "",
   userEmployeeNo: "",
   userAvatar: "",
-  currency: "",
+  companyName: "",
+  companyAddress: "",
+  companyLogo: "",
+  companyCurrName: "",
+  companyCurrDecimals: 0,
+  companyCurrSymbol: null,
+  companyCurrIsIndianStandard: false,
 };
 
 export const AuthProvider = ({ children }) => {
