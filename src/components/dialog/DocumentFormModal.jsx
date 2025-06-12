@@ -350,12 +350,13 @@ const DocumentFormModal = ({
       newErrors.DOC_RELATED_TO = "Related To is required";
     if (!formData.DOC_RELATED_CATEGORY.trim())
       newErrors.DOC_RELATED_CATEGORY = "Related Category is required";
+console.log(dynamicFields);
 
-    dynamicFields.forEach((field) => {
-      if (field.REQUIRED && !formData[field.COLUMN_NAME]?.trim()) {
-        newErrors[field.COLUMN_NAME] = `${field.COLUMN_LABEL} is required`;
-      }
-    });
+    // dynamicFields.forEach((field) => {
+    //   if (field.REQUIRED && !formData[field.COLUMN_NAME]?.trim()) {
+    //     newErrors[field.COLUMN_NAME] = `${field.COLUMN_LABEL} is required`;
+    //   }
+    // });
     return newErrors;
   };
 

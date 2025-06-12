@@ -290,7 +290,7 @@ export default function DocumentViewPage() {
   // Optimized service call payload
   const getDocMasterListPayload = useMemo(
     () => ({
-      WhereCondition: "",
+      WhereCondition: ` AND (USER_NAME = '${userData.userName}' OR ASSIGNED_USER = '${userData.userName}')`,
       Orderby: "REF_SEQ_NO DESC",
       IncludeEmpImage: false,
     }),

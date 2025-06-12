@@ -244,11 +244,19 @@ const UserCreateModal = ({ user, open, onClose }) => {
 
     try {
       setLoading((prev) => ({ ...prev, [key]: true }));
+
+      const formattedValue =
+        key === "USER_TYPE"
+          ? value === true || value === "true"
+            ? "Administrator"
+            : "User"
+          : value;
+
       const payload = {
         FQ_USER_NAME: user.EMAIL_ADDRESS,
         USER_NAME_ONLY: user.USER_NAME,
         COLUMN_NAME: key,
-        VALUE: value,
+        VALUE: formattedValue,
       };
 
       const response = await callSoapService(
@@ -346,7 +354,7 @@ const UserCreateModal = ({ user, open, onClose }) => {
     setIsSubmitting(true);
 
     console.log(formData);
-    
+
     try {
       const response = await callSoapService(
         userData.clientURL,

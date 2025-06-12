@@ -1,19 +1,11 @@
 import GlobalSearchInput from "@/components/GlobalSearchInput";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { callSoapService } from "@/services/callSoapService";
 import { useEffect, useState } from "react";
 import { BarLoader } from "react-spinners";
 import TeamProfileCard from "../components/TeamProfileCard";
 import { useAuth } from "../contexts/AuthContext";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 const TeamsPage = () => {
   const { userData } = useAuth();
@@ -135,38 +127,43 @@ const TeamsPage = () => {
     const search = globalFilter?.toLowerCase();
     const matchesSearch = user.user_name?.toLowerCase()?.includes(search);
 
-    // Corrected assignment filter logic
-    let matchesAssignment = true;
-    if (assignmentFilter === "Assigned") {
-      matchesAssignment = Number(user.overall_total_tasks) > 0;
-    } else if (assignmentFilter === "Unassigned") {
-      matchesAssignment = Number(user.overall_total_tasks) === 0;
+    // Explicitly handle all filter cases
+    switch (assignmentFilter) {
+      case "Assigned":
+        return matchesSearch && Number(user.overall_total_tasks) > 0;
+      case "Unassigned":
+        return matchesSearch && Number(user.overall_total_tasks) === 0;
+      case "All":
+      default:
+        return matchesSearch;
     }
-
-    return matchesSearch && matchesAssignment;
   });
+
+  // Calculate if there are filtered results
+  const hasFilteredResults = filteredUsersData.length > 0;
+  const hasUsersData = usersData.length > 0;
 
   return (
     <div className="grid grid-cols-1 gap-4">
-      <div className="flex flex-col md:flex-row gap-4">
+      <div className="flex flex-col md:flex-row md:justify-between items-stretch gap-2">
         <div className="w-full lg:w-1/2">
           <GlobalSearchInput value={globalFilter} onChange={setGlobalFilter} />
         </div>
 
-        <div className="w-full md:w-auto">
-          <Select value={assignmentFilter} onValueChange={setAssignmentFilter}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select filter" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                {/* Added ALL option */}
-                <SelectItem value="All">All</SelectItem>
-                <SelectItem value="Assigned">Assigned</SelectItem>
-                <SelectItem value="Unassigned">Unassigned</SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select>
+        <div className="flex-shrink-0">
+          <div className="flex gap-2">
+            {["All", "Assigned", "Unassigned"].map((filter) => (
+              <Button
+                key={filter}
+                variant={filter === assignmentFilter ? "default" : "outline"}
+                size="sm"
+                onClick={() => setAssignmentFilter(filter)}
+                aria-pressed={filter === assignmentFilter}
+              >
+                {filter}
+              </Button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -174,15 +171,22 @@ const TeamsPage = () => {
         <div className="flex justify-center items-start">
           <BarLoader color="#36d399" height={2} width="100%" />
         </div>
-      ) : usersData.length > 0 ? (
+      ) : hasFilteredResults ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {filteredUsersData.map((user, index) => (
-            <TeamProfileCard key={`${user.emp_no}-${index}`} user={user} />
+          {filteredUsersData.map((user) => (
+            <TeamProfileCard
+              key={`${user.emp_no}-${user.user_name}`}
+              user={user}
+            />
           ))}
         </div>
+      ) : hasUsersData ? (
+        <div className="flex justify-center items-center py-10">
+          <p className="text-gray-400">No users match your filters</p>
+        </div>
       ) : (
-        <div className="flex justify-center items-center min-h-screen">
-          <p className="text-gray-400">No data found</p>
+        <div className="flex justify-center items-center py-10">
+          <p className="text-gray-400">No users found</p>
         </div>
       )}
     </div>
