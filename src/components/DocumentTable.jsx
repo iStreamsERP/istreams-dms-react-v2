@@ -48,16 +48,39 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
   const uploadModalRef = useRef(null);
 
   const [documentList, setDocumentList] = useState([]);
+  const [categoryList, setCategoryList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const [selectedDocument, setSelectedDocument] = useState(null);
 
+  const fetchCategoryList = useCallback(async () => {
+    try {
+      const payload = {
+        UserName: userData.userName,
+      };
+
+      const response = await callSoapService(
+        userData.clientURL,
+        "DMS_Get_Allowed_DocCategories",
+        payload
+      );
+
+      setCategoryList(response || []);
+    } catch (err) {
+      toast({
+        title: "Failed to load categories.",
+        description: err.message || "Error",
+        variant: "destructive",
+      });
+    }
+  }, [userData, toast]);
+
   const fetchDocsMasterList = useCallback(async () => {
     setLoading(true);
     try {
       const whereCondition =
-        userData.isAdmin || userViewRights === "Allowed"
+        userData.isAdmin || userViewRights === "Allowed" || categoryList.length > 0
           ? ""
           : ` AND (USER_NAME = '${userData.userName}' OR ASSIGNED_USER = '${userData.userName}')`;
       const payload = {
@@ -144,6 +167,7 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
 
   // Initial data load
   useEffect(() => {
+    fetchCategoryList();
     fetchDocsMasterList();
 
     const getViewRights = async () => {
@@ -486,9 +510,19 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
       );
   }, []);
 
+  const filteredDocuments = useMemo(() => {
+    if (categoryList.length > 0) {
+      const allowedCategories = categoryList.map((cat) => cat.CATEGORY_NAME);
+      return documentList.filter((doc) =>
+        allowedCategories.includes(doc.DOC_RELATED_CATEGORY)
+      );
+    }
+    return documentList;
+  }, [documentList, categoryList]);
+
   // Initialize TanStack table
   const table = useReactTable({
-    data: documentList,
+    data: filteredDocuments,
     columns,
     globalFilterFn,
     getCoreRowModel: getCoreRowModel(),

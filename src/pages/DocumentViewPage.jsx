@@ -225,6 +225,7 @@ DocumentCard.displayName = "DocumentCard";
 export default function DocumentViewPage() {
   // Core data states - simplified
   const [allDocs, setAllDocs] = useState([]);
+  const [categoryList, setCategoryList] = useState([]);
   const [users, setUsers] = useState([]);
   const [assignments, setAssignments] = useState(new Map()); // Use Map for better performance
 
@@ -292,7 +293,9 @@ export default function DocumentViewPage() {
   const getDocMasterListPayload = useMemo(
     () => ({
       WhereCondition:
-        userData.isAdmin || userViewRights === "Allowed"
+        userData.isAdmin ||
+        userViewRights === "Allowed" ||
+        categoryList.length > 0
           ? ""
           : ` AND (USER_NAME = '${userData.userName}' OR ASSIGNED_USER = '${userData.userName}')`,
       Orderby: "REF_SEQ_NO DESC",
@@ -324,10 +327,20 @@ export default function DocumentViewPage() {
   }, [allDocs, debouncedFilter]);
 
   // Virtualized visible documents
-  const visibleDocs = useMemo(
-    () => filteredDocs.slice(0, visibleCount),
-    [filteredDocs, visibleCount]
-  );
+  const filteredByCategory = useMemo(() => {
+    if (categoryList.length > 0) {
+      const allowed = new Set(categoryList.map((cat) => cat.CATEGORY_NAME));
+      return filteredDocs.filter((doc) =>
+        allowed.has(doc.DOC_RELATED_CATEGORY)
+      );
+    }
+    // no category selected: use full filteredDocs
+    return filteredDocs;
+  }, [filteredDocs, categoryList]);
+
+  const visibleDocs = useMemo(() => {
+    return filteredByCategory.slice(0, visibleCount);
+  }, [filteredByCategory, visibleCount]);
 
   // Optimized assignment processing
   const processInitialAssignments = useCallback((docs) => {
@@ -344,6 +357,28 @@ export default function DocumentViewPage() {
 
     return assignmentMap;
   }, []);
+
+  const fetchCategoryList = useCallback(async () => {
+    try {
+      const payload = {
+        UserName: userData.userName,
+      };
+
+      const response = await callSoapService(
+        userData.clientURL,
+        "DMS_Get_Allowed_DocCategories",
+        payload
+      );
+
+      setCategoryList(response || []);
+    } catch (err) {
+      toast({
+        title: "Failed to load categories.",
+        description: err.message || "Error",
+        variant: "destructive",
+      });
+    }
+  }, [userData, toast]);
 
   // Fetch documents - simplified and optimized
   const fetchDocuments = useCallback(async () => {
@@ -461,16 +496,19 @@ export default function DocumentViewPage() {
 
   // Load more documents - simplified
   const loadMoreDocs = useCallback(() => {
-    setVisibleCount((prev) => Math.min(prev + BATCH_SIZE, filteredDocs.length));
-  }, [filteredDocs.length]);
+    setVisibleCount((prev) =>
+      Math.min(prev + BATCH_SIZE, filteredByCategory.length)
+    );
+  }, [filteredByCategory.length]);
 
   // Initialize data
   useEffect(() => {
+    fetchCategoryList();
     fetchDocuments();
     fetchUsers();
     fetchUserRights();
     fetchUserViewRights();
-  }, [fetchDocuments, fetchUsers, fetchUserViewRights]);
+  }, [fetchDocuments, fetchCategoryList, fetchUsers, fetchUserViewRights]);
 
   // Event handlers - optimized
   const handleVerifySuccess = useCallback((refSeqNo, verifierName) => {
@@ -495,7 +533,7 @@ export default function DocumentViewPage() {
     (doc) => {
       const hasAccess = String(userViewRights).toLowerCase() === "allowed";
 
-      if (!hasAccess) {
+      if (!hasAccess && categoryList.length === 0) {
         toast({
           variant: "destructive",
           title: "Permission Denied",
@@ -638,7 +676,7 @@ export default function DocumentViewPage() {
     return <AccessDenied />;
   }
 
-  const hasMore = visibleCount < filteredDocs.length;
+  const hasMore = visibleCount < filteredByCategory.length;
   const showingCount = Math.min(visibleDocs.length, visibleCount);
 
   return (
@@ -653,21 +691,23 @@ export default function DocumentViewPage() {
           />
 
           {/* Simplified status indicators */}
-          <div className="flex items-center gap-3 mt-2 min-h-[20px]">
-            {isSearchPending && (
-              <div className="flex items-center space-x-2 text-xs text-blue-600">
-                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
-                <span>Searching...</span>
-              </div>
-            )}
+          {(isSearchPending || isProcessing) && (
+            <div className="flex items-center gap-3 mt-2 min-h-[20px]">
+              {isSearchPending && (
+                <div className="flex items-center space-x-2 text-xs text-blue-600">
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                  <span>Searching...</span>
+                </div>
+              )}
 
-            {isProcessing && (
-              <div className="flex items-center space-x-2 text-xs text-amber-600">
-                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-amber-600"></div>
-                <span>Processing...</span>
-              </div>
-            )}
-          </div>
+              {isProcessing && (
+                <div className="flex items-center space-x-2 text-xs text-amber-600">
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-amber-600"></div>
+                  <span>Processing...</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Content */}
@@ -733,18 +773,9 @@ export default function DocumentViewPage() {
             {hasMore && !debouncedFilter && (
               <div className="text-center py-4">
                 <Button onClick={loadMoreDocs} variant="outline">
-                  Load More ({filteredDocs.length - visibleCount} remaining)
+                  Load More ({filteredByCategory.length - visibleCount}{" "}
+                  remaining)
                 </Button>
-              </div>
-            )}
-
-            {/* Document count */}
-            {allDocs.length > 0 && (
-              <div className="text-center text-sm text-gray-500 py-2">
-                Showing {showingCount} of {filteredDocs.length} documents
-                {debouncedFilter && ` (filtered by "${debouncedFilter}")`}
-                {filteredDocs.length !== allDocs.length &&
-                  ` from ${allDocs.length} total`}
               </div>
             )}
           </>

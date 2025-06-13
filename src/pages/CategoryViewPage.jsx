@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { callSoapService } from "@/services/callSoapService";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { BarLoader } from "react-spinners";
 import TimeRangeSelector from "../components/TimeRangeSelector";
@@ -22,10 +22,11 @@ const CategoryViewPage = () => {
   const { toast } = useToast();
 
   const [userRights, setUserRights] = useState("");
-  const [rightsChecked, setRightsChecked] = useState(false);
   const [userViewRights, setUserViewRights] = useState("");
+  const [rightsChecked, setRightsChecked] = useState(false);
 
   const [categories, setCategories] = useState([]);
+  const [categoryList, setCategoryList] = useState([]);
   const [filterDays, setFilterDays] = useState("365");
   const [loading, setLoading] = useState(true);
   const [globalFilter, setGlobalFilter] = useState("");
@@ -44,7 +45,9 @@ const CategoryViewPage = () => {
       const payload = {
         NoOfDays: filterDays,
         ForTheUser: `${
-          userData.isAdmin || userViewRights === "Allowed"
+          userData.isAdmin ||
+          userViewRights === "Allowed" ||
+          categoryList.length > 0
             ? ""
             : userData.userName
         }`,
@@ -56,8 +59,6 @@ const CategoryViewPage = () => {
         "DMS_GetDashboard_CategoriesSummary",
         payload
       );
-
-      console.log(response);
 
       setCategories(Array.isArray(response) ? response : []);
     } catch (error) {
@@ -71,6 +72,28 @@ const CategoryViewPage = () => {
       setLoading(false);
     }
   }, [filterDays, userViewRights, userData, buildFilterCond, toast]);
+
+  const fetchCategoryList = useCallback(async () => {
+    try {
+      const payload = {
+        UserName: userData.userName,
+      };
+
+      const response = await callSoapService(
+        userData.clientURL,
+        "DMS_Get_Allowed_DocCategories",
+        payload
+      );
+
+      setCategoryList(Array.isArray(response) ? response : []);
+    } catch (err) {
+      toast({
+        title: "Failed to load categories.",
+        description: err.message || "Error",
+        variant: "destructive",
+      });
+    }
+  }, [userData, toast]);
 
   // Fetch user permissions
   const fetchPermissions = useCallback(async () => {
@@ -105,17 +128,18 @@ const CategoryViewPage = () => {
     } finally {
       setRightsChecked(true);
     }
-  }, [userData, toast]);
+  }, [userData, userRights, userViewRights, toast]);
 
   // Initial data loading
   useEffect(() => {
     const loadData = async () => {
+      await fetchCategoryList();
       await fetchPermissions();
       await fetchData();
     };
 
     loadData();
-  }, [fetchPermissions, fetchData]);
+  }, [fetchPermissions, fetchData, fetchCategoryList]);
 
   // Refresh data when filters change
   useEffect(() => {
@@ -123,6 +147,17 @@ const CategoryViewPage = () => {
       fetchData();
     }
   }, [filterField, globalFilter, filterDays, rightsChecked, fetchData]);
+
+  const categoriesToDisplay = useMemo(() => {
+    // If categoryList has data, filter categories to match
+    if (categoryList.length > 0) {
+      return categories.filter((cat) =>
+        categoryList.some((c) => c.CATEGORY_NAME === cat.DOC_RELATED_CATEGORY)
+      );
+    }
+    // Otherwise use all categories from fetchData
+    return categories;
+  }, [categories, categoryList]);
 
   // const fetchUserViewRights = async () => {
   //   try {
@@ -219,11 +254,11 @@ const CategoryViewPage = () => {
         </div>
       ) : userRights !== "Allowed" ? (
         <AccessDenied />
-      ) : categories.length === 0 ? (
+      ) : categoriesToDisplay.length === 0 ? (
         <p className="text-center text-sm">No data found...</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {categories.map((category) => (
+          {categoriesToDisplay.map((category) => (
             <Link
               to="/document-view"
               state={{ categoryName: category.DOC_RELATED_CATEGORY }}

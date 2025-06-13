@@ -252,11 +252,11 @@ const DocumentFormModal = ({
         SQLQuery: `SELECT CLIENT_ID, CLIENT_NAME FROM CLIENT_MASTER`,
       };
 
-       const response = await callSoapService(
-          userData.clientURL,
-          "DataModel_GetDataFrom_Query",
-          payload
-        );
+      const response = await callSoapService(
+        userData.clientURL,
+        "DataModel_GetDataFrom_Query",
+        payload
+      );
 
       setClientData({
         list: response || [],
@@ -294,12 +294,12 @@ const DocumentFormModal = ({
       const payload = {
         SQLQuery: `SELECT INCLUDE_CUSTOM_COLUMNS FROM SYNM_DMS_DOC_CATEGORIES WHERE CATEGORY_NAME = '${value}'`,
       };
-      
-       const response = await callSoapService(
-          userData.clientURL,
-          "DataModel_GetDataFrom_Query",
-          payload
-        );
+
+      const response = await callSoapService(
+        userData.clientURL,
+        "DataModel_GetDataFrom_Query",
+        payload
+      );
 
       const raw = Array.isArray(response) ? response : response?.Data || [];
       const commaText = raw[0]?.INCLUDE_CUSTOM_COLUMNS || "";
@@ -350,8 +350,6 @@ const DocumentFormModal = ({
       newErrors.DOC_RELATED_TO = "Related To is required";
     if (!formData.DOC_RELATED_CATEGORY.trim())
       newErrors.DOC_RELATED_CATEGORY = "Related Category is required";
-console.log(dynamicFields);
-
     // dynamicFields.forEach((field) => {
     //   if (field.REQUIRED && !formData[field.COLUMN_NAME]?.trim()) {
     //     newErrors[field.COLUMN_NAME] = `${field.COLUMN_LABEL} is required`;
@@ -797,7 +795,12 @@ console.log(dynamicFields);
                       <Loader2 className="h-5 w-5 animate-spin" />
                     ) : (
                       dynamicFields.map((field) => {
-                        if (field.COLUMN_NAME === "X_VENDOR_NAME") {
+                        if (
+                          field.COLUMN_NAME === "X_VENDOR_ID" ||
+                          field.COLUMN_NAME === "X_CLIENT_ID"
+                        ) {
+                          return null;
+                        } else if (field.COLUMN_NAME === "X_VENDOR_NAME") {
                           return (
                             <div key={field.COLUMN_NAME} className="space-y-2">
                               <div className="flex items-center gap-2 text-sm">
@@ -820,9 +823,9 @@ console.log(dynamicFields);
                                 <option value="">
                                   Select {field.COLUMN_LABEL}
                                 </option>
-                                {vendorData.list.map((vendor) => (
+                                {vendorData.list.map((vendor, index) => (
                                   <option
-                                    key={vendor.VENDOR_ID}
+                                    key={`${vendor.VENDOR_ID}-${index}`}
                                     value={vendor.VENDOR_NAME}
                                   >
                                     {vendor.VENDOR_NAME}
@@ -856,7 +859,7 @@ console.log(dynamicFields);
                                 </option>
                                 {clientData.list.map((client, index) => (
                                   <option
-                                    key={`${client.CLIENT_ID}-${index}`}
+                                    key={`${client.CLIENT_NAME}-${index}`}
                                     value={client.CLIENT_NAME}
                                   >
                                     {client.CLIENT_NAME}
