@@ -398,7 +398,7 @@ const UserListPage = () => {
                     colSpan={columns.length}
                     className="h-24 text-center"
                   >
-                    <PacmanLoader color="#6366f1" />
+                    <PacmanLoader color="#36d399" />
                   </TableCell>
                 </TableRow>
               ) : error ? (

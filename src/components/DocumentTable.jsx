@@ -495,7 +495,7 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
             {loading ? (
               <tr>
                 <td colSpan="12" className="text-center py-4">
-                  <PacmanLoader color="#6366f1" />
+                  <PacmanLoader color="#36d399" />
                 </td>
               </tr>
             ) : error ? (

@@ -66,8 +66,6 @@ const TeamsPage = () => {
         payload
       );
 
-      console.log(userDetails[0]);
-
       let usersArray = [];
 
       if (rights === "Allowed") {

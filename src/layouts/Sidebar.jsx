@@ -105,6 +105,7 @@ export const Sidebar = forwardRef(({ collapsed }, ref) => {
                         "sidebar-item flex items-center gap-x-2 px-3 py-2 my-2 rounded-md text-sm font-medium hover:bg-slate-200 dark:hover:bg-slate-900 transition-colors",
                         collapsed && "md:w-[45px]"
                       )}
+                      title={link.label}
                     >
                       <link.icon size={18} className="flex-shrink-0" />
                       {!collapsed && (
