@@ -8,6 +8,8 @@ import React, { useEffect, useRef, useState } from "react";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
 import { useAuth } from "../contexts/AuthContext";
+import { callSoapService } from "@/services/callSoapService";
+import AccessDenied from "@/components/AccessDenied";
 
 // Utility: Split an event into hour blocks with unique ids
 function splitEventToHourBlocks(event) {
@@ -41,6 +43,8 @@ function splitEventToHourBlocks(event) {
 }
 
 export default function TimeSheetPage() {
+  const [userRights, setUserRights] = useState("");
+
   const [tasks, setTasks] = useState([
     {
       TASK_ID: 1,
@@ -310,11 +314,30 @@ export default function TimeSheetPage() {
 
   // Scroll to 8 AM on mount or tab switch
   useEffect(() => {
+    fetchUserRights();
     if (activeTab === "timesheet-tab" && timesheetScrollRef.current) {
       // Scroll to 8th hour (8 * rowHeight)
       timesheetScrollRef.current.scrollTop = 8 * rowHeight;
     }
   }, [activeTab, rowHeight]);
+
+  const fetchUserRights = async () => {
+    const userType = userData.isAdmin ? "ADMINISTRATOR" : "USER";
+    const payload = {
+      UserName: userData.userName,
+      FormName: "DMS-TIMESHEETENTRY",
+      FormDescription: "Time Sheet",
+      UserType: userType,
+    };
+
+    const response = await callSoapService(
+      userData.clientURL,
+      "DMS_CheckRights_ForTheUser",
+      payload
+    );
+
+    setUserRights(response);
+  };
 
   const handleTabChange = (tabId) => {
     setActiveTab(tabId);
@@ -397,104 +420,190 @@ export default function TimeSheetPage() {
   };
 
   // FIX: Only store parent event, not blocks, to prevent duplication
- // ...existing code...
-const handleSave = (e) => {
-  e.preventDefault();
+  // ...existing code...
+  const handleSave = (e) => {
+    e.preventDefault();
 
-  const todayKey = formatDateKey(new Date());
-  const selectedDateKey = formatDateKey(selectedDate);
+    const todayKey = formatDateKey(new Date());
+    const selectedDateKey = formatDateKey(selectedDate);
 
-  if (selectedDateKey !== todayKey) {
-    alert("You can only add events for today's date.");
-    return;
-  }
+    if (selectedDateKey !== todayKey) {
+      alert("You can only add events for today's date.");
+      return;
+    }
 
-  const taskTitle = selectedTask
-    ? selectedTask.TASK_NAME
-    : taskDetails.TASK_NAME;
+    const taskTitle = selectedTask
+      ? selectedTask.TASK_NAME
+      : taskDetails.TASK_NAME;
 
-  if (!taskTitle) {
-    alert("Task name is required.");
-    return;
-  }
+    if (!taskTitle) {
+      alert("Task name is required.");
+      return;
+    }
 
-  const {
-    START_TIME = 0,
-    startMinute = 0,
-    END_TIME = 0,
-    endMinute = 0,
-  } = taskDetails;
+    const {
+      START_TIME = 0,
+      startMinute = 0,
+      END_TIME = 0,
+      endMinute = 0,
+    } = taskDetails;
 
-  const startMins = parseInt(START_TIME) * 60 + parseInt(startMinute);
-  const endMins = parseInt(END_TIME) * 60 + parseInt(endMinute);
+    const startMins = parseInt(START_TIME) * 60 + parseInt(startMinute);
+    const endMins = parseInt(END_TIME) * 60 + parseInt(endMinute);
 
-  if (startMins >= endMins) {
-    alert("End time must be after start time.");
-    return;
-  }
+    if (startMins >= endMins) {
+      alert("End time must be after start time.");
+      return;
+    }
 
-  let TASK_ID =
-    taskDetails.TASK_ID || (selectedTask ? selectedTask.TASK_ID : null);
-  let PROJECT_NO =
-    taskDetails.PROJECT_NO || (selectedTask ? selectedTask.PROJECT_NO : null);
-  let dmsNo = taskDetails.dmsNo || (selectedTask ? selectedTask.dmsNo : null);
+    let TASK_ID =
+      taskDetails.TASK_ID || (selectedTask ? selectedTask.TASK_ID : null);
+    let PROJECT_NO =
+      taskDetails.PROJECT_NO || (selectedTask ? selectedTask.PROJECT_NO : null);
+    let dmsNo = taskDetails.dmsNo || (selectedTask ? selectedTask.dmsNo : null);
 
-  const NO_OF_MINUTES = calculateDuration(
-    START_TIME,
-    startMinute,
-    END_TIME,
-    endMinute
-  );
-  const NO_OF_HOURS = parseFloat((NO_OF_MINUTES / 60).toFixed(2));
-  const TRANS_DATE = formatDateKey(selectedDate);
+    const NO_OF_MINUTES = calculateDuration(
+      START_TIME,
+      startMinute,
+      END_TIME,
+      endMinute
+    );
+    const NO_OF_HOURS = parseFloat((NO_OF_MINUTES / 60).toFixed(2));
+    const TRANS_DATE = formatDateKey(selectedDate);
 
-  // --- If editing a block, split parent event into up to 3 events ---
-  if (editingBlock) {
-    const { block, parentEvent } = editingBlock;
-    const parentStart =
-      parentEvent.START_TIME * 60 + Number(parentEvent.startMinute);
-    const parentEnd =
-      parentEvent.END_TIME * 60 + Number(parentEvent.endMinute);
+    // --- If editing a block, split parent event into up to 3 events ---
+    if (editingBlock) {
+      const { block, parentEvent } = editingBlock;
+      const parentStart =
+        parentEvent.START_TIME * 60 + Number(parentEvent.startMinute);
+      const parentEnd =
+        parentEvent.END_TIME * 60 + Number(parentEvent.endMinute);
 
-    // The new block's time
-    const newBlockStart = startMins;
-    const newBlockEnd = endMins;
+      // The new block's time
+      const newBlockStart = startMins;
+      const newBlockEnd = endMins;
 
-    // Check for overlap with other events (excluding this parent event)
+      // Check for overlap with other events (excluding this parent event)
+      const overlappingEvent = events.some((event) => {
+        if (event.id === parentEvent.id) return false;
+        const eventStart = event.START_TIME * 60 + event.startMinute;
+        const eventEnd = event.END_TIME * 60 + event.endMinute;
+        return newBlockStart < eventEnd && newBlockEnd > eventStart;
+      });
+      if (overlappingEvent) {
+        alert("This time slot overlaps with another event.");
+        return;
+      }
+
+      // Prepare new events: before, edited block, after
+      const newEvents = events.filter((ev) => ev.id !== parentEvent.id);
+
+      // Before block
+      if (newBlockStart > parentStart) {
+        newEvents.push({
+          ...parentEvent,
+          id: parentEvent.id + "_before_" + newBlockStart,
+          START_TIME: parentEvent.START_TIME,
+          startMinute: parentEvent.startMinute,
+          END_TIME: Math.floor(newBlockStart / 60),
+          endMinute: newBlockStart % 60,
+          NO_OF_MINUTES: newBlockStart - parentStart,
+          NO_OF_HOURS: parseFloat(
+            ((newBlockStart - parentStart) / 60).toFixed(2)
+          ),
+        });
+      }
+      // Edited block
+      const updatedColor = taskDetails.color || getRandomColor();
+      newEvents.push({
+        ...parentEvent,
+        id: parentEvent.id + "_edit_" + newBlockStart,
+        TASK_NAME: taskTitle,
+        TASK_ID,
+        PROJECT_NO,
+        dmsNo,
+        START_TIME: parseInt(START_TIME),
+        startMinute: parseInt(startMinute),
+        END_TIME: parseInt(END_TIME),
+        endMinute: parseInt(endMinute),
+        color: updatedColor,
+        USER_NAME: userData?.currentUserName || "",
+        EMP_NO: userData?.currentUserEmpNo || "",
+        NO_OF_HOURS,
+        NO_OF_MINUTES,
+        TRANS_DATE,
+        isCompleted: taskDetails.isCompleted || false,
+      });
+      // After block
+      if (newBlockEnd < parentEnd) {
+        newEvents.push({
+          ...parentEvent,
+          id: parentEvent.id + "_after_" + newBlockEnd,
+          START_TIME: Math.floor(newBlockEnd / 60),
+          startMinute: newBlockEnd % 60,
+          END_TIME: parentEvent.END_TIME,
+          endMinute: parentEvent.endMinute,
+          NO_OF_MINUTES: parentEnd - newBlockEnd,
+          NO_OF_HOURS: parseFloat(((parentEnd - newBlockEnd) / 60).toFixed(2)),
+        });
+      }
+
+      setTimesheetsByDate((prev) => ({
+        ...prev,
+        [TRANS_DATE]: newEvents,
+      }));
+      setEvents(newEvents);
+
+      // --- Update color in pending/filtered tasks ---
+      setTasks((prevTasks) =>
+        prevTasks.map((t) =>
+          t.TASK_NAME === taskTitle ? { ...t, color: updatedColor } : t
+        )
+      );
+      setFilteredTasks((prevFiltered) =>
+        prevFiltered.map((t) =>
+          t.TASK_NAME === taskTitle ? { ...t, color: updatedColor } : t
+        )
+      );
+
+      setEditingBlock(null);
+      handleClosePopup();
+      setSelectedTask(null);
+      return;
+    }
+
+    // --- Normal add/update for full event ---
+    // Prevent duplicate for same task in same day, except for the current editing event
+    const taskAlreadyExists = events.some(
+      (event) =>
+        event.TASK_NAME === taskTitle &&
+        event.id !== taskDetails.id &&
+        formatDateKey(selectedDate) === event.TRANS_DATE
+    );
+    if (taskAlreadyExists) {
+      alert("This task is already scheduled in the calendar.");
+      return;
+    }
+
+    // Prevent overlap, except for the current editing event
     const overlappingEvent = events.some((event) => {
-      if (event.id === parentEvent.id) return false;
+      if (event.id === taskDetails.id) return false;
       const eventStart = event.START_TIME * 60 + event.startMinute;
       const eventEnd = event.END_TIME * 60 + event.endMinute;
-      return newBlockStart < eventEnd && newBlockEnd > eventStart;
+      return startMins < eventEnd && endMins > eventStart;
     });
     if (overlappingEvent) {
       alert("This time slot overlaps with another event.");
       return;
     }
 
-    // Prepare new events: before, edited block, after
-    const newEvents = events.filter((ev) => ev.id !== parentEvent.id);
+    // Use the same id for update, or new id for new event
+    const parentId = taskDetails.id || Date.now();
 
-    // Before block
-    if (newBlockStart > parentStart) {
-      newEvents.push({
-        ...parentEvent,
-        id: parentEvent.id + "_before_" + newBlockStart,
-        START_TIME: parentEvent.START_TIME,
-        startMinute: parentEvent.startMinute,
-        END_TIME: Math.floor(newBlockStart / 60),
-        endMinute: newBlockStart % 60,
-        NO_OF_MINUTES: newBlockStart - parentStart,
-        NO_OF_HOURS: parseFloat(
-          ((newBlockStart - parentStart) / 60).toFixed(2)
-        ),
-      });
-    }
-    // Edited block
     const updatedColor = taskDetails.color || getRandomColor();
-    newEvents.push({
-      ...parentEvent,
-      id: parentEvent.id + "_edit_" + newBlockStart,
+
+    const baseEvent = {
+      id: parentId,
       TASK_NAME: taskTitle,
       TASK_ID,
       PROJECT_NO,
@@ -510,26 +619,25 @@ const handleSave = (e) => {
       NO_OF_MINUTES,
       TRANS_DATE,
       isCompleted: taskDetails.isCompleted || false,
-    });
-    // After block
-    if (newBlockEnd < parentEnd) {
-      newEvents.push({
-        ...parentEvent,
-        id: parentEvent.id + "_after_" + newBlockEnd,
-        START_TIME: Math.floor(newBlockEnd / 60),
-        startMinute: newBlockEnd % 60,
-        END_TIME: parentEvent.END_TIME,
-        endMinute: parentEvent.endMinute,
-        NO_OF_MINUTES: parentEnd - newBlockEnd,
-        NO_OF_HOURS: parseFloat(((parentEnd - newBlockEnd) / 60).toFixed(2)),
-      });
-    }
+    };
 
-    setTimesheetsByDate((prev) => ({
-      ...prev,
-      [TRANS_DATE]: newEvents,
-    }));
-    setEvents(newEvents);
+    // Only store the parent event, not blocks
+    setTimesheetsByDate((prev) => {
+      const prevArr = prev[TRANS_DATE] || [];
+      const filtered = prevArr.filter(
+        (ev) => ev.id !== parentId && ev.id !== taskDetails.id
+      );
+      return {
+        ...prev,
+        [TRANS_DATE]: [...filtered, baseEvent],
+      };
+    });
+    setEvents((prev) => {
+      const filtered = prev.filter(
+        (ev) => ev.id !== parentId && ev.id !== taskDetails.id
+      );
+      return [...filtered, baseEvent];
+    });
 
     // --- Update color in pending/filtered tasks ---
     setTasks((prevTasks) =>
@@ -543,95 +651,10 @@ const handleSave = (e) => {
       )
     );
 
-    setEditingBlock(null);
     handleClosePopup();
     setSelectedTask(null);
-    return;
-  }
-
-  // --- Normal add/update for full event ---
-  // Prevent duplicate for same task in same day, except for the current editing event
-  const taskAlreadyExists = events.some(
-    (event) =>
-      event.TASK_NAME === taskTitle &&
-      event.id !== taskDetails.id &&
-      formatDateKey(selectedDate) === event.TRANS_DATE
-  );
-  if (taskAlreadyExists) {
-    alert("This task is already scheduled in the calendar.");
-    return;
-  }
-
-  // Prevent overlap, except for the current editing event
-  const overlappingEvent = events.some((event) => {
-    if (event.id === taskDetails.id) return false;
-    const eventStart = event.START_TIME * 60 + event.startMinute;
-    const eventEnd = event.END_TIME * 60 + event.endMinute;
-    return startMins < eventEnd && endMins > eventStart;
-  });
-  if (overlappingEvent) {
-    alert("This time slot overlaps with another event.");
-    return;
-  }
-
-  // Use the same id for update, or new id for new event
-  const parentId = taskDetails.id || Date.now();
-
-  const updatedColor = taskDetails.color || getRandomColor();
-
-  const baseEvent = {
-    id: parentId,
-    TASK_NAME: taskTitle,
-    TASK_ID,
-    PROJECT_NO,
-    dmsNo,
-    START_TIME: parseInt(START_TIME),
-    startMinute: parseInt(startMinute),
-    END_TIME: parseInt(END_TIME),
-    endMinute: parseInt(endMinute),
-    color: updatedColor,
-    USER_NAME: userData?.currentUserName || "",
-    EMP_NO: userData?.currentUserEmpNo || "",
-    NO_OF_HOURS,
-    NO_OF_MINUTES,
-    TRANS_DATE,
-    isCompleted: taskDetails.isCompleted || false,
   };
-
-  // Only store the parent event, not blocks
-  setTimesheetsByDate((prev) => {
-    const prevArr = prev[TRANS_DATE] || [];
-    const filtered = prevArr.filter(
-      (ev) => ev.id !== parentId && ev.id !== taskDetails.id
-    );
-    return {
-      ...prev,
-      [TRANS_DATE]: [...filtered, baseEvent],
-    };
-  });
-  setEvents((prev) => {
-    const filtered = prev.filter(
-      (ev) => ev.id !== parentId && ev.id !== taskDetails.id
-    );
-    return [...filtered, baseEvent];
-  });
-
-  // --- Update color in pending/filtered tasks ---
-  setTasks((prevTasks) =>
-    prevTasks.map((t) =>
-      t.TASK_NAME === taskTitle ? { ...t, color: updatedColor } : t
-    )
-  );
-  setFilteredTasks((prevFiltered) =>
-    prevFiltered.map((t) =>
-      t.TASK_NAME === taskTitle ? { ...t, color: updatedColor } : t
-    )
-  );
-
-  handleClosePopup();
-  setSelectedTask(null);
-};
-// ...existing code...
+  // ...existing code...
 
   const handleSelectTask = (e, task) => {
     e.preventDefault();
@@ -1436,6 +1459,10 @@ const handleSave = (e) => {
     setSelectedTask(foundTask || null);
     setShowPopup(true);
   };
+
+  if (userRights !== "Allowed") {
+    return <AccessDenied />;
+  }
 
   return (
     <>

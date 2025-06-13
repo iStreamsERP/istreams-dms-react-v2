@@ -1,22 +1,50 @@
 import AccessDenied from "@/components/AccessDenied";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { callSoapService } from "@/services/callSoapService";
 import { convertDataModelToStringData } from "@/utils/dataModelConverter";
-import { Popover, PopoverContent, PopoverTrigger } from "@radix-ui/react-popover";
-import { Check, ChevronsUpDown, Search, Trash2 } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@radix-ui/react-popover";
+import {
+  Check,
+  CheckSquare,
+  ChevronsUpDown,
+  Search,
+  Trash2,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 
 const CategoryAccessRightsPage = () => {
-  const [roleDetails, setRoleDetails] = useState({ ROLE_NAME: "", ROLE_ID: "", ROLE_DESCRIPTION: "" });
+  const [roleDetails, setRoleDetails] = useState({
+    ROLE_NAME: "",
+    ROLE_ID: "",
+    ROLE_DESCRIPTION: "",
+  });
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [rolesList, setRolesList] = useState([]);
   const [tableSearchInput, setTableSearchInput] = useState("");
@@ -58,7 +86,11 @@ const CategoryAccessRightsPage = () => {
         Orderby: "ROLE_ID",
       };
 
-      const response = await callSoapService(userData.clientURL, "DataModel_GetData", payload);
+      const response = await callSoapService(
+        userData.clientURL,
+        "DataModel_GetData",
+        payload
+      );
 
       const formattedRoles = response.map((role) => ({
         ROLE_NAME: role.ROLE_NAME?.trim(),
@@ -68,7 +100,11 @@ const CategoryAccessRightsPage = () => {
 
       setRolesList(formattedRoles);
     } catch (error) {
-      toast({ variant: "destructive", title: "Error fetching roles", description: error.message });
+      toast({
+        variant: "destructive",
+        title: "Error fetching roles",
+        description: error.message,
+      });
     } finally {
       setLoadingRoles(false);
     }
@@ -83,9 +119,15 @@ const CategoryAccessRightsPage = () => {
         Orderby: "CATEGORY_NAME",
       };
 
-      const response = await callSoapService(userData.clientURL, "DataModel_GetData", payload);
+      const response = await callSoapService(
+        userData.clientURL,
+        "DataModel_GetData",
+        payload
+      );
 
-      const categoriesArray = Array.isArray(response) ? response : response?.data || [];
+      const categoriesArray = Array.isArray(response)
+        ? response
+        : response?.data || [];
       const formattedCategories = categoriesArray.map((category) => ({
         CATEGORY_ID: category.CATEGORY_ID,
         name: category.CATEGORY_NAME,
@@ -98,7 +140,11 @@ const CategoryAccessRightsPage = () => {
     } catch (error) {
       setCategoriesList([]);
       setFilteredCategories([]);
-      toast({ variant: "destructive", title: "Error fetching categories", description: error.message || "Failed to fetch categories" });
+      toast({
+        variant: "destructive",
+        title: "Error fetching categories",
+        description: error.message || "Failed to fetch categories",
+      });
     } finally {
       setLoadingCategories(false);
     }
@@ -113,11 +159,17 @@ const CategoryAccessRightsPage = () => {
         Orderby: "CATEGORY_NAME",
       };
 
-      const response = await callSoapService(userData.clientURL, "DataModel_GetData", payload);
+      const response = await callSoapService(
+        userData.clientURL,
+        "DataModel_GetData",
+        payload
+      );
 
       if (Array.isArray(response) && response.length > 0) {
         const categoryItems = response.map((item) => {
-          const matchingCategory = categoriesList.find((cat) => cat.name === item.CATEGORY_NAME);
+          const matchingCategory = categoriesList.find(
+            (cat) => cat.name === item.CATEGORY_NAME
+          );
 
           return {
             CATEGORY_ID: matchingCategory?.CATEGORY_ID || null,
@@ -135,7 +187,11 @@ const CategoryAccessRightsPage = () => {
       }
     } catch (error) {
       console.error("Error fetching role categories:", error);
-      toast({ variant: "destructive", title: "Error", description: "Failed to fetch category assignments for this role" });
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to fetch category assignments for this role",
+      });
       setSelectedCategoryItems([]);
       setSelectedCategory(null);
     } finally {
@@ -144,7 +200,11 @@ const CategoryAccessRightsPage = () => {
   };
 
   const handleRoleSelect = (role) => {
-    setRoleDetails({ ROLE_NAME: role.ROLE_NAME, ROLE_ID: role.ROLE_ID, ROLE_DESCRIPTION: role.ROLE_DESCRIPTION || "" });
+    setRoleDetails({
+      ROLE_NAME: role.ROLE_NAME,
+      ROLE_ID: role.ROLE_ID,
+      ROLE_DESCRIPTION: role.ROLE_DESCRIPTION || "",
+    });
     setOpenRolePopover(false);
 
     fetchRoleCategoryData(role.ROLE_ID);
@@ -153,7 +213,9 @@ const CategoryAccessRightsPage = () => {
   const handleDisplayNameSelect = (DISPLAY_NAME) => {
     setOpenDisplayNamePopover(false);
 
-    const matchingCategories = categoriesList.filter((c) => c.DISPLAY_NAME === DISPLAY_NAME);
+    const matchingCategories = categoriesList.filter(
+      (c) => c.DISPLAY_NAME === DISPLAY_NAME
+    );
 
     if (matchingCategories.length > 0) {
       setSelectedCategory({ DISPLAY_NAME: DISPLAY_NAME });
@@ -188,8 +250,68 @@ const CategoryAccessRightsPage = () => {
           duration: 2000,
         });
       } else {
-        toast({ variant: "default", title: "Info", description: "These categories are already selected", duration: 2000 });
+        toast({
+          variant: "default",
+          title: "Info",
+          description: "These categories are already selected",
+          duration: 2000,
+        });
       }
+    }
+  };
+
+  // New function to handle "Select All" option
+  const handleSelectAll = () => {
+    setOpenDisplayNamePopover(false);
+
+    if (categoriesList.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "No Categories",
+        description: "No categories available to select",
+      });
+      return;
+    }
+
+    // Create a map of existing items to avoid duplicates
+    const existingItemsMap = {};
+    selectedCategoryItems.forEach((item) => {
+      const key = `${item.CATEGORY_NAME}-${item.MODULE_NAME}`;
+      existingItemsMap[key] = item;
+    });
+
+    const newItems = [...selectedCategoryItems];
+    let addedCount = 0;
+
+    // Add all categories that aren't already selected
+    categoriesList.forEach((category) => {
+      const key = `${category.name}-${category.MODULE_NAME}`;
+      if (!existingItemsMap[key]) {
+        newItems.push({
+          CATEGORY_ID: category.CATEGORY_ID,
+          CATEGORY_NAME: category.name,
+          DISPLAY_NAME: category.DISPLAY_NAME,
+          MODULE_NAME: category.MODULE_NAME,
+        });
+        addedCount++;
+      }
+    });
+
+    if (addedCount > 0) {
+      setSelectedCategoryItems(newItems);
+      setSelectedCategory({ DISPLAY_NAME: "All Categories" });
+      toast({
+        title: "All Categories Added",
+        description: `Added All categories to the selection`,
+        duration: 3000,
+      });
+    } else {
+      toast({
+        variant: "default",
+        title: "Info",
+        description: "All categories are already selected",
+        duration: 2000,
+      });
     }
   };
 
@@ -208,69 +330,183 @@ const CategoryAccessRightsPage = () => {
         WhereCondition: `ROLE_ID = '${roleDetails.ROLE_ID}' AND CATEGORY_NAME = '${CATEGORY_NAME}'`,
       };
 
-      const response = await callSoapService(userData.clientURL, "DataModel_DeleteData", payload);
+      const response = await callSoapService(
+        userData.clientURL,
+        "DataModel_DeleteData",
+        payload
+      );
 
-      setSelectedCategoryItems((prev) => prev.filter((item) => item.CATEGORY_NAME !== CATEGORY_NAME));
+      setSelectedCategoryItems((prev) =>
+        prev.filter((item) => item.CATEGORY_NAME !== CATEGORY_NAME)
+      );
 
-      toast({ title: "Category removed", description: `${CATEGORY_NAME} has been removed successfully`, duration: 2000 });
+      toast({
+        title: "Category removed",
+        description: `${CATEGORY_NAME} has been removed successfully`,
+        duration: 2000,
+      });
     } catch (error) {
       console.error("Delete error:", error);
-      toast({ variant: "destructive", title: "Error removing category", description: error.message || "Failed to remove category" });
+      toast({
+        variant: "destructive",
+        title: "Error removing category",
+        description: error.message || "Failed to remove category",
+      });
     } finally {
       setDeleting(false);
     }
   };
 
   const getAllUniqueDisplayNames = () => {
-    const uniqueDisplayNames = categoriesList.map((cat) => cat.DISPLAY_NAME).filter((value, index, self) => self.indexOf(value) === index && value);
+    const uniqueDisplayNames = categoriesList
+      .map((cat) => cat.DISPLAY_NAME)
+      .filter((value, index, self) => self.indexOf(value) === index && value);
 
     return uniqueDisplayNames;
   };
 
   const handleSave = async () => {
     if (!roleDetails.ROLE_ID || selectedCategoryItems.length === 0) {
-      toast({ variant: "destructive", title: "Validation Error", description: "Please select both a role and at least one category item" });
+      toast({
+        variant: "destructive",
+        title: "Validation Error",
+        description: "Please select both a role and at least one category item",
+      });
       return;
     }
 
     setSaving(true);
     try {
-      for (const item of selectedCategoryItems) {
-        const categoryRoleData = {
-          ROLE_ID: roleDetails.ROLE_ID,
-          CATEGORY_ID: item.CATEGORY_ID,
-          CATEGORY_NAME: item.CATEGORY_NAME,
-          MODULE_NAME: item.MODULE_NAME,
-          DISPLAY_NAME: item.DISPLAY_NAME,
-        };
+      // First, check which categories already exist to avoid duplicates
+      const existingCategoriesPayload = {
+        DataModelName: "synm_dms_doc_catg_roles",
+        WhereCondition: `ROLE_ID = '${roleDetails.ROLE_ID}'`,
+        Orderby: "CATEGORY_NAME",
+      };
 
-        const data = convertDataModelToStringData("synm_dms_doc_catg_roles", categoryRoleData);
+      let existingCategories = [];
+      try {
+        const existingResponse = await callSoapService(
+          userData.clientURL,
+          "DataModel_GetData",
+          existingCategoriesPayload
+        );
+        existingCategories = Array.isArray(existingResponse)
+          ? existingResponse
+          : [];
+      } catch (error) {
+        console.log("No existing categories found or error fetching:", error);
+      }
 
-        const payload = {
-          UserName: userData.userEmail,
-          DModelData: data,
-        };
+      // Create a set of existing category names for quick lookup
+      const existingCategoryNames = new Set(
+        existingCategories.map((cat) => cat.CATEGORY_NAME)
+      );
 
-        const response = await callSoapService(userData.clientURL, "DataModel_SaveData", payload);
+      // Filter out categories that already exist
+      const categoriesToSave = selectedCategoryItems.filter(
+        (item) => !existingCategoryNames.has(item.CATEGORY_NAME)
+      );
 
-        if (response === null || response === undefined || (typeof response === "object" && response.error)) {
-          throw new Error(`Failed to save category ${item.CATEGORY_NAME} to role ${roleDetails.ROLE_NAME}`);
+      if (categoriesToSave.length === 0) {
+        toast({
+          variant: "default",
+          title: "Info",
+          description:
+            "All selected categories are already assigned to this role",
+          duration: 2000,
+        });
+        return;
+      }
+
+      let savedCount = 0;
+      let failedCount = 0;
+
+      // Save categories one by one with delay to prevent overwhelming the API
+      for (const item of categoriesToSave) {
+        try {
+          const categoryRoleData = {
+            ROLE_ID: roleDetails.ROLE_ID,
+            CATEGORY_ID: item.CATEGORY_ID,
+            CATEGORY_NAME: item.CATEGORY_NAME,
+            MODULE_NAME: item.MODULE_NAME,
+            DISPLAY_NAME: item.DISPLAY_NAME,
+          };
+
+          const data = convertDataModelToStringData(
+            "synm_dms_doc_catg_roles",
+            categoryRoleData
+          );
+
+          const payload = {
+            UserName: userData.userEmail,
+            DModelData: data,
+          };
+
+          const response = await callSoapService(
+            userData.clientURL,
+            "DataModel_SaveData",
+            payload
+          );
+
+          // Check if the response indicates success
+          if (
+            response !== null &&
+            response !== undefined &&
+            !(typeof response === "object" && response.error)
+          ) {
+            savedCount++;
+          } else {
+            console.error(
+              `Failed to save category ${item.CATEGORY_NAME}:`,
+              response
+            );
+            failedCount++;
+          }
+
+          // Small delay between each save to prevent overwhelming the server
+          await new Promise((resolve) => setTimeout(resolve, 200));
+        } catch (error) {
+          console.error(`Error saving category ${item.CATEGORY_NAME}:`, error);
+          failedCount++;
         }
       }
 
-      setRoleDetails({ ROLE_NAME: "", ROLE_ID: "", ROLE_DESCRIPTION: "" });
-      setSelectedCategory(null);
-      setSelectedCategoryItems([]);
+      // Reset form only if at least some categories were saved successfully
+      if (savedCount > 0) {
+        setRoleDetails({ ROLE_NAME: "", ROLE_ID: "", ROLE_DESCRIPTION: "" });
+        setSelectedCategory(null);
+        setSelectedCategoryItems([]);
 
-      toast({
-        variant: "default",
-        title: "Success",
-        description: `Saved ${selectedCategoryItems.length} category items to role ${roleDetails.ROLE_NAME}`,
-        duration: 3000,
-      });
+        if (failedCount > 0) {
+          toast({
+            variant: "default",
+            title: "Partial Success",
+            description: `Saved ${savedCount} categories successfully, ${failedCount} failed`,
+            duration: 3000,
+          });
+        } else {
+          toast({
+            variant: "default",
+            title: "Success",
+            description: `Successfully saved ${savedCount} category items to role ${roleDetails.ROLE_NAME}`,
+            duration: 3000,
+          });
+        }
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Save failed",
+          description: `Failed to save any categories. ${failedCount} categories failed to save.`,
+        });
+      }
     } catch (error) {
       console.error("Save error:", error);
-      toast({ variant: "destructive", title: "Save failed", description: error.message || "Failed to save category access rights" });
+      toast({
+        variant: "destructive",
+        title: "Save failed",
+        description: error.message || "Failed to save category access rights",
+      });
     } finally {
       setSaving(false);
     }
@@ -282,10 +518,9 @@ const CategoryAccessRightsPage = () => {
     setSelectedCategoryItems([]);
   };
 
-  
-     if (!userData?.isAdmin) {
-      return <AccessDenied />;
-    }
+  if (!userData?.isAdmin) {
+    return <AccessDenied />;
+  }
 
   return (
     <div className="flex flex-col gap-3">
@@ -325,10 +560,16 @@ const CategoryAccessRightsPage = () => {
                         <CommandEmpty>No roles found.</CommandEmpty>
                         <CommandGroup>
                           {loadingRoles ? (
-                            <div className="p-4 text-center text-sm text-muted-foreground">Loading roles...</div>
+                            <div className="p-4 text-center text-sm text-muted-foreground">
+                              Loading roles...
+                            </div>
                           ) : (
                             rolesList
-                              .filter((role) => role.ROLE_NAME.toLowerCase().includes(roleSearchInput.toLowerCase()))
+                              .filter((role) =>
+                                role.ROLE_NAME.toLowerCase().includes(
+                                  roleSearchInput.toLowerCase()
+                                )
+                              )
                               .map((role) => (
                                 <CommandItem
                                   key={`role-${role.ROLE_ID}`}
@@ -336,7 +577,14 @@ const CategoryAccessRightsPage = () => {
                                   onSelect={() => handleRoleSelect(role)}
                                 >
                                   {role.ROLE_NAME}
-                                  <Check className={cn("ml-auto h-4 w-4", roleDetails.ROLE_ID === role.ROLE_ID ? "opacity-100" : "opacity-0")} />
+                                  <Check
+                                    className={cn(
+                                      "ml-auto h-4 w-4",
+                                      roleDetails.ROLE_ID === role.ROLE_ID
+                                        ? "opacity-100"
+                                        : "opacity-0"
+                                    )}
+                                  />
                                 </CommandItem>
                               ))
                           )}
@@ -348,7 +596,8 @@ const CategoryAccessRightsPage = () => {
               </div>
               <div className="mt-2 flex items-center text-left md:col-span-3 md:mt-7">
                 <Label className="text-gray-500 md:ml-3">
-                  <span className="truncate font-medium">Description:</span> {roleDetails.ROLE_DESCRIPTION || "-"}
+                  <span className="truncate font-medium">Description:</span>{" "}
+                  {roleDetails.ROLE_DESCRIPTION || "-"}
                 </Label>
               </div>
             </div>
@@ -357,13 +606,20 @@ const CategoryAccessRightsPage = () => {
       </div>
 
       {/* Category Selection Card */}
-      <Card className={cn("border", !roleDetails.ROLE_ID && "pointer-events-none opacity-50")}>
+      <Card
+        className={cn(
+          "border",
+          !roleDetails.ROLE_ID && "pointer-events-none opacity-50"
+        )}
+      >
         <div className="p-2">
           {/* Title on left, Dropdown and Search on right */}
           <div className="mb-2 flex w-full flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             {/* Left side - Title */}
             <div className="flex-shrink-0">
-              <Label className="text-sm font-semibold">Category Selection</Label>
+              <Label className="text-sm font-semibold">
+                Category Selection
+              </Label>
             </div>
 
             {/* Right side - Dropdown and Search */}
@@ -379,7 +635,10 @@ const CategoryAccessRightsPage = () => {
                       variant="outline"
                       className="w-full justify-between text-left"
                     >
-                      <span className="truncate pr-2">{selectedCategory?.DISPLAY_NAME || "Select Display Name"}</span>
+                      <span className="truncate pr-2">
+                        {selectedCategory?.DISPLAY_NAME ||
+                          "Select Display Name"}
+                      </span>
                       <ChevronsUpDown className="ml-2 h-4 w-4 flex-shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
@@ -393,22 +652,43 @@ const CategoryAccessRightsPage = () => {
                       <CommandList>
                         <CommandGroup>
                           {loadingCategories ? (
-                            <div className="p-4 text-center text-sm text-muted-foreground">Loading display names...</div>
+                            <div className="p-4 text-center text-sm text-muted-foreground">
+                              Loading display names...
+                            </div>
                           ) : (
-                            getAllUniqueDisplayNames()
-                              .filter((DISPLAY_NAME) => DISPLAY_NAME.toLowerCase().includes(displayNameSearchInput.toLowerCase()))
-                              .map((DISPLAY_NAME) => (
-                                <CommandItem
-                                  key={`display-name-${DISPLAY_NAME}`}
-                                  value={DISPLAY_NAME}
-                                  onSelect={() => handleDisplayNameSelect(DISPLAY_NAME)}
-                                >
-                                  <div className="flex w-full items-center justify-between">
-                                    <span>{DISPLAY_NAME}</span>
-                                    {selectedCategory?.DISPLAY_NAME === DISPLAY_NAME && <Check className="h-4 w-4 text-primary" />}
-                                  </div>
-                                </CommandItem>
-                              ))
+                            <>
+                              <CommandItem
+                                key="select-all"
+                                value="select-all-categories"
+                                onSelect={handleSelectAll}
+                                className="font-medium text-primary"
+                              >
+                                <span>Select All Categories</span>
+                              </CommandItem>
+                              {getAllUniqueDisplayNames()
+                                .filter((DISPLAY_NAME) =>
+                                  DISPLAY_NAME.toLowerCase().includes(
+                                    displayNameSearchInput.toLowerCase()
+                                  )
+                                )
+                                .map((DISPLAY_NAME) => (
+                                  <CommandItem
+                                    key={`display-name-${DISPLAY_NAME}`}
+                                    value={DISPLAY_NAME}
+                                    onSelect={() =>
+                                      handleDisplayNameSelect(DISPLAY_NAME)
+                                    }
+                                  >
+                                    <div className="flex w-full items-center justify-between">
+                                      <span>{DISPLAY_NAME}</span>
+                                      {selectedCategory?.DISPLAY_NAME ===
+                                        DISPLAY_NAME && (
+                                        <Check className="h-4 w-4 text-primary" />
+                                      )}
+                                    </div>
+                                  </CommandItem>
+                                ))}
+                            </>
                           )}
                         </CommandGroup>
                       </CommandList>
@@ -432,9 +712,11 @@ const CategoryAccessRightsPage = () => {
 
           {/* Categories Table */}
           <div className="rounded-md border dark:border-gray-800">
-            <ScrollArea className="h-[290px]">
+            <ScrollArea className="h-[41vh]">
               {loading ? (
-                <div className="py-4 text-center text-sm">Loading assigned categories...</div>
+                <div className="py-4 text-center text-sm">
+                  Loading assigned categories...
+                </div>
               ) : selectedCategoryItems.length > 0 ? (
                 <Table>
                   <TableHeader className="sticky top-0 bg-background">
@@ -446,7 +728,11 @@ const CategoryAccessRightsPage = () => {
                   </TableHeader>
                   <TableBody>
                     {selectedCategoryItems
-                      .filter((item) => item.CATEGORY_NAME.toLowerCase().includes(tableSearchInput.toLowerCase()))
+                      .filter((item) =>
+                        item.CATEGORY_NAME.toLowerCase().includes(
+                          tableSearchInput.toLowerCase()
+                        )
+                      )
                       .map((item) => (
                         <TableRow
                           key={`selected-${item.CATEGORY_ID}-${item.CATEGORY_NAME}`}
@@ -458,7 +744,12 @@ const CategoryAccessRightsPage = () => {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleCategoryDelete(item.CATEGORY_ID, item.CATEGORY_NAME)}
+                              onClick={() =>
+                                handleCategoryDelete(
+                                  item.CATEGORY_ID,
+                                  item.CATEGORY_NAME
+                                )
+                              }
                               className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
                               disabled={deleting}
                             >
@@ -471,7 +762,9 @@ const CategoryAccessRightsPage = () => {
                 </Table>
               ) : (
                 <div className="py-4 text-center text-sm">
-                  {roleDetails.ROLE_ID ? "No categories assigned to this role" : "Select a role to view or add categories"}
+                  {roleDetails.ROLE_ID
+                    ? "No categories assigned to this role"
+                    : "Select a role to view or add categories"}
                 </div>
               )}
             </ScrollArea>
@@ -480,16 +773,15 @@ const CategoryAccessRightsPage = () => {
       </Card>
 
       {/* Action Buttons */}
-      <div className="flex gap-4 md:self-end md:pb-6">
-        <Button
-          variant="outline"
-          onClick={handleCancel}
-        >
+      <div className="flex gap-4 md:self-end">
+        <Button variant="outline" onClick={handleCancel}>
           Cancel
         </Button>
         <Button
           onClick={handleSave}
-          disabled={!roleDetails.ROLE_ID || saving || selectedCategoryItems.length === 0}
+          disabled={
+            !roleDetails.ROLE_ID || saving || selectedCategoryItems.length === 0
+          }
         >
           {saving ? "Saving..." : "Save"}
         </Button>

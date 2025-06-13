@@ -33,7 +33,7 @@ const TeamsPage = () => {
       const payload = {
         UserName: userData.userName,
         FormName: "DMS-TEAMSFULLVIEW",
-        FormDescription: "Teams All Users",
+        FormDescription: "View Rights For Entire Team",
         UserType: userType,
       };
 

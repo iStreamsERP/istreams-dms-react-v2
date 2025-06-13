@@ -214,9 +214,9 @@ const TreeView = ({
 
 const RoleAccessRightsPage = () => {
   const [roleDetails, setRoleDetails] = useState({
-    roleName: "",
-    roleId: "",
-    description: "",
+    ROLE_NAME: "",
+    ROLE_ID: "",
+    ROLE_DESCRIPTION: "",
   });
   const [rolesList, setRolesList] = useState([]);
 
@@ -402,9 +402,9 @@ const RoleAccessRightsPage = () => {
       );
 
       const formattedRoles = response.map((role) => ({
-        roleName: role.ROLE_NAME?.trim(),
-        roleId: role.ROLE_ID.toString(),
-        description: role.ROLE_DESCRIPTION || "",
+        ROLE_NAME: role.ROLE_NAME?.trim(),
+        ROLE_ID: role.ROLE_ID.toString(),
+        ROLE_DESCRIPTION: role.ROLE_DESCRIPTION || "",
       }));
 
       setRolesList(formattedRoles);
@@ -539,12 +539,12 @@ const RoleAccessRightsPage = () => {
 
   const handleRoleSelect = (role) => {
     setRoleDetails({
-      roleName: role.roleName,
-      roleId: role.roleId,
-      description: role.description || "",
+      ROLE_NAME: role.ROLE_NAME,
+      ROLE_ID: role.ROLE_ID,
+      ROLE_DESCRIPTION: role.ROLE_DESCRIPTION || "",
     });
     setOpenRolePopover(false);
-    fetchRoleFormAccess(role.roleId);
+    fetchRoleFormAccess(role.ROLE_ID);
   };
 
   const handleFormSelect = (node) => {
@@ -603,12 +603,12 @@ const RoleAccessRightsPage = () => {
         duration: 2000,
       });
 
-      if (roleDetails.roleId) {
+      if (roleDetails.ROLE_ID) {
         try {
           const payload = {
             UserName: userData.userEmail,
             DataModelName: "USER_RIGHTS_ROLES",
-            WhereCondition: `ROLE_ID = '${roleDetails.roleId}' AND FORM_NAME = '${node.id}'`,
+            WhereCondition: `ROLE_ID = '${roleDetails.ROLE_ID}' AND FORM_NAME = '${node.id}'`,
           };
 
           const response = await callSoapService(
@@ -644,13 +644,13 @@ const RoleAccessRightsPage = () => {
         duration: 2000,
       });
 
-      if (roleDetails.roleId) {
+      if (roleDetails.ROLE_ID) {
         for (const node of forms) {
           try {
             const payload = {
               UserName: userData.userEmail,
               DataModelName: "USER_RIGHTS_ROLES",
-              WhereCondition: `ROLE_ID = '${roleDetails.roleId}' AND FORM_NAME = '${node.id}'`,
+              WhereCondition: `ROLE_ID = '${roleDetails.ROLE_ID}' AND FORM_NAME = '${node.id}'`,
             };
 
             const response = await callSoapService(
@@ -677,7 +677,7 @@ const RoleAccessRightsPage = () => {
   };
 
   const handleSave = async () => {
-    if (!roleDetails.roleId || selectedForms.length === 0) {
+    if (!roleDetails.ROLE_ID || selectedForms.length === 0) {
       toast({
         variant: "destructive",
         title: "Validation Error",
@@ -690,7 +690,7 @@ const RoleAccessRightsPage = () => {
     try {
       for (const form of selectedForms) {
         const formAccessData = {
-          ROLE_ID: roleDetails.roleId,
+          ROLE_ID: roleDetails.ROLE_ID,
           MODULE_NAME: form.formData.MODULE_NAME,
           FORM_NAME: form.id,
           CAN_CUSTOMIZE: "F",
@@ -718,17 +718,17 @@ const RoleAccessRightsPage = () => {
           (typeof saveResponse === "object" && saveResponse.error)
         ) {
           throw new Error(
-            `Failed to save category ${form.label} to role ${roleDetails.roleName}`
+            `Failed to save category ${form.label} to role ${roleDetails.ROLE_NAME}`
           );
         }
       }
 
-      await fetchRoleFormAccess(roleDetails.roleId);
+      await fetchRoleFormAccess(roleDetails.ROLE_ID);
 
       toast({
         variant: "default",
         title: "Success",
-        description: `Saved rights items to role ${roleDetails.roleName}`,
+        description: `Saved rights items to role ${roleDetails.ROLE_NAME}`,
         duration: 3000,
       });
     } catch (error) {
@@ -744,198 +744,204 @@ const RoleAccessRightsPage = () => {
   };
 
   const handleCancel = () => {
-    setRoleDetails({ roleName: "", roleId: "", description: "" });
+    setRoleDetails({ ROLE_NAME: "", ROLE_ID: "", ROLE_DESCRIPTION: "" });
     setSelectedForms([]);
   };
 
-     if (!userData?.isAdmin) {
-      return <AccessDenied />;
-    }
-
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-col md:flex-row gap-4 items-start">
-        {/* Role Details */}
-        <div className="flex-grow">
-          <div>
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-              {/* Role Selector - Full width on mobile, 40% on desktop */}
-              <div className="md:col-span-2">
-                <Label>Select Roles:</Label>
-                <Popover
-                  open={openRolePopover}
-                  onOpenChange={setOpenRolePopover}
-                >
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      className="ml-2 justify-between font-normal w-full"
+      {!userData?.isAdmin ? (
+        <AccessDenied />
+      ) : (
+        <>
+          <div className="flex flex-col md:flex-row gap-4 items-start">
+            {/* Role Details */}
+            <div className="flex-grow">
+              <div>
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                  {/* Role Selector - Full width on mobile, 40% on desktop */}
+                  <div className="md:col-span-2">
+                    <Label>Select Roles:</Label>
+                    <Popover
+                      open={openRolePopover}
+                      onOpenChange={setOpenRolePopover}
                     >
-                      {roleDetails.roleName || "Select role name"}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[var(--radix-popover-trigger-width)] h-[200px] p-0 z-50">
-                    <Command>
-                      <CommandInput
-                        placeholder="Search role name"
-                        value={roleSearchInput}
-                        onValueChange={setRoleSearchInput}
-                      />
-                      <CommandList>
-                        {/* <CommandEmpty>No roles found.</CommandEmpty> */}
-                        <CommandGroup>
-                          {loadingRoles ? (
-                            <div className="p-4 text-center text-sm text-muted-foreground">
-                              Loading roles...
-                            </div>
-                          ) : (
-                            rolesList
-                              .filter((role) =>
-                                role.roleName
-                                  .toLowerCase()
-                                  .includes(roleSearchInput.toLowerCase())
-                              )
-                              .map((role) => (
-                                <CommandItem
-                                  key={`role-${role.roleId}`}
-                                  value={role.roleName}
-                                  onSelect={() => handleRoleSelect(role)}
-                                >
-                                  {role.roleName}
-                                  <Check
-                                    className={cn(
-                                      "ml-auto h-4 w-4",
-                                      roleDetails.roleId === role.roleId
-                                        ? "opacity-100"
-                                        : "opacity-0"
-                                    )}
-                                  />
-                                </CommandItem>
-                              ))
-                          )}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-              </div>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          className="ml-2 justify-between font-normal w-full"
+                        >
+                          {roleDetails.ROLE_NAME || "Select role name"}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[var(--radix-popover-trigger-width)] h-[200px] p-0 z-50">
+                        <Command>
+                          <CommandInput
+                            placeholder="Search role name"
+                            value={roleSearchInput}
+                            onValueChange={setRoleSearchInput}
+                          />
+                          <CommandList>
+                            {/* <CommandEmpty>No roles found.</CommandEmpty> */}
+                            <CommandGroup>
+                              {loadingRoles ? (
+                                <div className="p-4 text-center text-sm text-muted-foreground">
+                                  Loading roles...
+                                </div>
+                              ) : (
+                                rolesList
+                                  .filter((role) =>
+                                    role.ROLE_NAME.toLowerCase().includes(
+                                      roleSearchInput.toLowerCase()
+                                    )
+                                  )
+                                  .map((role) => (
+                                    <CommandItem
+                                      key={`role-${role.ROLE_ID}`}
+                                      value={role.ROLE_NAME}
+                                      onSelect={() => handleRoleSelect(role)}
+                                    >
+                                      {role.ROLE_NAME}
+                                      <Check
+                                        className={cn(
+                                          "ml-auto h-4 w-4",
+                                          roleDetails.ROLE_ID === role.ROLE_ID
+                                            ? "opacity-100"
+                                            : "opacity-0"
+                                        )}
+                                      />
+                                    </CommandItem>
+                                  ))
+                              )}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
 
-              {/* Description - Full width on mobile (appears below), 60% on desktop */}
-              <div className="md:col-span-3 flex items-center text-left mt-2 md:mt-7">
-                <Label className="text-gray-500 md:ml-3">
-                  <span className="font-medium truncate">Description:</span>{" "}
-                  {roleDetails.description || "-"}
+                  {/* Description - Full width on mobile (appears below), 60% on desktop */}
+                  <div className="md:col-span-3 flex items-center text-left mt-2 md:mt-7">
+                    <Label className="text-gray-500 md:ml-3">
+                      <span className="font-medium truncate">Description:</span>{" "}
+                      {roleDetails.ROLE_DESCRIPTION || "-"}
+                    </Label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2">
+            {/* Add Rights */}
+            <div
+              className={cn(
+                !roleDetails.ROLE_ID && "opacity-50 pointer-events-none"
+              )}
+            >
+              <div className="flex justify-between items-center mb-2">
+                <Label className="text-sm font-semibold">
+                  Add Access Rights
                 </Label>
+                <span className="text-xs text-gray-500"></span>
+              </div>
+              <div className="flex flex-col space-y-4">
+                <div className="border rounded-md h-[45vh] overflow-hidden">
+                  {loadingForms ? (
+                    <div className="flex items-center justify-center h-full">
+                      <span className="text-sm text-muted-foreground">
+                        Loading forms...
+                      </span>
+                    </div>
+                  ) : filteredTreeData.length > 0 ? (
+                    <ScrollArea className="h-full w-full p-2">
+                      <TreeView
+                        data={filteredTreeData}
+                        onSelect={handleFormSelect}
+                        selectedItems={selectedForms}
+                        useCheckbox={true}
+                        onSelectAll={handleBulkFormsSelection}
+                        isSelectAllMode={true}
+                      />
+                    </ScrollArea>
+                  ) : (
+                    <div className="flex items-center justify-center h-full">
+                      <span className="text-sm text-muted-foreground">
+                        All available forms are already added
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Remove Rights */}
+            <div
+              className={cn(
+                !roleDetails.ROLE_ID && "opacity-50 pointer-events-none"
+              )}
+            >
+              <div className="flex justify-between items-center mb-2">
+                <Label className="text-sm font-semibold">
+                  Remove Access Rights
+                </Label>
+                <span className="text-xs text-gray-500">
+                  Assigned Forms ({selectedForms.length})
+                </span>
+              </div>
+              <div className="flex flex-col space-y-4">
+                <div className="border rounded-md h-[45vh] overflow-hidden">
+                  {loading ? (
+                    <div className="flex items-center justify-center h-full">
+                      <span className="text-sm text-muted-foreground">
+                        Loading assigned forms...
+                      </span>
+                    </div>
+                  ) : assignedFormsTreeData.length > 0 ? (
+                    <ScrollArea className="h-full w-full p-2">
+                      <TreeView
+                        data={assignedFormsTreeData}
+                        onRemove={handleRemoveSelectedForm}
+                        isRemovable={true}
+                        useCheckbox={true}
+                        onSelectAll={handleRemoveMultipleSelectedForms}
+                        isSelectAllMode={true}
+                      />
+                    </ScrollArea>
+                  ) : (
+                    <div className="flex items-center justify-center h-full">
+                      <span className="text-sm text-muted-foreground">
+                        No forms assigned to this role
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2">
-        {/* Add Rights */}
-        <div
-          className={cn(
-            !roleDetails.roleId && "opacity-50 pointer-events-none"
-          )}
-        >
-          <div className="flex justify-between items-center mb-2">
-            <Label className="text-sm font-semibold">Add Access Rights</Label>
-            <span className="text-xs text-gray-500"></span>
+          {/* Buttons */}
+          <div className="flex gap-4 md:self-end">
+            <Button
+              variant="outline"
+              onClick={handleCancel}
+              disabled={!roleDetails.ROLE_ID}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSave}
+              disabled={
+                saving || !roleDetails.ROLE_ID || selectedForms.length === 0
+              }
+            >
+              {saving ? "Saving..." : "Save"}
+            </Button>
           </div>
-          <div className="flex flex-col space-y-4">
-            <div className="border rounded-md h-80 overflow-hidden">
-              {loadingForms ? (
-                <div className="flex items-center justify-center h-full">
-                  <span className="text-sm text-muted-foreground">
-                    Loading forms...
-                  </span>
-                </div>
-              ) : filteredTreeData.length > 0 ? (
-                <ScrollArea className="h-full w-full p-2">
-                  <TreeView
-                    data={filteredTreeData}
-                    onSelect={handleFormSelect}
-                    selectedItems={selectedForms}
-                    useCheckbox={true}
-                    onSelectAll={handleBulkFormsSelection}
-                    isSelectAllMode={true}
-                  />
-                </ScrollArea>
-              ) : (
-                <div className="flex items-center justify-center h-full">
-                  <span className="text-sm text-muted-foreground">
-                    All available forms are already added
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Remove Rights */}
-        <div
-          className={cn(
-            !roleDetails.roleId && "opacity-50 pointer-events-none"
-          )}
-        >
-          <div className="flex justify-between items-center mb-2">
-            <Label className="text-sm font-semibold">
-              Remove Access Rights
-            </Label>
-            <span className="text-xs text-gray-500">
-              Assigned Forms ({selectedForms.length})
-            </span>
-          </div>
-          <div className="flex flex-col space-y-4">
-            <div className="border rounded-md h-80 overflow-hidden">
-              {loading ? (
-                <div className="flex items-center justify-center h-full">
-                  <span className="text-sm text-muted-foreground">
-                    Loading assigned forms...
-                  </span>
-                </div>
-              ) : assignedFormsTreeData.length > 0 ? (
-                <ScrollArea className="h-full w-full p-2">
-                  <TreeView
-                    data={assignedFormsTreeData}
-                    onRemove={handleRemoveSelectedForm}
-                    isRemovable={true}
-                    useCheckbox={true}
-                    onSelectAll={handleRemoveMultipleSelectedForms}
-                    isSelectAllMode={true}
-                  />
-                </ScrollArea>
-              ) : (
-                <div className="flex items-center justify-center h-full">
-                  <span className="text-sm text-muted-foreground">
-                    No forms assigned to this role
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Buttons */}
-      <div className="flex gap-4 md:self-end md:pb-6">
-        <Button
-          variant="outline"
-          onClick={handleCancel}
-          disabled={!roleDetails.roleId}
-        >
-          Cancel
-        </Button>
-        <Button
-          onClick={handleSave}
-          disabled={saving || !roleDetails.roleId || selectedForms.length === 0}
-        >
-          {saving ? "Saving..." : "Save Changes"}
-        </Button>
-      </div>
+        </>
+      )}
     </div>
   );
 };

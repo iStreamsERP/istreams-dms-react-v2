@@ -9,44 +9,45 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { callSoapService } from "@/services/callSoapService";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { BarLoader } from "react-spinners";
 import TimeRangeSelector from "../components/TimeRangeSelector";
 import { useAuth } from "../contexts/AuthContext";
 import AccessDenied from "@/components/AccessDenied";
+import { useToast } from "@/hooks/use-toast";
 
 const CategoryViewPage = () => {
   const { userData } = useAuth();
+  const { toast } = useToast();
 
   const [userRights, setUserRights] = useState("");
   const [rightsChecked, setRightsChecked] = useState(false);
+  const [userViewRights, setUserViewRights] = useState("");
 
   const [categories, setCategories] = useState([]);
   const [filterDays, setFilterDays] = useState("365");
   const [loading, setLoading] = useState(true);
-
   const [globalFilter, setGlobalFilter] = useState("");
-  const [filterField, setFilterField] = useState("ALL");
+  const [filterField, setFilterField] = useState("All");
 
-  const buildFilterCond = () => {
-    if (filterField === "ALL" || globalFilter.trim() === "") {
+  const buildFilterCond = useCallback(() => {
+    if (filterField === "All" || globalFilter.trim() === "") {
       return ""; // No filtering
     }
     return `${filterField} LIKE '%${globalFilter}%'`;
-  };
-
-  useEffect(() => {
-    fetchData();
-    fetchUserRights();
   }, [filterField, globalFilter]);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const payload = {
         NoOfDays: filterDays,
-        ForTheUser: `${userData.isAdmin ? "" : userData.userName}`,
+        ForTheUser: `${
+          userData.isAdmin || userViewRights === "Allowed"
+            ? ""
+            : userData.userName
+        }`,
         FilterCond: buildFilterCond(),
       };
 
@@ -56,41 +57,126 @@ const CategoryViewPage = () => {
         payload
       );
 
-      setCategories(response);
+      console.log(response);
 
-      setLoading(false);
+      setCategories(Array.isArray(response) ? response : []);
     } catch (error) {
       console.error("Error fetching dashboard summary:", error);
+      toast({
+        variant: "destructive",
+        title: "Data Fetch Error",
+        description: error.message || "Failed to fetch categories",
+      });
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [filterDays, userViewRights, userData, buildFilterCond, toast]);
 
-  const fetchUserRights = async () => {
+  // Fetch user permissions
+  const fetchPermissions = useCallback(async () => {
     try {
       const userType = userData.isAdmin ? "ADMINISTRATOR" : "USER";
-      const payload = {
-        UserName: userData.userName,
-        FormName: "DMS-CATEGORIESFORM",
-        FormDescription: "Categories View",
-        UserType: userType,
-      };
 
-      const response = await callSoapService(
-        userData.clientURL,
-        "DMS_CheckRights_ForTheUser",
-        payload
-      );
+      // Fetch both permissions in parallel
+      const [rightsResponse, viewRightsResponse] = await Promise.all([
+        callSoapService(userData.clientURL, "DMS_CheckRights_ForTheUser", {
+          UserName: userData.userName,
+          FormName: "DMS-CATEGORIESFORM",
+          FormDescription: "Categories View",
+          UserType: userType,
+        }),
+        callSoapService(userData.clientURL, "DMS_CheckRights_ForTheUser", {
+          UserName: userData.userName,
+          FormName: "DMS-DOCUMENTLISTVIEWALL",
+          FormDescription: "View Rights For All Documents",
+          UserType: userType,
+        }),
+      ]);
 
-      setUserRights(response);
+      setUserRights(rightsResponse);
+      setUserViewRights(viewRightsResponse);
     } catch (error) {
       console.error("Failed to fetch user rights:", error);
       toast({
         variant: "destructive",
-        title: error,
+        title: "Permission Error",
+        description: error.message || "Failed to load permissions",
       });
     } finally {
       setRightsChecked(true);
     }
-  };
+  }, [userData, toast]);
+
+  // Initial data loading
+  useEffect(() => {
+    const loadData = async () => {
+      await fetchPermissions();
+      await fetchData();
+    };
+
+    loadData();
+  }, [fetchPermissions, fetchData]);
+
+  // Refresh data when filters change
+  useEffect(() => {
+    if (rightsChecked) {
+      fetchData();
+    }
+  }, [filterField, globalFilter, filterDays, rightsChecked, fetchData]);
+
+  // const fetchUserViewRights = async () => {
+  //   try {
+  //     const userType = userData.isAdmin ? "ADMINISTRATOR" : "USER";
+  //     const payload = {
+  //       UserName: userData.userName,
+  //       FormName: "DMS-DOCUMENTLISTVIEWALL",
+  //       FormDescription: "View Rights For All Documents",
+  //       UserType: userType,
+  //     };
+
+  //     const response = await callSoapService(
+  //       userData.clientURL,
+  //       "DMS_CheckRights_ForTheUser",
+  //       payload
+  //     );
+
+  //     setUserViewRights(response);
+  //   } catch (error) {
+  //     console.error("Failed to fetch user rights:", error);
+  //     toast({
+  //       variant: "destructive",
+  //       title: error,
+  //     });
+  //   }
+  // };
+
+  // const fetchUserRights = async () => {
+  //   try {
+  //     const userType = userData.isAdmin ? "ADMINISTRATOR" : "USER";
+  //     const payload = {
+  //       UserName: userData.userName,
+  //       FormName: "DMS-CATEGORIESFORM",
+  //       FormDescription: "Categories View",
+  //       UserType: userType,
+  //     };
+
+  //     const response = await callSoapService(
+  //       userData.clientURL,
+  //       "DMS_CheckRights_ForTheUser",
+  //       payload
+  //     );
+
+  //     setUserRights(response);
+  //   } catch (error) {
+  //     console.error("Failed to fetch user rights:", error);
+  //     toast({
+  //       variant: "destructive",
+  //       title: error,
+  //     });
+  //   } finally {
+  //     setRightsChecked(true);
+  //   }
+  // };
 
   return (
     <div className="space-y-4">
@@ -104,7 +190,7 @@ const CategoryViewPage = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
-                <SelectItem value="ALL">All</SelectItem>
+                <SelectItem value="All">All</SelectItem>
                 <SelectItem value="X_CLIENT_NAME">Client</SelectItem>
                 <SelectItem value="X_VENDOR_NAME">Supplier</SelectItem>
                 <SelectItem value="DOC_REF_VALUE">Doc Ref for</SelectItem>

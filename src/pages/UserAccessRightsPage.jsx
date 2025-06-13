@@ -38,7 +38,6 @@ import {
   Square,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { BarLoader } from "react-spinners";
 
 const TreeNode = ({
   node,
@@ -231,9 +230,6 @@ const TreeView = ({
 };
 
 const UserAccessRightsPage = () => {
-  const [userRights, setUserRights] = useState("");
-  const [rightsChecked, setRightsChecked] = useState(false);
-
   const [userDetails, setUserDetails] = useState({ USER_NAME: "" });
   const [usersList, setUsersList] = useState([]);
   const [userRoles, setUserRoles] = useState([]);
@@ -256,7 +252,6 @@ const UserAccessRightsPage = () => {
   const { userData } = useAuth();
 
   useEffect(() => {
-    fetchUserRights();
     fetchUsersData();
     fetchFormsData();
   }, [userData?.clientURL]);
@@ -399,34 +394,6 @@ const UserAccessRightsPage = () => {
       setAssignedFormsTreeData([]);
     }
   }, [selectedForms]);
-
-  const fetchUserRights = async () => {
-    try {
-      const userType = userData.isAdmin ? "ADMINISTRATOR" : "USER";
-      const payload = {
-        UserName: userData.userName,
-        FormName: "DMS-CATEGORYACCESSRIGHTS",
-        FormDescription: "Categories Access Rights",
-        UserType: userType,
-      };
-
-      const response = await callSoapService(
-        userData.clientURL,
-        "DMS_CheckRights_ForTheUser",
-        payload
-      );
-
-      setUserRights(response);
-    } catch (error) {
-      console.error("Failed to fetch user rights:", error);
-      toast({
-        variant: "destructive",
-        title: error,
-      });
-    } finally {
-      setRightsChecked(true);
-    }
-  };
 
   const fetchUsersData = async () => {
     setLoadingUsers(true);
@@ -874,15 +841,11 @@ const UserAccessRightsPage = () => {
 
   return (
     <div className="flex flex-col gap-4">
-      {!rightsChecked ? (
-        <div className="flex justify-center items-start">
-          <BarLoader color="#36d399" height={2} width="100%" />
-        </div>
-      ) : userRights !== "Allowed" ? (
+      {!userData?.isAdmin ? (
         <AccessDenied />
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-8 md:grid-cols-1 lg:grid-cols-3">
             {/* User Details */}
             <Card className="flex flex-col p-4">
               <Label className="mb-2 text-xs font-semibold">Select User</Label>

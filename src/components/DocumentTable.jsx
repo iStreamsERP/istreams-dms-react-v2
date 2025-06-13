@@ -42,6 +42,7 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
   const { toast } = useToast();
 
   const [userEditRights, setUserEditRights] = useState("");
+  const [userViewRights, setUserViewRights] = useState("");
 
   const formModalRef = useRef(null);
   const uploadModalRef = useRef(null);
@@ -55,9 +56,10 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
   const fetchDocsMasterList = useCallback(async () => {
     setLoading(true);
     try {
-      const whereCondition = userData.isAdmin
-        ? ""
-        : ` AND (USER_NAME = '${userData.userName}' OR ASSIGNED_USER = '${userData.userName}')`;
+      const whereCondition =
+        userData.isAdmin || userViewRights === "Allowed"
+          ? ""
+          : ` AND (USER_NAME = '${userData.userName}' OR ASSIGNED_USER = '${userData.userName}')`;
       const payload = {
         WhereCondition: whereCondition,
         Orderby: "REF_SEQ_NO DESC",
@@ -86,25 +88,33 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
     } finally {
       setLoading(false);
     }
-  }, [userData.userEmail, userData.clientURL]);
+  }, [userData.userEmail, userData.clientURL, userViewRights]);
 
-  // Initial data load
-  useEffect(() => {
-    fetchDocsMasterList();
+  const fetchUserViewRights = async () => {
+    try {
+      const userType = userData.isAdmin ? "ADMINISTRATOR" : "USER";
+      const payload = {
+        UserName: userData.userName,
+        FormName: "DMS-DOCUMENTLISTVIEWALL",
+        FormDescription: "View Rights For All Documents",
+        UserType: userType,
+      };
 
-    const getEditRights = async () => {
-      await fetchUserEditRights();
-    };
+      const response = await callSoapService(
+        userData.clientURL,
+        "DMS_CheckRights_ForTheUser",
+        payload
+      );
 
-    getEditRights();
-  }, [fetchDocsMasterList]);
-
-  // Expose fetch function to parent via ref for external refresh
-  useEffect(() => {
-    if (fetchDataRef) {
-      fetchDataRef.current = fetchDocsMasterList;
+      setUserViewRights(response);
+    } catch (error) {
+      console.error("Failed to fetch user rights:", error);
+      toast({
+        variant: "destructive",
+        title: error,
+      });
     }
-  }, [fetchDataRef, fetchDocsMasterList]);
+  };
 
   const fetchUserEditRights = async () => {
     try {
@@ -131,6 +141,29 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
       });
     }
   };
+
+  // Initial data load
+  useEffect(() => {
+    fetchDocsMasterList();
+
+    const getViewRights = async () => {
+      await fetchUserViewRights();
+    };
+
+    const getEditRights = async () => {
+      await fetchUserEditRights();
+    };
+
+    getViewRights();
+    getEditRights();
+  }, [fetchDocsMasterList]);
+
+  // Expose fetch function to parent via ref for external refresh
+  useEffect(() => {
+    if (fetchDataRef) {
+      fetchDataRef.current = fetchDocsMasterList;
+    }
+  }, [fetchDataRef, fetchDocsMasterList]);
 
   const onUploadSuccess = () => {
     fetchDocsMasterList();

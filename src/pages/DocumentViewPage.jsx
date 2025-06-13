@@ -87,6 +87,7 @@ const DocumentCard = memo(
     onEmployeeSelect,
     users,
     usersLoading,
+    userViewRights,
   }) => {
     const handleEmployeeChange = useCallback(
       (value) => {
@@ -101,7 +102,7 @@ const DocumentCard = memo(
 
     const handleViewClick = useCallback(() => {
       onView(doc);
-    }, [doc, onView]);
+    }, [doc, onView, userViewRights]);
 
     const isAssigned = Boolean(assignedUser);
     const isVerified = Boolean(doc.VERIFIED_BY);
@@ -238,10 +239,10 @@ export default function DocumentViewPage() {
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [docFormMode, setDocFormMode] = useState("view");
 
-   // User rights
-    const [userViewRights, setUserViewRights] = useState("");
-    const [userRights, setUserRights] = useState("");
-    const [rightsChecked, setRightsChecked] = useState(false);
+  // User rights
+  const [userViewRights, setUserViewRights] = useState("");
+  const [userRights, setUserRights] = useState("");
+  const [rightsChecked, setRightsChecked] = useState(false);
 
   // Virtual scrolling
   const [visibleCount, setVisibleCount] = useState(24);
@@ -250,7 +251,7 @@ export default function DocumentViewPage() {
   const modalRefTask = useRef(null);
   const formModalRef = useRef(null);
   const { userData } = useAuth();
-   const { toast } = useToast();
+  const { toast } = useToast();
   const location = useLocation();
 
   // Optimized debounced search with transition
@@ -290,11 +291,14 @@ export default function DocumentViewPage() {
   // Optimized service call payload
   const getDocMasterListPayload = useMemo(
     () => ({
-      WhereCondition: ` AND (USER_NAME = '${userData.userName}' OR ASSIGNED_USER = '${userData.userName}')`,
+      WhereCondition:
+        userData.isAdmin || userViewRights === "Allowed"
+          ? ""
+          : ` AND (USER_NAME = '${userData.userName}' OR ASSIGNED_USER = '${userData.userName}')`,
       Orderby: "REF_SEQ_NO DESC",
       IncludeEmpImage: false,
     }),
-    []
+    [userViewRights, userData.isAdmin, userData.userName]
   );
 
   // Highly optimized document filtering with memoization
@@ -393,7 +397,6 @@ export default function DocumentViewPage() {
       );
 
       setUsers(Array.isArray(response) ? response : []);
-      
     } catch (err) {
       console.error("Error fetching users:", err);
       setUsers([]);
@@ -402,62 +405,59 @@ export default function DocumentViewPage() {
     }
   }, [userData.userEmail, userData.clientURL, userData.userName]);
 
-   const fetchUserViewRights = useCallback(async () => {
-      try {
-        const userType = userData.isAdmin ? "ADMINISTRATOR" : "USER";
-        const payload = {
-          UserName: userData.userName,
-          FormName: "DMS-DOCUMENTVIEWVIEWALL",
-          FormDescription: "View Rights For All Documents View",
-          UserType: userType,
-        };
-  
-        const response = await callSoapService(
-          userData.clientURL,
-          "DMS_CheckRights_ForTheUser",
-          payload
-        );
-  
-        console.log(response);
-        
-  
-        setUserViewRights(response);
-      } catch (error) {
-        console.error("Failed to fetch user rights:", error);
-        toast({
-          variant: "destructive",
-          title: error,
-        });
-      }
-    }, [userData.clientURL, userData.isAdmin, userData.userName]);
-  
-    const fetchUserRights = useCallback(async () => {
-      try {
-        const userType = userData.isAdmin ? "ADMINISTRATOR" : "USER";
-        const payload = {
-          UserName: userData.userName,
-          FormName: "DMS-DOCUMENTVIEW",
-          FormDescription: "Document View",
-          UserType: userType,
-        };
-  
-        const response = await callSoapService(
-          userData.clientURL,
-          "DMS_CheckRights_ForTheUser",
-          payload
-        );
-  
-        setUserRights(response);
-      } catch (error) {
-        console.error("Failed to fetch user rights:", error);
-        toast({
-          variant: "destructive",
-          title: error,
-        });
-      } finally {
-        setRightsChecked(true);
-      }
-    }, [userData.clientURL, userData.isAdmin, userData.userName]);
+  const fetchUserViewRights = useCallback(async () => {
+    try {
+      const userType = userData.isAdmin ? "ADMINISTRATOR" : "USER";
+      const payload = {
+        UserName: userData.userName,
+        FormName: "DMS-DOCUMENTLISTVIEWALL",
+        FormDescription: "View Rights For All Documents",
+        UserType: userType,
+      };
+
+      const response = await callSoapService(
+        userData.clientURL,
+        "DMS_CheckRights_ForTheUser",
+        payload
+      );
+
+      setUserViewRights(response);
+    } catch (error) {
+      console.error("Failed to fetch user rights:", error);
+      toast({
+        variant: "destructive",
+        title: error,
+      });
+    }
+  }, [userData.clientURL, userData.isAdmin, userData.userName]);
+
+  const fetchUserRights = useCallback(async () => {
+    try {
+      const userType = userData.isAdmin ? "ADMINISTRATOR" : "USER";
+      const payload = {
+        UserName: userData.userName,
+        FormName: "DMS-DOCUMENTVIEW",
+        FormDescription: "Document View",
+        UserType: userType,
+      };
+
+      const response = await callSoapService(
+        userData.clientURL,
+        "DMS_CheckRights_ForTheUser",
+        payload
+      );
+
+      setUserRights(response);
+    } catch (error) {
+      console.error("Failed to fetch user rights:", error);
+      toast({
+        variant: "destructive",
+        title: error,
+      });
+    } finally {
+      setRightsChecked(true);
+    }
+  }, [userData.clientURL, userData.isAdmin, userData.userName]);
 
   // Load more documents - simplified
   const loadMoreDocs = useCallback(() => {
@@ -491,23 +491,25 @@ export default function DocumentViewPage() {
     formModalRef.current?.showModal();
   }, []);
 
-  const handleView = useCallback((doc) => {
-     const hasAccess = String(userViewRights).toLowerCase() === "allowed";
-    
-          if (!hasAccess) {
-            toast({
-              variant: "destructive",
-              title: "Permission Denied",
-              description: "You don't have permission to view documents.",
-            });
-            return;
-          }
-    
+  const handleView = useCallback(
+    (doc) => {
+      const hasAccess = String(userViewRights).toLowerCase() === "allowed";
 
-    setSelectedDocument(doc);
-    setDocFormMode("view");
-    formModalRef.current?.showModal();
-  }, []);
+      if (!hasAccess) {
+        toast({
+          variant: "destructive",
+          title: "Permission Denied",
+          description: "You don't have permission to view documents.",
+        });
+        return;
+      }
+
+      setSelectedDocument(doc);
+      setDocFormMode("view");
+      formModalRef.current?.showModal();
+    },
+    [userViewRights]
+  );
 
   // Optimized category fetching with caching
   const categoryCache = useRef(new Map());
@@ -615,7 +617,7 @@ export default function DocumentViewPage() {
     setTaskData((prev) => ({ ...prev, newTask }));
   }, []);
 
-   // Show loading state
+  // Show loading state
   if (isLoading || !rightsChecked) {
     return (
       <div className="grid grid-cols-1 gap-4">
@@ -694,6 +696,7 @@ export default function DocumentViewPage() {
                       onEmployeeSelect={handleEmployeeSelect}
                       users={users}
                       usersLoading={isLoadingUsers}
+                      userViewRights={userViewRights}
                     />
                   );
                 })
