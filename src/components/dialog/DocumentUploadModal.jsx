@@ -323,7 +323,7 @@ const DocumentUploadModal = ({
         const formData = new FormData();
         formData.append("file", file.file);
 
-        const uploadUrl = `https://cloud.istreams-erp.com:4440/api/megacloud/upload?email=${encodeURIComponent(
+        const uploadUrl = `https://apps.istreams-erp.com:4440/api/megacloud/upload?email=${encodeURIComponent(
           email
         )}&refNo=${encodeURIComponent(refNo)}`;
 

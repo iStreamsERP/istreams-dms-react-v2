@@ -77,6 +77,8 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
   }, [userData, toast]);
 
   const fetchDocsMasterList = useCallback(async () => {
+    console.log(categoryList);
+    
     setLoading(true);
     try {
       const whereCondition =
