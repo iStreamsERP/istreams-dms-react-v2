@@ -55,9 +55,12 @@ const TeamsPage = () => {
   };
 
   const fetchUsersAndImages = async (rights) => {
+    console.log(userData.isAdmin, rights);
+
     try {
       const payload = {
-        UserName: userData.userName,
+        UserName:
+          userData.isAdmin || rights === "Allowed" ? "" : userData.userName,
       };
 
       const userDetails = await callSoapService(

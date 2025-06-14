@@ -95,6 +95,8 @@ const CategoryViewPage = () => {
     }
   }, [userData, toast]);
 
+  // First Category View or admin to all this page || View rights all docs not true check category list to get docs
+
   // Fetch user permissions
   const fetchPermissions = useCallback(async () => {
     try {
@@ -149,14 +151,18 @@ const CategoryViewPage = () => {
   }, [filterField, globalFilter, filterDays, rightsChecked, fetchData]);
 
   const categoriesToDisplay = useMemo(() => {
-    // If categoryList has data, filter categories to match
+    if (userData.isAdmin || userViewRights === "Allowed") {
+      return categories;
+    }
+
     if (categoryList.length > 0) {
       return categories.filter((cat) =>
         categoryList.some((c) => c.CATEGORY_NAME === cat.DOC_RELATED_CATEGORY)
       );
     }
-    // Otherwise use all categories from fetchData
-    return categories;
+
+    // If user has no allowed categories, show nothing
+    return [];
   }, [categories, categoryList]);
 
   // const fetchUserViewRights = async () => {
@@ -255,7 +261,13 @@ const CategoryViewPage = () => {
       ) : userRights !== "Allowed" ? (
         <AccessDenied />
       ) : categoriesToDisplay.length === 0 ? (
-        <p className="text-center text-sm">No data found...</p>
+        <p className="text-center text-sm">
+          {" "}
+          {categoryList.length === 0 &&
+          !(userData.isAdmin || userViewRights === "Allowed")
+            ? "No categories assigned to you."
+            : "No data found..."}
+        </p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {categoriesToDisplay.map((category) => (

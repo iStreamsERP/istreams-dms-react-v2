@@ -26,6 +26,9 @@ const defaultUserData = {
   companyCurrDecimals: 0,
   companyCurrSymbol: null,
   companyCurrIsIndianStandard: false,
+  isAdmin: false,
+  userRoles: [],
+  permissions: [],
 };
 
 export const AuthProvider = ({ children }) => {
@@ -39,7 +42,7 @@ export const AuthProvider = ({ children }) => {
       JSON.parse(localStorage.getItem("userData"));
 
     if (storedUserData?.userEmail) {
-      setUserData(storedUserData);
+      setUserData({ ...defaultUserData, ...storedUserData });
     } else {
       setUserData(defaultUserData);
     }

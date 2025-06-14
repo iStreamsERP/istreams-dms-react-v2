@@ -771,6 +771,11 @@ const DocumentFormModal = ({
                         </option>
                         <optgroup label="Categories" className="font-semibold">
                           {Array.isArray(categoryList) &&
+                          categoryList.length === 0 ? (
+                            <option value="" disabled>
+                              No categories assigned for you
+                            </option>
+                          ) : (
                             categoryList.map((category, index) =>
                               category?.CATEGORY_NAME ? (
                                 <option
@@ -780,7 +785,8 @@ const DocumentFormModal = ({
                                   {category.CATEGORY_NAME}
                                 </option>
                               ) : null
-                            )}
+                            )
+                          )}
                         </optgroup>
                       </select>
 

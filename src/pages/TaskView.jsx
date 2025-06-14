@@ -410,7 +410,7 @@ const TaskViewPage = () => {
                                 {task.CREATED_USER.toUpperCase() ===
                                 userData.userName.toUpperCase()
                                   ? "Self Assigned" // Both created and assigned by current user
-                                  : "Assigned to Me"}{" "}
+                                  : "Task From"}{" "}
                                 {/* Current user is the assignee but not the creator */}
                                 {task.CREATED_USER.toUpperCase() ===
                                 userData.userName.toUpperCase() ? (
