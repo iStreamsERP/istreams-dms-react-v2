@@ -186,7 +186,7 @@ const DocumentUploadModal = ({
 
   // Download & view documents
   const handleViewDocs = async (selectedDocs) => {
-    const hasAccess = String(userViewRights).toLowerCase() === "allowed";
+    const hasAccess = String(userViewRights)?.toLowerCase() === "allowed";
 
     if (!hasAccess) {
       alert("You don't have permission to view documents.");
@@ -343,7 +343,7 @@ const DocumentUploadModal = ({
 
         const uploadResult = uploadResponse.data.message;
 
-        // const base64Data = await readFileAsBase64(file.file);
+        const base64Data = await readFileAsBase64(file.file);
 
         const payload = {
           REF_SEQ_NO: selectedDocument.REF_SEQ_NO,
@@ -359,9 +359,9 @@ const DocumentUploadModal = ({
           DOC_TAGS: selectedDocument.DOC_TAGS || "",
           FOR_THE_USERS: selectedDocument.FOR_THE_USERS || "",
           EXPIRY_DATE: file.EXPIRY_DATE || "",
-          // DOC_DATA: base64Data,
+          DOC_DATA: base64Data,
           DOC_NAME: file.name,
-          // DOC_EXT: file.name.split(".").pop(),
+          DOC_EXT: file.name.split(".").pop(),
           FILE_PATH: "",
           IsPrimaryDocument: file.isPrimaryDocument,
         };
@@ -464,7 +464,10 @@ const DocumentUploadModal = ({
                               />
                             </div>
                             <div className="min-w-0 flex-1 overflow-hidden">
-                              <h5 className="text-sm font-semibold truncate text-gray-800 dark:text-gray-300">
+                              <h5
+                                className="text-sm font-semibold truncate text-gray-800 dark:text-gray-300"
+                                title={doc.DOC_NAME}
+                              >
                                 {doc.DOC_NAME.length > 24
                                   ? doc.DOC_NAME.slice(0, 24) + "..."
                                   : doc.DOC_NAME}
@@ -523,11 +526,14 @@ const DocumentUploadModal = ({
                               className="w-8 h-8 object-contain rounded"
                             />
                             <div className="min-w-0">
-                              <span className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate block max-w-[180px]">
+                              <p
+                                className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate block max-w-[180px]"
+                                title={file.name}
+                              >
                                 {file.name.length > 24
                                   ? file.name.slice(0, 24) + "..."
                                   : file.name}
-                              </span>
+                              </p>
                               <span className="text-xs text-gray-500 dark:text-gray-400">
                                 {file.size}
                               </span>
