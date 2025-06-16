@@ -77,14 +77,15 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
   }, [userData, toast]);
 
   const fetchDocsMasterList = useCallback(async () => {
-    console.log(categoryList);
-    
     setLoading(true);
     try {
       const whereCondition =
-        userData.isAdmin || userViewRights === "Allowed" || categoryList.length > 0
+        userData.isAdmin ||
+        userViewRights === "Allowed" ||
+        categoryList.length > 0
           ? ""
           : ` AND (USER_NAME = '${userData.userName}' OR ASSIGNED_USER = '${userData.userName}')`;
+
       const payload = {
         WhereCondition: whereCondition,
         Orderby: "REF_SEQ_NO DESC",
@@ -513,14 +514,27 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
   }, []);
 
   const filteredDocuments = useMemo(() => {
+    if (userData.isAdmin) {
+      return documentList; // Admin sees all
+    }
+
+    // if (categoryList.length > 0) {
+    //   const allowedCategories = categoryList.map((cat) => cat.CATEGORY_NAME);
+    //   return documentList.filter((doc) =>
+    //     allowedCategories.includes(doc.DOC_RELATED_CATEGORY)
+    //   );
+    // }
+    // return documentList;
+
     if (categoryList.length > 0) {
-      const allowedCategories = categoryList.map((cat) => cat.CATEGORY_NAME);
+      const allowed = new Set(categoryList.map((cat) => cat.CATEGORY_NAME));
       return documentList.filter((doc) =>
-        allowedCategories.includes(doc.DOC_RELATED_CATEGORY)
+        allowed.has(doc.DOC_RELATED_CATEGORY)
       );
     }
+    // no category selected: use full filteredDocs
     return documentList;
-  }, [documentList, categoryList]);
+  }, [userData.isAdmin, documentList, categoryList]);
 
   // Initialize TanStack table
   const table = useReactTable({

@@ -295,6 +295,7 @@ const DocumentUploadModal = ({
       });
       return;
     }
+
     if (totalPrimaryCount > 1) {
       toast({
         title: "Only one primary document allowed.",
@@ -340,9 +341,9 @@ const DocumentUploadModal = ({
           );
         }
 
-        const uploadResult = uploadResponse.data;
+        const uploadResult = uploadResponse.data.message;
 
-        const base64Data = await readFileAsBase64(file.file);
+        // const base64Data = await readFileAsBase64(file.file);
 
         const payload = {
           REF_SEQ_NO: selectedDocument.REF_SEQ_NO,
@@ -358,9 +359,9 @@ const DocumentUploadModal = ({
           DOC_TAGS: selectedDocument.DOC_TAGS || "",
           FOR_THE_USERS: selectedDocument.FOR_THE_USERS || "",
           EXPIRY_DATE: file.EXPIRY_DATE || "",
-          DOC_DATA: base64Data,
+          // DOC_DATA: base64Data,
           DOC_NAME: file.name,
-          DOC_EXT: file.name.split(".").pop(),
+          // DOC_EXT: file.name.split(".").pop(),
           FILE_PATH: "",
           IsPrimaryDocument: file.isPrimaryDocument,
         };
@@ -379,7 +380,8 @@ const DocumentUploadModal = ({
     } catch (error) {
       toast({
         title: "Upload Failed",
-        description: error || "An error occurred while uploading files.",
+        description:
+          error?.message || "An error occurred while uploading files.",
       });
     } finally {
       setIsSubmitting(false);
@@ -469,7 +471,7 @@ const DocumentUploadModal = ({
                               </h5>
                               <div className="text-xs mt-1 flex items-center gap-2">
                                 <span className="text-gray-500 dark:text-gray-400">
-                                  {doc.DOC_EXT.toUpperCase()}
+                                  {doc?.DOC_EXT?.toUpperCase()}
                                 </span>
                                 {doc.IS_PRIMARY_DOCUMENT === "T" && (
                                   <span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">

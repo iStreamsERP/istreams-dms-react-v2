@@ -328,6 +328,10 @@ export default function DocumentViewPage() {
 
   // Virtualized visible documents
   const filteredByCategory = useMemo(() => {
+    if (userData.isAdmin) {
+      return allDocs; // Admin sees all
+    }
+
     if (categoryList.length > 0) {
       const allowed = new Set(categoryList.map((cat) => cat.CATEGORY_NAME));
       return filteredDocs.filter((doc) =>
@@ -336,7 +340,7 @@ export default function DocumentViewPage() {
     }
     // no category selected: use full filteredDocs
     return filteredDocs;
-  }, [filteredDocs, categoryList]);
+  }, [userData.isAdmin, filteredDocs, categoryList]);
 
   const visibleDocs = useMemo(() => {
     return filteredByCategory.slice(0, visibleCount);

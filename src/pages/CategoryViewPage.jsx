@@ -151,7 +151,7 @@ const CategoryViewPage = () => {
   }, [filterField, globalFilter, filterDays, rightsChecked, fetchData]);
 
   const categoriesToDisplay = useMemo(() => {
-    if (userData.isAdmin || userViewRights === "Allowed") {
+    if (userData.isAdmin) {
       return categories;
     }
 
