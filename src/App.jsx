@@ -21,6 +21,8 @@ import UserListPage from "./pages/UserListPage";
 import UserRolePage from "./pages/UserRolePage ";
 import Layout from "./routes/Layout";
 import ProtectedRoute from "./routes/ProtectedRoute";
+import UploadDocument from "./pages/UploadDocument";
+import V2UploadDocument from "./pages/V2UploadDocument";
 
 const App = () => {
   const { userData } = useAuth();
@@ -37,6 +39,14 @@ const App = () => {
     {
       path: "/forgot-password",
       element: <ForgetPasswordPage />,
+    },
+    {
+      path: "/upload-document",
+      element: <UploadDocument />,
+    },
+    {
+      path: "/upload-document-v2",
+      element: <V2UploadDocument />,
     },
     {
       path: "/",
