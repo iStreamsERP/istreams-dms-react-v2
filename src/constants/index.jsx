@@ -21,6 +21,11 @@ export const getNavbarLinks = (isAdmin) => [
         icon: Home,
         path: "/",
       },
+      {
+        label: "Upload",
+        icon: Home,
+        path: "/upload-document",
+      },
       ...(isAdmin
         ? [
             {

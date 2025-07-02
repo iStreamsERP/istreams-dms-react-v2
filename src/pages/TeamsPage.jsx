@@ -55,8 +55,6 @@ const TeamsPage = () => {
   };
 
   const fetchUsersAndImages = async (rights) => {
-    console.log(userData.isAdmin, rights);
-
     try {
       const payload = {
         UserName:

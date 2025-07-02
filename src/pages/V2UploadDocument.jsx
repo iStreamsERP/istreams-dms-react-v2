@@ -4,26 +4,19 @@ import axios from "axios";
 const V2UploadDocument = () => {
   const [file, setFile] = useState(null);
   const [question, setQuestion] = useState("");
+  const [leftQuestion, setLeftQuestion] = useState("");
   const [chatHistory, setChatHistory] = useState([]);
+  const [leftAnswers, setLeftAnswers] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [predefinedAnswers, setPredefinedAnswers] = useState([]);
 
-  const predefinedQuestions = [
-    "translate to english",
-    "What type of document is this?,This document send by Whom?,Is there any validity for this document?",
-    "This document addressed to whom",
-    "is there any penalties involved on this",
-    "is there any submission date is mentioned",
-  ];
-
-  const askQuestion = async (q, isPredefined = false) => {
+  const askQuestion = async (q, toLeft = false) => {
     if (!file || !q) return;
 
     const formData = new FormData();
     formData.append("File", file);
     formData.append("Question", q);
 
-    if (!isPredefined) {
+    if (!toLeft) {
       setChatHistory((prev) => [...prev, { type: "question", message: q }]);
     }
 
@@ -37,11 +30,8 @@ const V2UploadDocument = () => {
         }
       );
 
-      if (isPredefined) {
-        setPredefinedAnswers((prev) => [
-          ...prev,
-          { question: q, answer: res.data },
-        ]);
+      if (toLeft) {
+        setLeftAnswers((prev) => [...prev, { question: q, answer: res.data }]);
       } else {
         setChatHistory((prev) => [
           ...prev,
@@ -53,10 +43,10 @@ const V2UploadDocument = () => {
         ? JSON.stringify(err.response.data, null, 2)
         : err.message;
 
-      if (isPredefined) {
-        setPredefinedAnswers((prev) => [
+      if (toLeft) {
+        setLeftAnswers((prev) => [
           ...prev,
-          { question: q, answer: `${errMsg}` },
+          { question: q, answer: `❌ ${errMsg}` },
         ]);
       } else {
         setChatHistory((prev) => [...prev, { type: "error", message: errMsg }]);
@@ -66,27 +56,18 @@ const V2UploadDocument = () => {
     }
   };
 
-  const handleUpload = async () => {
+  const handleUpload = () => {
     if (!file) {
       alert("Please upload a file first.");
       return;
     }
-
-    setChatHistory([]);
-    setPredefinedAnswers([]);
-    setLoading(true);
-
-    for (const q of predefinedQuestions) {
-      await askQuestion(q, true);
-    }
-
     setChatHistory([
       {
         type: "info",
-        message: " Document analyzed. You can now ask more questions.",
+        message: "📄 Document uploaded. You can now ask your questions below.",
       },
     ]);
-    setLoading(false);
+    setLeftAnswers([]);
   };
 
   const handleManualSubmit = async (e) => {
@@ -94,6 +75,12 @@ const V2UploadDocument = () => {
     if (!question) return;
     await askQuestion(question, false);
     setQuestion("");
+  };
+
+  const handleLeftSubmit = async () => {
+    if (!leftQuestion) return;
+    await askQuestion(leftQuestion, true);
+    setLeftQuestion("");
   };
 
   return (
@@ -118,7 +105,7 @@ const V2UploadDocument = () => {
           overflow: "hidden",
         }}
       >
-        {/* Left Predefined Answer Summary */}
+        {/* Left Panel */}
         <div
           style={{
             flex: 1.2,
@@ -127,14 +114,14 @@ const V2UploadDocument = () => {
             borderRight: "1px solid #ddd",
           }}
         >
-          <h3> Document Summary</h3>
+          <h3>📄 Upload Document</h3>
           <input
             type="file"
             accept=".pdf,.jpg,.jpeg,.png,.xlsx,.json,.txt"
             onChange={(e) => {
               setFile(e.target.files[0]);
-              setPredefinedAnswers([]);
               setChatHistory([]);
+              setLeftAnswers([]);
             }}
             style={{ marginTop: "10px", marginBottom: "10px" }}
           />
@@ -151,12 +138,44 @@ const V2UploadDocument = () => {
               cursor: "pointer",
             }}
           >
-            {loading ? "Analyzing..." : "Analyze"}
+            Analyze
           </button>
 
-          {predefinedAnswers.length > 0 && (
-            <div>
-              {predefinedAnswers.map((item, idx) => (
+          <h4 style={{ marginTop: "20px" }}>📝 Ask a question (Left Panel)</h4>
+          <textarea
+            value={leftQuestion}
+            onChange={(e) => setLeftQuestion(e.target.value)}
+            placeholder="Type your question here..."
+            rows={4}
+            style={{
+              width: "100%",
+              padding: "10px",
+              borderRadius: "8px",
+              border: "1px solid #ccc",
+              resize: "none",
+              marginBottom: "10px",
+            }}
+          />
+          <button
+            onClick={handleLeftSubmit}
+            disabled={loading || !file}
+            style={{
+              padding: "10px 15px",
+              backgroundColor: "#28a745",
+              color: "#fff",
+              border: "none",
+              borderRadius: "5px",
+              cursor: "pointer",
+              width: "100%",
+            }}
+          >
+            {loading ? "Sending..." : "Submit"}
+          </button>
+
+          {/* Answer area for left questions */}
+          {leftAnswers.length > 0 && (
+            <div style={{ marginTop: "20px" }}>
+              {leftAnswers.map((item, idx) => (
                 <div
                   key={idx}
                   style={{
@@ -166,7 +185,7 @@ const V2UploadDocument = () => {
                     borderRadius: "8px",
                   }}
                 >
-                  <strong> {item.question}</strong>
+                  <strong>❓ {item.question}</strong>
                   <div style={{ marginTop: "5px", whiteSpace: "pre-wrap" }}>
                     {item.answer}
                   </div>
@@ -189,7 +208,6 @@ const V2UploadDocument = () => {
             💬 Chat Assistant
           </h2>
 
-          {/* Chat History */}
           <div
             style={{
               flex: 1,
@@ -213,10 +231,10 @@ const V2UploadDocument = () => {
                 }}
               >
                 <div style={{ fontSize: "20px", margin: "0 10px" }}>
-                  {item.type === "question"}
-                  {item.type === "answer"}
-                  {item.type === "info"}
-                  {item.type === "error"}
+                  {item.type === "question" && "🧑‍💬"}
+                  {item.type === "answer" && "🤖"}
+                  {item.type === "info" && "ℹ️"}
+                  {item.type === "error" && "❌"}
                 </div>
                 <div
                   style={{
@@ -242,7 +260,7 @@ const V2UploadDocument = () => {
             ))}
           </div>
 
-          {/* Manual Question Input */}
+          {/* Manual Chat Input */}
           <form
             onSubmit={handleManualSubmit}
             style={{ display: "flex", gap: "10px" }}
@@ -271,7 +289,7 @@ const V2UploadDocument = () => {
                 cursor: "pointer",
               }}
             >
-              {loading ? "sending.." : "Send"}
+              {loading ? "Sending..." : "Send"}
             </button>
           </form>
         </div>

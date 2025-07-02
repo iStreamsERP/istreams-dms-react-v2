@@ -1,14 +1,12 @@
-import { Outlet } from "react-router-dom";
-import { Header } from "../layouts/Header";
-import { Sidebar } from "../layouts/Sidebar";
-import { useMediaQuery } from "@uidotdev/usehooks";
-import { useEffect, useRef, useState } from "react";
-import { useClickOutside } from "../hooks/use-click-outside";
-import Footer from "@/layouts/Footer";
 import { Toaster } from "@/components/ui/toaster";
 import { cn } from "@/lib/utils";
+import { useMediaQuery } from "@uidotdev/usehooks";
+import { useEffect, useRef, useState } from "react";
+import { Outlet } from "react-router-dom";
+import { useClickOutside } from "../hooks/use-click-outside";
+import { Sidebar, DefaultHeader, Footer } from "@/components";
 
-const Layout = () => {
+export const DefaultLayout = () => {
   const isDesktopDevice = useMediaQuery("(min-width: 768px)");
   const [collapsed, setCollapsed] = useState(!isDesktopDevice);
 
@@ -38,7 +36,7 @@ const Layout = () => {
           collapsed ? "md:ml-[70px]" : "md:ml-[240px]"
         )}
       >
-        <Header collapsed={collapsed} setCollapsed={setCollapsed} />
+        <DefaultHeader collapsed={collapsed} setCollapsed={setCollapsed} />
         <main className="h-[calc(100vh-108px)] overflow-y-auto overflow-x-hidden p-6">
           <Outlet />
           <Toaster />
@@ -48,5 +46,3 @@ const Layout = () => {
     </div>
   );
 };
-
-export default Layout;

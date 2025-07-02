@@ -7,7 +7,6 @@ import { useDropzone } from "react-dropzone";
 import { useAuth } from "../../contexts/AuthContext";
 import { getFileIcon } from "../../utils/getFileIcon";
 import { readFileAsBase64 } from "../../utils/soapUtils";
-import LoadingSpinner from "../common/LoadingSpinner";
 import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
 
@@ -444,7 +443,7 @@ const DocumentUploadModal = ({
             </div>
 
             {isLoadingDocs ? (
-              <LoadingSpinner />
+              <p>Loading...</p>
             ) : existingDocs.length > 0 ? (
               <div className="flex flex-wrap gap-2 mt-4">
                 {existingDocs.map((doc) => (
@@ -592,7 +591,6 @@ const DocumentUploadModal = ({
               {isSubmitting ? (
                 <>
                   Uploading...
-                  <LoadingSpinner className="w-4 h-4 ml-2" />
                 </>
               ) : (
                 `Upload ${files.length} File${files.length !== 1 ? "s" : ""}`
