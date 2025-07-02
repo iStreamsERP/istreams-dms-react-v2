@@ -1,10 +1,12 @@
 // src/components/AnimatedDropzone.tsx
+import { Button } from "@/components/ui/button";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Check,
   ChevronLeft,
   ClipboardCheck,
   CloudUpload,
+  Ellipsis,
   FileText,
   Languages,
   Loader2,
@@ -309,7 +311,7 @@ This project implements a modern web application using React and Tailwind CSS. T
   );
 
   return (
-    <div className="flex flex-col items-center justify-center h-screen bg-gradient-to-br from-slate-900 to-slate-800 p-4 relative">
+    <div className="h-[92vh] w-full">
       {!showAnalysis && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -331,7 +333,7 @@ This project implements a modern web application using React and Tailwind CSS. T
               backgroundSize: "200% auto",
             }}
           >
-            DocuInsight AI
+            Upload Your Document
           </motion.h1>
           <p className="text-sm sm:text-base text-cyan-100">
             Upload, Analyze & Chat with your Documents
@@ -360,7 +362,6 @@ This project implements a modern web application using React and Tailwind CSS. T
             type="file"
             className="hidden"
             onChange={handleChange}
-            multiple
           />
 
           {/* Vibrant Radial Upload Area */}
@@ -524,9 +525,7 @@ This project implements a modern web application using React and Tailwind CSS. T
                 </motion.h3>
 
                 <p className="text-xs sm:text-sm text-cyan-200 mb-2 sm:mb-3 md:mb-4 text-center">
-                  {isDragActive
-                    ? "Release to upload your project"
-                    : "Supports HTML, CSS, JS, and docs"}
+                  {isDragActive ? "Release to upload your project" : ""}
                 </p>
 
                 <motion.button
@@ -556,27 +555,7 @@ This project implements a modern web application using React and Tailwind CSS. T
           </motion.div>
         </div>
       ) : (
-        <div className="fixed inset-0 flex flex-col bg-slate-900">
-          {/* Header */}
-          <div className="p-3 bg-gradient-to-r from-cyan-800 to-teal-800 text-white flex justify-between items-center">
-            <div className="flex items-center gap-3">
-              <FileText className="w-5 h-5 sm:w-6 sm:h-6" />
-              <h2 className="text-lg sm:text-xl font-bold">
-                Document Analysis
-              </h2>
-            </div>
-
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={handleReset}
-              className="flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-cyan-600 text-white rounded-lg font-medium text-sm sm:text-base hover:bg-cyan-500"
-            >
-              <Upload className="w-4 h-4 sm:w-5 sm:h-5" />
-              <span>New Upload</span>
-            </motion.button>
-          </div>
-
+        <div className="flex flex-col bg-slate-900 h-full">
           {/* Main Content */}
           <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
             {/* Left section - Document analysis */}
@@ -592,7 +571,7 @@ This project implements a modern web application using React and Tailwind CSS. T
                   onClick={() => setActiveTab("summary")}
                 >
                   <ClipboardCheck className="w-4 h-4 sm:w-5 sm:h-5" />
-                  Summary
+                  Analysis Summary
                 </button>
                 <button
                   className={`flex-1 px-3 py-2 sm:px-4 sm:py-3 font-medium flex items-center justify-center gap-1 sm:gap-2 text-xs sm:text-sm ${
@@ -603,7 +582,7 @@ This project implements a modern web application using React and Tailwind CSS. T
                   onClick={() => setActiveTab("translation")}
                 >
                   <Languages className="w-4 h-4 sm:w-5 sm:h-5" />
-                  Translation
+                  Translated to English
                 </button>
               </div>
 
@@ -612,9 +591,15 @@ This project implements a modern web application using React and Tailwind CSS. T
                 {activeTab === "summary" ? (
                   <div className="space-y-4 sm:space-y-6">
                     <div className="bg-gradient-to-r from-cyan-900/50 to-teal-900/50 rounded-xl p-4 sm:p-6 shadow-lg border border-slate-700">
-                      <h3 className="text-base sm:text-lg font-semibold text-cyan-200 mb-3 sm:mb-4 flex items-center gap-2">
-                        <ClipboardCheck className="text-cyan-400 w-4 h-4 sm:w-5 sm:h-5" />
-                        Document Summary
+                      <h3 className="text-base sm:text-lg font-semibold text-cyan-200 mb-3 sm:mb-4 flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <ClipboardCheck className="text-cyan-400 w-4 h-4 sm:w-5 sm:h-5" />
+                          Analysis Summary
+                        </div>
+
+                        <Button variant="ghost" onClick={() => {}}>
+                          <Ellipsis />
+                        </Button>
                       </h3>
                       <div className="space-y-3 sm:space-y-4">
                         {analysisData.slice(0, 3).map((item, index) => (
@@ -650,11 +635,22 @@ This project implements a modern web application using React and Tailwind CSS. T
 
             {/* Right section - Chat (hidden on mobile) */}
             <div className="hidden md:flex w-full md:w-1/2 flex-col bg-gradient-to-b from-slate-900 to-slate-800">
-              <div className="p-3 bg-gradient-to-r from-cyan-800 to-teal-800 text-white flex items-center gap-2 sm:gap-3">
-                <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5" />
-                <h3 className="text-base sm:text-lg font-semibold">
-                  Document Assistant
-                </h3>
+              <div className="px-4 py-1 bg-gradient-to-r from-cyan-800 to-teal-800 text-white flex items-center justify-between gap-2 sm:gap-3">
+                <div className=" flex items-center gap-2 sm:gap-3">
+                  <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <h3 className="text-base sm:text-lg font-semibold">
+                    Document Assistant
+                  </h3>
+                </div>
+
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleReset}
+                  className="flex items-center gap-2 px-2 py-1.5 sm:px-4 sm:py-2 bg-cyan-600 text-white rounded-lg font-medium text-sm sm:text-base hover:bg-cyan-500"
+                >
+                  <Upload className="w-3 h-3 sm:w-4 sm:h-4" />
+                </motion.button>
               </div>
 
               <div className="flex-1 overflow-y-auto p-3 sm:p-4 bg-gradient-to-b from-slate-800/50 to-slate-900/50">
@@ -664,40 +660,12 @@ This project implements a modern web application using React and Tailwind CSS. T
                       <MessageSquare className="text-cyan-400 w-6 h-6 sm:w-8 sm:h-8" />
                     </div>
                     <h4 className="text-lg sm:text-xl font-medium text-cyan-200 mb-1 sm:mb-2">
-                      Ask about your document
+                      How can I help you?
                     </h4>
                     <p className="text-cyan-100 max-w-md text-xs sm:text-sm">
-                      I can help you understand, improve, and analyze your
-                      document. Try asking questions about its content,
-                      structure, or suggestions for improvements.
+                      Ask about your document, I can analyze its content,
+                      structure, or suggestions for your questions .
                     </p>
-                    <div className="mt-4 sm:mt-6 text-left w-full max-w-md">
-                      <p className="text-xs sm:text-sm font-medium text-cyan-300 mb-2 sm:mb-3">
-                        Example questions:
-                      </p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-                        <div className="bg-slate-800 p-2 sm:p-3 rounded-lg shadow-sm border border-slate-700 text-xs sm:text-sm">
-                          <p className="text-cyan-400">
-                            • What's the main color scheme?
-                          </p>
-                        </div>
-                        <div className="bg-slate-800 p-2 sm:p-3 rounded-lg shadow-sm border border-slate-700 text-xs sm:text-sm">
-                          <p className="text-cyan-400">
-                            • How can I improve performance?
-                          </p>
-                        </div>
-                        <div className="bg-slate-800 p-2 sm:p-3 rounded-lg shadow-sm border border-slate-700 text-xs sm:text-sm">
-                          <p className="text-cyan-400">
-                            • Show me the layout structure
-                          </p>
-                        </div>
-                        <div className="bg-slate-800 p-2 sm:p-3 rounded-lg shadow-sm border border-slate-700 text-xs sm:text-sm">
-                          <p className="text-cyan-400">
-                            • Summarize the key features
-                          </p>
-                        </div>
-                      </div>
-                    </div>
                   </div>
                 ) : (
                   <div className="space-y-3 sm:space-y-4">

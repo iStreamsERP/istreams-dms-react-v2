@@ -4,14 +4,12 @@ import { Outlet } from "react-router-dom";
 
 export const UploadLayout = () => {
   return (
-    <div className="relative h-screen bg-slate-100 text-2xl transition-colors dark:bg-slate-950 overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">
       {/* Overlay Header */}
-      <div className="absolute top-0 left-0 right-0 z-50">
-        <UploadHeader />
-      </div>
+      <UploadHeader />
 
       {/* Main content gets full height, header overlays on top */}
-      <main className="relative h-full">
+      <main className="flex flex-col items-center justify-center relative">
         <Outlet />
         <Toaster />
       </main>
