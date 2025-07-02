@@ -27,7 +27,7 @@ export const UploadHeader = () => {
     <header className="w-full flex items-center justify-between px-4 py-1 h-[8vh]">
       {/* Logo */}
       <Link to="/" className="flex items-center gap-x-3">
-        <img src={logoDark} alt="Logo" className="h-8 dark" />
+        <img src={logoDark} alt="Logo" className="h-10 dark" />
       </Link>
 
       {/* User Info */}

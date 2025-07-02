@@ -9,6 +9,7 @@ import {
   LayoutGrid,
   LibraryBig,
   ShieldUser,
+  Upload,
   Users,
 } from "lucide-react";
 
@@ -23,7 +24,7 @@ export const getNavbarLinks = (isAdmin) => [
       },
       {
         label: "Upload",
-        icon: Home,
+        icon: Upload,
         path: "/upload-document",
       },
       ...(isAdmin

@@ -1,6 +1,9 @@
+import { DefaultLayout } from "@/layouts/DefaultLayout";
+import { UploadLayout } from "@/layouts/UploadLayout";
 import CategoryAccessRightsPage from "@/pages/CategoryAccessRightsPage";
 import CategoryMasterPage from "@/pages/CategoryMasterPage";
 import CategoryViewPage from "@/pages/CategoryViewPage";
+import DashboardPage from "@/pages/DashboardPage";
 import DocumentListPage from "@/pages/DocumentListPage";
 import DocumentViewPage from "@/pages/DocumentViewPage";
 import ForgetPasswordPage from "@/pages/ForgetPasswordPage";
@@ -12,16 +15,12 @@ import TaskPage from "@/pages/TaskPage";
 import TaskViewPage from "@/pages/TaskView";
 import TeamsPage from "@/pages/TeamsPage";
 import TimeSheetPage from "@/pages/TimeSheetPage";
+import { UploadDocument } from "@/pages/UploadDocument";
 import UserAccessRightsPage from "@/pages/UserAccessRightsPage";
 import UserListPage from "@/pages/UserListPage";
 import UserRolePage from "@/pages/UserRolePage ";
 import { createBrowserRouter } from "react-router-dom";
 import ProtectedRoute from "./ProtectedRoute";
-import { DefaultLayout } from "@/layouts/DefaultLayout";
-import DashboardPage from "@/pages/DashboardPage";
-import { UploadDocument } from "@/pages/UploadDocument";
-import { UploadLayout } from "@/layouts/UploadLayout";
-import V2UploadDocument from "@/pages/V2UploadDocument";
 
 const router = createBrowserRouter([
   {
@@ -35,10 +34,6 @@ const router = createBrowserRouter([
   {
     path: "/forget-password",
     element: <ForgetPasswordPage />,
-  },
-  {
-    path: "/upload-document-v2",
-    element: <V2UploadDocument />,
   },
   {
     path: "/upload-document",

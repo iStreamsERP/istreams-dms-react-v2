@@ -1,17 +1,26 @@
-// src/components/AnimatedDropzone.tsx
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import axios from "axios";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Check,
   ChevronLeft,
   ClipboardCheck,
   CloudUpload,
-  Ellipsis,
   FileText,
   Languages,
   Loader2,
   MessageSquare,
+  ScanSearch,
   Send,
+  SquarePen,
   Upload,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -20,7 +29,6 @@ export const UploadDocument = () => {
   const [isDragActive, setIsDragActive] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isUploadComplete, setIsUploadComplete] = useState(false);
-  const [progress, setProgress] = useState(0);
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [activeTab, setActiveTab] = useState("summary");
   const [messages, setMessages] = useState([]);
@@ -29,52 +37,16 @@ export const UploadDocument = () => {
   const chatEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const dropAreaRef = useRef(null);
+  const [file, setFile] = useState(null);
+  const [analysisSummary, setAnalysisSummary] = useState([]);
+  const [translatedContent, setTranslatedContent] = useState("");
+  const [isAnalysisModalOpen, setIsAnalysisModalOpen] = useState(false); // Renamed for clarity
+  const [analysisQuestion, setAnalysisQuestion] = useState(""); // Single question for analysis
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+  const [isLoadingTranslation, setIsLoadingTranslation] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState(null);
 
-  // Mock analysis data
-  const analysisData = [
-    "Document contains 5 sections with clear headings",
-    "3 responsive layouts detected in CSS files",
-    "JavaScript bundle size is 124KB (optimization recommended)",
-    "Found 8 accessibility issues (contrast ratios)",
-    "No deprecated HTML tags detected",
-    "Lighthouse score: 82/100 (Performance)",
-  ];
-
-  // Mock document content
-  const documentContent = `
-# Project Documentation
-
-## Overview
-This project implements a modern web application using React and Tailwind CSS. The application features a drag-and-drop interface for document uploads and includes AI-powered analysis capabilities.
-
-## Key Features
-- Responsive design with mobile-first approach
-- Animated transitions using Framer Motion
-- Real-time document analysis
-- AI-powered chat assistant
-- Multi-language translation support
-
-## Technical Details
-- Built with React 18 and TypeScript
-- Styled with Tailwind CSS and ShadCN components
-- State management using React hooks
-- File processing via custom API endpoints
-
-## Performance Metrics
-- Initial load time: 1.2s
-- Bundle size: 124KB (JS), 45KB (CSS)
-- Accessibility score: 92/100
-- SEO optimization: fully compliant
-  `;
-
-  // Mock chat responses
-  const chatResponses = [
-    "The main theme color is #0ea5e9 based on your CSS variables.",
-    "The largest component is the hero section at 45% of the viewport height.",
-    "You have 3 media queries for responsive design: mobile, tablet, and desktop.",
-    "The document uses Flexbox for layout and CSS Grid for the card sections.",
-    "The main JavaScript bundle is 124KB. Consider code splitting for better performance.",
-  ];
+  const API_URL = "https://apps.istreams-erp.com:4491/api/OpenAI/ask-from-file";
 
   const handleDrag = (e) => {
     e.preventDefault();
@@ -90,65 +62,95 @@ This project implements a modern web application using React and Tailwind CSS. T
   const handleDrop = (e) => {
     e.preventDefault();
     e.stopPropagation();
-
     setIsDragActive(false);
 
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      simulateUpload(e.dataTransfer.files);
+      handleFileUpload(e.dataTransfer.files);
     }
   };
 
   const handleChange = (e) => {
     e.preventDefault();
-
     if (e.target.files && e.target.files[0]) {
-      simulateUpload(e.target.files);
+      handleFileUpload(e.target.files);
     }
   };
 
-  const simulateUpload = (files) => {
+  const handleFileUpload = async (files) => {
+    const selectedFile = files[0];
+    setFile(selectedFile);
+    setPreviewUrl(URL.createObjectURL(selectedFile));
     setIsUploading(true);
-    setProgress(0);
-    setShowAnalysis(false);
     setIsUploadComplete(false);
-
-    // Simulate upload progress
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setTimeout(() => {
-            setIsUploading(false);
-            setIsUploadComplete(true);
-            setTimeout(() => {
-              setShowAnalysis(true);
-            }, 1000);
-          }, 500);
-          return 100;
-        }
-        return prev + 10;
-      });
-    }, 200);
-  };
-
-  const onButtonClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleReset = () => {
     setShowAnalysis(false);
-    setIsUploadComplete(false);
+    setAnalysisSummary([]);
+    setTranslatedContent("");
     setMessages([]);
-    setIsChatOpen(false);
+
+    try {
+      // 1. Upload file and translate immediately
+      const translateFormData = new FormData();
+      translateFormData.append("File", selectedFile);
+      translateFormData.append(
+        "Question",
+        "Translate the entire document to English."
+      );
+
+      setIsLoadingTranslation(true);
+
+      const translateRes = await axios.post(API_URL, translateFormData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      setTranslatedContent(translateRes.data);
+
+      setIsUploading(false);
+      setIsUploadComplete(true);
+      setShowAnalysis(true);
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      setIsUploading(false);
+      setIsLoadingTranslation(false);
+    } finally {
+      setIsLoadingTranslation(false);
+    }
   };
 
-  const handleSendMessage = () => {
-    if (!inputValue.trim()) return;
+  const generateAnalysisSummary = async () => {
+    if (!file || !analysisQuestion.trim()) return;
 
-    // Add user message
-    const newMessage = {
+    setIsGeneratingSummary(true);
+    try {
+      const formData = new FormData();
+      formData.append("File", file);
+      formData.append("Question", analysisQuestion);
+
+      const res = await axios.post(API_URL, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      // Parse the response as array of points
+      const summaryPoints = res.data
+        .split("\n")
+        .filter((line) => line.trim() !== "")
+        .map((line) => line.replace(/^- /, "").trim());
+
+      setAnalysisSummary(summaryPoints);
+      setIsAnalysisModalOpen(false);
+    } catch (error) {
+      console.error("Error generating summary:", error);
+    } finally {
+      setIsGeneratingSummary(false);
+    }
+  };
+
+  const askQuestion = async (question) => {
+    if (!file || !question.trim()) return;
+
+    // Add user message to chat
+    const userMessage = {
       id: messages.length + 1,
-      text: inputValue,
+      text: question,
       sender: "user",
       timestamp: new Date().toLocaleTimeString([], {
         hour: "2-digit",
@@ -156,24 +158,51 @@ This project implements a modern web application using React and Tailwind CSS. T
       }),
     };
 
-    setMessages((prev) => [...prev, newMessage]);
-    setInputValue("");
+    setMessages((prev) => [...prev, userMessage]);
 
-    // Simulate AI response after delay
-    setTimeout(() => {
-      const randomResponse =
-        chatResponses[Math.floor(Math.random() * chatResponses.length)];
+    try {
+      const formData = new FormData();
+      formData.append("File", file);
+      formData.append("Question", question);
+
+      const res = await axios.post(API_URL, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      // Add AI response to chat
       const aiMessage = {
         id: messages.length + 2,
-        text: randomResponse,
+        text: res.data,
         sender: "ai",
         timestamp: new Date().toLocaleTimeString([], {
           hour: "2-digit",
           minute: "2-digit",
         }),
       };
+
       setMessages((prev) => [...prev, aiMessage]);
-    }, 1000);
+    } catch (error) {
+      console.error("Error asking question:", error);
+
+      // Add error message to chat
+      const errorMessage = {
+        id: messages.length + 2,
+        text: "Sorry, I couldn't process your request. Please try again.",
+        sender: "ai",
+        timestamp: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      };
+
+      setMessages((prev) => [...prev, errorMessage]);
+    }
+  };
+
+  const handleSendMessage = () => {
+    if (!inputValue.trim()) return;
+    askQuestion(inputValue);
+    setInputValue("");
   };
 
   const handleKeyDown = (e) => {
@@ -190,10 +219,19 @@ This project implements a modern web application using React and Tailwind CSS. T
     }
   }, [messages]);
 
+  const handleReset = () => {
+    setShowAnalysis(false);
+    setIsUploadComplete(false);
+    setMessages([]);
+    setIsChatOpen(false);
+    setFile(null);
+    setAnalysisSummary([]);
+    setTranslatedContent("");
+  };
+
   // Chat Modal component for mobile
   const ChatModal = () => (
     <div className="fixed inset-0 z-50 bg-slate-900 flex flex-col md:hidden">
-      {/* Modal Header */}
       <div className="p-3 bg-gradient-to-r from-cyan-800 to-teal-800 text-white flex items-center gap-3">
         <button
           onClick={() => setIsChatOpen(false)}
@@ -204,7 +242,6 @@ This project implements a modern web application using React and Tailwind CSS. T
         <h3 className="text-lg font-semibold">Document Assistant</h3>
       </div>
 
-      {/* Chat Messages Area */}
       <div className="flex-1 overflow-y-auto p-3 sm:p-4 bg-gradient-to-b from-slate-800/50 to-slate-900/50">
         {messages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center p-3 sm:p-4">
@@ -219,31 +256,6 @@ This project implements a modern web application using React and Tailwind CSS. T
               asking questions about its content, structure, or suggestions for
               improvements.
             </p>
-            <div className="mt-4 sm:mt-6 text-left w-full max-w-md">
-              <p className="text-xs sm:text-sm font-medium text-cyan-300 mb-2 sm:mb-3">
-                Example questions:
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-                <div className="bg-slate-800 p-2 sm:p-3 rounded-lg shadow-sm border border-slate-700 text-xs sm:text-sm">
-                  <p className="text-cyan-400">
-                    • What's the main color scheme?
-                  </p>
-                </div>
-                <div className="bg-slate-800 p-2 sm:p-3 rounded-lg shadow-sm border border-slate-700 text-xs sm:text-sm">
-                  <p className="text-cyan-400">
-                    • How can I improve performance?
-                  </p>
-                </div>
-                <div className="bg-slate-800 p-2 sm:p-3 rounded-lg shadow-sm border border-slate-700 text-xs sm:text-sm">
-                  <p className="text-cyan-400">
-                    • Show me the layout structure
-                  </p>
-                </div>
-                <div className="bg-slate-800 p-2 sm:p-3 rounded-lg shadow-sm border border-slate-700 text-xs sm:text-sm">
-                  <p className="text-cyan-400">• Summarize the key features</p>
-                </div>
-              </div>
-            </div>
           </div>
         ) : (
           <div className="space-y-3 sm:space-y-4">
@@ -281,7 +293,6 @@ This project implements a modern web application using React and Tailwind CSS. T
         )}
       </div>
 
-      {/* Input Area */}
       <div className="p-3 border-t border-slate-700 bg-slate-800">
         <div className="flex gap-1 sm:gap-2">
           <input
@@ -309,6 +320,130 @@ This project implements a modern web application using React and Tailwind CSS. T
       </div>
     </div>
   );
+
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case "summary":
+        return (
+          <div className="space-y-4 sm:space-y-6">
+            <div className=" p-2 sm:p-4">
+              <h3 className="text-base sm:text-lg font-semibold text-cyan-200 mb-1 sm:mb-2 flex items-center justify-end gap-2">
+                <Button
+                  variant="ghost"
+                  onClick={() => setIsAnalysisModalOpen(true)}
+                >
+                  <SquarePen />
+                </Button>
+              </h3>
+              <div className="space-y-3 sm:space-y-4">
+                {analysisSummary.length > 0 ? (
+                  analysisSummary.map((item, index) => (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                      className="flex items-start bg-slate-800 p-3 sm:p-4 rounded-lg shadow-sm text-xs sm:text-sm border border-slate-700"
+                    >
+                      <div className="mt-1 w-2 h-2 bg-cyan-400 rounded-full mr-2 sm:mr-3"></div>
+                      <p className="text-slate-200">{item}</p>
+                    </motion.div>
+                  ))
+                ) : (
+                  <div className="text-center py-8">
+                    <FileText className="mx-auto w-12 h-12 text-cyan-400 mb-4" />
+                    <h4 className="text-lg font-medium text-cyan-200 mb-2">
+                      No Analysis Generated
+                    </h4>
+                    <p className="text-slate-400 mb-4">
+                      Click the button below to generate analysis summary
+                    </p>
+                    <Button
+                      onClick={() => setIsAnalysisModalOpen(true)}
+                      className="bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500"
+                    >
+                      Generate Summary
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+
+      case "translation":
+        return (
+          <div className=" p-2 sm:p-4 prose max-w-none bg-slate-800 overflow-auto max-h-[500px] text-xs sm:text-sm">
+            {isLoadingTranslation ? (
+              <div className="flex justify-center items-center h-32">
+                <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
+                <span className="ml-2 text-slate-300">
+                  Translating document...
+                </span>
+              </div>
+            ) : translatedContent ? (
+              <pre className="whitespace-pre-wrap font-sans text-slate-200">
+                {translatedContent}
+              </pre>
+            ) : (
+              <div className="text-slate-400 italic">
+                Translation will appear here when available
+              </div>
+            )}
+          </div>
+        );
+
+      case "preview":
+        if (!previewUrl || !file) return null;
+
+        const mimeType = file.type;
+
+        if (mimeType.startsWith("image/")) {
+          return (
+            <img
+              src={previewUrl}
+              alt="Image Preview"
+              style={{ maxWidth: "100%", maxHeight: "500px" }}
+            />
+          );
+        }
+
+        if (mimeType === "application/pdf") {
+          return (
+            <iframe
+              src={previewUrl}
+              width="100%"
+              height="500px"
+              title="PDF Preview"
+            />
+          );
+        }
+
+        if (mimeType.startsWith("text/")) {
+          return (
+            <iframe
+              src={previewUrl}
+              width="100%"
+              height="300px"
+              title="Text File Preview"
+            />
+          );
+        }
+
+        // Optional: Fallback for unsupported or other file types
+        return (
+          <div>
+            <p>Preview not supported for this file type.</p>
+            <a href={previewUrl} target="_blank" rel="noopener noreferrer">
+              Download File
+            </a>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
 
   return (
     <div className="h-[92vh] w-full">
@@ -364,14 +499,13 @@ This project implements a modern web application using React and Tailwind CSS. T
             onChange={handleChange}
           />
 
-          {/* Vibrant Radial Upload Area */}
           <div
             ref={dropAreaRef}
             onDragEnter={handleDrag}
             onDragOver={handleDrag}
             onDragLeave={handleDrag}
             onDrop={handleDrop}
-            onClick={onButtonClick}
+            onClick={() => fileInputRef.current?.click()}
             className="relative rounded-full w-48 h-48 sm:w-64 sm:h-64 md:w-72 md:h-72 lg:w-80 lg:h-80 flex items-center justify-center cursor-pointer transition-all duration-300 ease-in-out overflow-hidden"
             style={{
               background: isDragActive
@@ -379,45 +513,6 @@ This project implements a modern web application using React and Tailwind CSS. T
                 : "radial-gradient(circle, rgba(56,189,248,0.1) 0%, rgba(20,184,166,0.2) 100%), radial-gradient(circle at 30% 30%, rgba(6,182,212,0.4) 0%, rgba(8,145,178,0.2) 20%, transparent 60%), #0f172a",
             }}
           >
-            {/* Animated gradient rings */}
-            <motion.div
-              className="absolute inset-0 rounded-full"
-              animate={{
-                scale: [1, 1.1, 1],
-                opacity: [0.3, 0.6, 0.3],
-              }}
-              transition={{
-                duration: 4,
-                repeat: Infinity,
-                ease: "easeInOut",
-              }}
-              style={{
-                background:
-                  "radial-gradient(circle, rgba(103,232,249,0.3) 0%, transparent 70%)",
-              }}
-            />
-
-            {/* Pulsing glow effect */}
-            {isDragActive && (
-              <motion.div
-                className="absolute inset-0 rounded-full"
-                animate={{
-                  opacity: [0, 0.4, 0],
-                  scale: [1, 1.2, 1.3],
-                }}
-                transition={{
-                  duration: 2,
-                  repeat: Infinity,
-                  repeatType: "loop",
-                }}
-                style={{
-                  background:
-                    "radial-gradient(circle, rgba(103,232,249,0.6) 0%, transparent 70%)",
-                }}
-              />
-            )}
-
-            {/* Uploading state */}
             {isUploading ? (
               <motion.div
                 initial={{ opacity: 0 }}
@@ -425,29 +520,14 @@ This project implements a modern web application using React and Tailwind CSS. T
                 className="flex flex-col items-center justify-center w-full h-full"
               >
                 <div className="relative w-24 h-24 sm:w-32 sm:h-32 md:w-36 md:h-36 lg:w-40 lg:h-40 mb-3 sm:mb-4">
-                  {/* Progress track */}
-                  <div className="absolute inset-0 rounded-full border-3 sm:border-4 border-slate-700 opacity-50"></div>
-
-                  {/* Progress indicator */}
-                  <motion.div
-                    className="absolute inset-0 rounded-full border-3 sm:border-4 border-cyan-400 border-t-transparent border-r-transparent"
-                    style={{
-                      rotate: `${progress * 3.6}deg`,
-                      transformOrigin: "center",
-                    }}
-                  />
-
                   <div className="absolute inset-2 sm:inset-3 md:inset-4 flex items-center justify-center">
                     <Loader2 className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 text-cyan-400 animate-spin" />
                   </div>
                 </div>
 
                 <h3 className="text-sm sm:text-base md:text-lg font-medium text-cyan-100 mb-1 sm:mb-2">
-                  Uploading files...
+                  Analyzing document...
                 </h3>
-                <span className="text-xl sm:text-2xl font-bold text-cyan-300">
-                  {progress}%
-                </span>
               </motion.div>
             ) : (
               <motion.div
@@ -455,7 +535,6 @@ This project implements a modern web application using React and Tailwind CSS. T
                 animate={{ opacity: 1, scale: 1 }}
                 className="flex flex-col items-center justify-center w-full h-full p-6 sm:p-8 md:p-10"
               >
-                {/* Floating cloud icon */}
                 <motion.div
                   className="relative w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 mb-4 sm:mb-6"
                   animate={{
@@ -472,44 +551,6 @@ This project implements a modern web application using React and Tailwind CSS. T
                   <div className="absolute inset-2 sm:inset-3 md:inset-4 flex items-center justify-center">
                     <CloudUpload className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 text-cyan-300" />
                   </div>
-
-                  {/* Floating particles */}
-                  <motion.div
-                    className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-4 h-4 sm:w-6 sm:h-6 bg-cyan-400 rounded-full"
-                    animate={{
-                      scale: [1, 1.2, 1],
-                      opacity: [0.7, 1, 0.7],
-                    }}
-                    transition={{
-                      duration: 2,
-                      repeat: Infinity,
-                      delay: 0.2,
-                    }}
-                  />
-                  <motion.div
-                    className="absolute -bottom-1 -left-1 sm:-bottom-2 sm:-left-2 w-3 h-3 sm:w-4 sm:h-4 bg-teal-400 rounded-full"
-                    animate={{
-                      scale: [1, 1.3, 1],
-                      opacity: [0.5, 0.8, 0.5],
-                    }}
-                    transition={{
-                      duration: 2.5,
-                      repeat: Infinity,
-                      delay: 0.4,
-                    }}
-                  />
-                  <motion.div
-                    className="absolute top-0 right-2 sm:right-4 w-2 h-2 sm:w-3 sm:h-3 bg-cyan-300 rounded-full"
-                    animate={{
-                      y: [0, -8, 0],
-                      opacity: [0.6, 1, 0.6],
-                    }}
-                    transition={{
-                      duration: 3,
-                      repeat: Infinity,
-                      delay: 0.6,
-                    }}
-                  />
                 </motion.div>
 
                 <motion.h3
@@ -523,10 +564,6 @@ This project implements a modern web application using React and Tailwind CSS. T
                 >
                   {isDragActive ? "Drop to analyze" : "Drag & drop files"}
                 </motion.h3>
-
-                <p className="text-xs sm:text-sm text-cyan-200 mb-2 sm:mb-3 md:mb-4 text-center">
-                  {isDragActive ? "Release to upload your project" : ""}
-                </p>
 
                 <motion.button
                   whileHover={{ scale: 1.05 }}
@@ -547,31 +584,40 @@ This project implements a modern web application using React and Tailwind CSS. T
             className="mt-4 sm:mt-6 md:mt-8 text-center text-cyan-200 max-w-md"
           >
             <p className="mb-1 text-xs sm:text-sm">
-              AI-powered analysis for your documents and code
+              Smart AI assistance for managing and analyzing your documents{" "}
             </p>
             <p className="text-xs opacity-75">
-              Instant insights • Code suggestions • Chat assistant
+              Auto-tagging • Context-aware search • Document insights
             </p>
           </motion.div>
         </div>
       ) : (
-        <div className="flex flex-col bg-slate-900 h-full">
-          {/* Main Content */}
+        <div className="flex flex-col  h-full">
           <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
             {/* Left section - Document analysis */}
             <div className="w-full md:w-1/2 h-full border-b md:border-b-0 md:border-r border-slate-700 flex flex-col">
-              {/* Tabs */}
               <div className="flex border-b border-slate-700">
                 <button
                   className={`flex-1 px-3 py-2 sm:px-4 sm:py-3 font-medium flex items-center justify-center gap-1 sm:gap-2 text-xs sm:text-sm ${
                     activeTab === "summary"
-                      ? "text-cyan-300 border-b-2 border-cyan-400 bg-slate-800"
+                      ? "text-cyan-300 border-b-2 border-cyan-400 "
                       : "text-slate-400 hover:text-slate-300 hover:bg-slate-800"
                   }`}
                   onClick={() => setActiveTab("summary")}
                 >
                   <ClipboardCheck className="w-4 h-4 sm:w-5 sm:h-5" />
                   Analysis Summary
+                </button>
+                <button
+                  className={`flex-1 px-3 py-1 sm:px-4 sm:py-2 font-medium flex items-center justify-center gap-1 sm:gap-2 text-xs sm:text-sm ${
+                    activeTab === "preview"
+                      ? "text-cyan-300 border-b-2 border-cyan-400 bg-slate-800"
+                      : "text-slate-400 hover:text-slate-300 hover:bg-slate-800"
+                  }`}
+                  onClick={() => setActiveTab("preview")}
+                >
+                  <ScanSearch className="w-4 h-4 sm:w-5 sm:h-5" />
+                  Preview
                 </button>
                 <button
                   className={`flex-1 px-3 py-2 sm:px-4 sm:py-3 font-medium flex items-center justify-center gap-1 sm:gap-2 text-xs sm:text-sm ${
@@ -586,71 +632,25 @@ This project implements a modern web application using React and Tailwind CSS. T
                 </button>
               </div>
 
-              {/* Tab Content */}
-              <div className="flex-1 overflow-auto p-3 sm:p-4 md:p-6 bg-gradient-to-br from-slate-800 to-slate-900">
-                {activeTab === "summary" ? (
-                  <div className="space-y-4 sm:space-y-6">
-                    <div className="bg-gradient-to-r from-cyan-900/50 to-teal-900/50 rounded-xl p-4 sm:p-6 shadow-lg border border-slate-700">
-                      <h3 className="text-base sm:text-lg font-semibold text-cyan-200 mb-3 sm:mb-4 flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <ClipboardCheck className="text-cyan-400 w-4 h-4 sm:w-5 sm:h-5" />
-                          Analysis Summary
-                        </div>
-
-                        <Button variant="ghost" onClick={() => {}}>
-                          <Ellipsis />
-                        </Button>
-                      </h3>
-                      <div className="space-y-3 sm:space-y-4">
-                        {analysisData.slice(0, 3).map((item, index) => (
-                          <motion.div
-                            key={index}
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: index * 0.1 }}
-                            className="flex items-start bg-slate-800 p-3 sm:p-4 rounded-lg shadow-sm text-xs sm:text-sm border border-slate-700"
-                          >
-                            <div className="mt-1 w-2 h-2 bg-cyan-400 rounded-full mr-2 sm:mr-3"></div>
-                            <p className="text-slate-200">{item}</p>
-                          </motion.div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="bg-gradient-to-r from-cyan-900/50 to-teal-900/50 rounded-xl p-4 sm:p-6 shadow-lg border border-slate-700">
-                    <h3 className="text-base sm:text-lg font-semibold text-cyan-200 mb-3 sm:mb-4 flex items-center gap-2">
-                      <Languages className="text-cyan-400 w-4 h-4 sm:w-5 sm:h-5" />
-                      Translated to English
-                    </h3>
-                    <div className="prose max-w-none bg-slate-800 p-4 sm:p-6 rounded-lg shadow-sm overflow-auto max-h-[500px] text-xs sm:text-sm border border-slate-700">
-                      <pre className="whitespace-pre-wrap font-sans text-slate-200">
-                        {documentContent}
-                      </pre>
-                    </div>
-                  </div>
-                )}
+              <div className="flex-1 overflow-auto bg-gradient-to-br from-slate-800 to-slate-900">
+                {renderTabContent()}
               </div>
             </div>
 
-            {/* Right section - Chat (hidden on mobile) */}
+            {/* Right section - Chat */}
             <div className="hidden md:flex w-full md:w-1/2 flex-col bg-gradient-to-b from-slate-900 to-slate-800">
-              <div className="px-4 py-1 bg-gradient-to-r from-cyan-800 to-teal-800 text-white flex items-center justify-between gap-2 sm:gap-3">
-                <div className=" flex items-center gap-2 sm:gap-3">
-                  <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5" />
-                  <h3 className="text-base sm:text-lg font-semibold">
+              <div className="px-4 py-1.5 bg-gradient-to-r from-cyan-800 to-teal-800 text-white flex items-center justify-between gap-2 sm:gap-3">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <MessageSquare className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <h3 className="text-base sm:text-sm font-semibold">
                     Document Assistant
                   </h3>
                 </div>
 
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={handleReset}
-                  className="flex items-center gap-2 px-2 py-1.5 sm:px-4 sm:py-2 bg-cyan-600 text-white rounded-lg font-medium text-sm sm:text-base hover:bg-cyan-500"
-                >
+                <Button variant="ghost" onClick={handleReset}>
                   <Upload className="w-3 h-3 sm:w-4 sm:h-4" />
-                </motion.button>
+                  <span>New Document</span>
+                </Button>
               </div>
 
               <div className="flex-1 overflow-y-auto p-3 sm:p-4 bg-gradient-to-b from-slate-800/50 to-slate-900/50">
@@ -664,7 +664,7 @@ This project implements a modern web application using React and Tailwind CSS. T
                     </h4>
                     <p className="text-cyan-100 max-w-md text-xs sm:text-sm">
                       Ask about your document, I can analyze its content,
-                      structure, or suggestions for your questions .
+                      structure, or suggestions for your questions.
                     </p>
                   </div>
                 ) : (
@@ -752,49 +752,51 @@ This project implements a modern web application using React and Tailwind CSS. T
       {/* Chat Modal (Mobile Only) */}
       {isChatOpen && <ChatModal />}
 
-      {/* Floating elements */}
-      {!showAnalysis && (
-        <>
-          <motion.div
-            className="absolute top-10 left-10 w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-cyan-500/20"
-            animate={{
-              y: [0, -20, 0],
-              scale: [1, 1.2, 1],
-            }}
-            transition={{
-              duration: 6,
-              repeat: Infinity,
-              ease: "easeInOut",
-            }}
-          />
-          <motion.div
-            className="absolute bottom-20 right-16 w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-teal-500/20"
-            animate={{
-              y: [0, 20, 0],
-              scale: [1, 1.3, 1],
-            }}
-            transition={{
-              duration: 7,
-              repeat: Infinity,
-              ease: "easeInOut",
-              delay: 0.5,
-            }}
-          />
-          <motion.div
-            className="absolute top-1/3 right-20 w-4 h-4 sm:w-6 sm:h-6 rounded-full bg-cyan-400/30"
-            animate={{
-              y: [0, -15, 0],
-              scale: [1, 1.1, 1],
-            }}
-            transition={{
-              duration: 5,
-              repeat: Infinity,
-              ease: "easeInOut",
-              delay: 1,
-            }}
-          />
-        </>
-      )}
+      {/* Analysis Summary Modal */}
+      <Dialog open={isAnalysisModalOpen} onOpenChange={setIsAnalysisModalOpen}>
+        <DialogContent className="sm:max-w-xl bg-slate-800 border-slate-700 text-slate-200">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ClipboardCheck className="text-cyan-400" />
+              <span>Generate Analysis Summary</span>
+            </DialogTitle>
+            <DialogDescription className="text-slate-400">
+              Enter your question to generate the analysis summary
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Textarea
+              value={analysisQuestion}
+              onChange={(e) => setAnalysisQuestion(e.target.value)}
+              placeholder="What would you like to know about this document? (e.g., Summarize key points, analyze structure, etc.)"
+              className="min-h-[150px] bg-slate-900 border-slate-700 text-slate-200"
+            />
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setIsAnalysisModalOpen(false)}
+                className="border-slate-700 text-slate-300 hover:bg-slate-700"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={generateAnalysisSummary}
+                disabled={isGeneratingSummary || !analysisQuestion.trim()}
+                className="bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500"
+              >
+                {isGeneratingSummary ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  "Generate Summary"
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
