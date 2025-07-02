@@ -775,7 +775,6 @@ export const UploadDocument = () => {
               <Button
                 variant="outline"
                 onClick={() => setIsAnalysisModalOpen(false)}
-                className="border-slate-700 text-slate-300 hover:bg-slate-700"
               >
                 Cancel
               </Button>

@@ -10,6 +10,7 @@ import {
   LibraryBig,
   ShieldUser,
   Upload,
+  UploadCloud,
   Users,
 } from "lucide-react";
 
@@ -21,11 +22,6 @@ export const getNavbarLinks = (isAdmin) => [
         label: "Dashboard",
         icon: Home,
         path: "/",
-      },
-      {
-        label: "Upload",
-        icon: Upload,
-        path: "/upload-document",
       },
       ...(isAdmin
         ? [
@@ -46,6 +42,11 @@ export const getNavbarLinks = (isAdmin) => [
   {
     title: "Documents",
     links: [
+      {
+        label: "Upload Document",
+        icon: UploadCloud,
+        path: "/upload-document",
+      },
       {
         label: "Document List",
         icon: FileText,

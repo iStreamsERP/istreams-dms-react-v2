@@ -11,11 +11,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, Settings2 } from "lucide-react";
+import { CloudMoon, CloudSun, LogOut, Settings2 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+import { useTheme } from "../theme-provider";
+import { Button } from "../ui/button";
 
 export const UploadHeader = () => {
   const { userData, logout } = useAuth();
+  const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -30,48 +33,60 @@ export const UploadHeader = () => {
         <img src={logoDark} alt="Logo" className="h-10 dark" />
       </Link>
 
-      {/* User Info */}
-      {userData && (
-        <DropdownMenu>
-          <DropdownMenuTrigger className="flex items-center gap-2 focus:outline-none">
-            <Avatar>
-              <AvatarImage
-                src={userData.userAvatar || ""}
-                alt={userData.userName || "User"}
-              />
-              <AvatarFallback>{userData.userName?.charAt(0)}</AvatarFallback>
-            </Avatar>
-          </DropdownMenuTrigger>
+      <div className="flex items-center gap-x-3">
+        <Button
+          variant="ghost"
+          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+        >
+          {theme === "dark" ? <CloudSun /> : <CloudMoon />}
+        </Button>
 
-          <DropdownMenuContent className="w-64 mt-2">
-            <DropdownMenuLabel>
-              <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium">{userData.userName}</p>
-                <p className="text-xs text-muted-foreground">
-                  {userData.userEmail}
-                </p>
-              </div>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
+        {/* User Info */}
+        {userData && (
+          <DropdownMenu>
+            <DropdownMenuTrigger className="flex items-center gap-2 focus:outline-none">
+              <Avatar>
+                <AvatarImage
+                  src={userData.userAvatar || ""}
+                  alt={userData.userName || "User"}
+                />
+                <AvatarFallback>{userData.userName?.charAt(0)}</AvatarFallback>
+              </Avatar>
+            </DropdownMenuTrigger>
 
-            <DropdownMenuGroup>
-              <DropdownMenuItem onClick={() => navigate("/profile")}>
-                Profile
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate("/account-settings")}>
-                <div className="flex justify-between items-center w-full">
-                  Account Settings <Settings2 size={16} />
+            <DropdownMenuContent className="w-64 mt-2">
+              <DropdownMenuLabel>
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium">{userData.userName}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {userData.userEmail}
+                  </p>
                 </div>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleLogout} className="text-red-600">
-                <div className="flex justify-between items-center w-full">
-                  Log out <LogOut size={16} />
-                </div>
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )}
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+
+              <DropdownMenuGroup>
+                <DropdownMenuItem onClick={() => navigate("/profile")}>
+                  Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/account-settings")}>
+                  <div className="flex justify-between items-center w-full">
+                    Account Settings <Settings2 size={16} />
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={handleLogout}
+                  className="text-red-600"
+                >
+                  <div className="flex justify-between items-center w-full">
+                    Log out <LogOut size={16} />
+                  </div>
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      </div>
     </header>
   );
 };

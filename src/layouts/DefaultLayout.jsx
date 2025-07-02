@@ -2,9 +2,10 @@ import { Toaster } from "@/components/ui/toaster";
 import { cn } from "@/lib/utils";
 import { useMediaQuery } from "@uidotdev/usehooks";
 import { useEffect, useRef, useState } from "react";
-import { Outlet } from "react-router-dom";
+import { Link, Outlet } from "react-router-dom";
 import { useClickOutside } from "../hooks/use-click-outside";
 import { Sidebar, DefaultHeader, Footer } from "@/components";
+import { Bot, CloudUpload } from "lucide-react";
 
 export const DefaultLayout = () => {
   const isDesktopDevice = useMediaQuery("(min-width: 768px)");
@@ -39,6 +40,26 @@ export const DefaultLayout = () => {
         <DefaultHeader collapsed={collapsed} setCollapsed={setCollapsed} />
         <main className="h-[calc(100vh-108px)] overflow-y-auto overflow-x-hidden p-6">
           <Outlet />
+
+          <div className="fixed bottom-8 right-8 z-50">
+            <Link
+              to="/upload-document"
+              className="group flex items-center rounded-full bg-gradient-to-r from-indigo-500 to-blue-600 p-4 text-white shadow-lg transition-all duration-300 ease-in-out hover:from-indigo-600 hover:to-blue-700 hover:shadow-xl"
+              aria-label="Upload Document"
+            >
+              {/* Icon with rotation animation on hover */}
+              <CloudUpload
+                size={24}
+                className="shrink-0 transform transition-transform duration-300 group-hover:rotate-90 group-hover:scale-110"
+              />
+
+              {/* Expanding label */}
+              <span className="ml-0 font-semibold max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-300 group-hover:ml-2 group-hover:max-w-[200px] group-hover:opacity-100 text-sm">
+                Upload document
+              </span>
+            </Link>
+          </div>
+
           <Toaster />
         </main>
         <Footer />
