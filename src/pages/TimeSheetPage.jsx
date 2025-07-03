@@ -1,326 +1,57 @@
+import PendingTaskComponent from "@/components/timeSheet/PendingTaskComponent";
+import TableComponent from "@/components/timeSheet/TableComponent";
+import TimeSheetComponent from "@/components/timeSheet/TimeSheetComponent";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
-  AlertTriangleIcon,
-  Rotate3DIcon,
-  Trash2Icon,
-  XIcon,
-} from "lucide-react";
-import React, { useEffect, useRef, useState } from "react";
-import { DayPicker } from "react-day-picker";
-import "react-day-picker/dist/style.css";
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { callSoapService } from "@/services/callSoapService";
+import { convertDataModelToStringData } from "@/utils/dataModelConverter";
+import { AlertTriangleIcon } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 
-// Utility: Split an event into hour blocks with unique ids
-function splitEventToHourBlocks(event) {
-  const blocks = [];
-  const startTotal = event.START_TIME * 60 + Number(event.startMinute);
-  const endTotal = event.END_TIME * 60 + Number(event.endMinute);
-
-  let blockStart = startTotal;
-  while (blockStart < endTotal) {
-    const nextHour = Math.floor(blockStart / 60) + 1;
-    const blockEnd = Math.min(nextHour * 60, endTotal);
-    const startHour = Math.floor(blockStart / 60);
-    const startMinute = blockStart % 60;
-    const endHour =
-      Math.floor((blockEnd - 1) / 60) + (blockEnd % 60 === 0 ? 0 : 1);
-    const endMinute = blockEnd === endTotal ? event.endMinute : 0;
-
-    blocks.push({
-      ...event,
-      id: `${event.id}_${startHour}_${startMinute}`,
-      blockParentId: event.id,
-      blockStartHour: startHour,
-      blockStartMinute: startMinute,
-      blockEndHour: blockEnd === endTotal ? event.END_TIME : startHour + 1,
-      blockEndMinute: endMinute,
-    });
-
-    blockStart = blockEnd;
-  }
-  return blocks;
-}
-
 export default function TimeSheetPage() {
-  const [tasks, setTasks] = useState([
-    {
-      TASK_ID: 1,
-      TASK_NAME: "Database Optimization",
-      dmsNo: "30000001",
-      status: "Completed",
-      PROJECT_NO: "P1001",
-    },
-    {
-      TASK_ID: 2,
-      TASK_NAME: "Firewall Configuration",
-      dmsNo: "30000002",
-      status: "In Progress",
-      PROJECT_NO: "P1002",
-    },
-    {
-      TASK_ID: 3,
-      TASK_NAME: "Employee Training Program",
-      dmsNo: "30000003",
-      status: "Pending",
-      PROJECT_NO: "P1003",
-    },
-    {
-      TASK_ID: 4,
-      TASK_NAME: "Server Maintenance",
-      dmsNo: "30000004",
-      status: "Completed",
-      PROJECT_NO: "P1004",
-    },
-    {
-      TASK_ID: 5,
-      TASK_NAME: "Mobile App Development",
-      dmsNo: "30000005",
-      status: "In Progress",
-      PROJECT_NO: "P1005",
-    },
-    {
-      TASK_ID: 6,
-      TASK_NAME: "Data Migration",
-      dmsNo: "30000006",
-      status: "Pending",
-      PROJECT_NO: "P1006",
-    },
-    {
-      TASK_ID: 7,
-      TASK_NAME: "Network Security Audit",
-      dmsNo: "30000007",
-      status: "Completed",
-      PROJECT_NO: "P1007",
-    },
-    {
-      TASK_ID: 8,
-      TASK_NAME: "CRM Implementation",
-      dmsNo: "30000008",
-      status: "In Progress",
-      PROJECT_NO: "P1008",
-    },
-    {
-      TASK_ID: 9,
-      TASK_NAME: "Budget Planning",
-      dmsNo: "30000009",
-      status: "Pending",
-      PROJECT_NO: "P1009",
-    },
-    {
-      TASK_ID: 10,
-      TASK_NAME: "Cloud Storage Setup",
-      dmsNo: "30000010",
-      status: "Completed",
-      PROJECT_NO: "P1010",
-    },
-    {
-      TASK_ID: 11,
-      TASK_NAME: "UI/UX Redesign",
-      dmsNo: "30000011",
-      status: "In Progress",
-      PROJECT_NO: "P1011",
-    },
-    {
-      TASK_ID: 12,
-      TASK_NAME: "Vendor Contract Review",
-      dmsNo: "30000012",
-      status: "Pending",
-      PROJECT_NO: "P1012",
-    },
-    {
-      TASK_ID: 14,
-      TASK_NAME: "API Integration",
-      dmsNo: "30000014",
-      status: "In Progress",
-      PROJECT_NO: "P1014",
-    },
-    {
-      TASK_ID: 15,
-      TASK_NAME: "Inventory Audit",
-      dmsNo: "30000015",
-      status: "Pending",
-      PROJECT_NO: "P1015",
-    },
-    {
-      TASK_ID: 17,
-      TASK_NAME: "Payment Gateway Setup",
-      dmsNo: "30000017",
-      status: "In Progress",
-      PROJECT_NO: "P1017",
-    },
-    {
-      TASK_ID: 18,
-      TASK_NAME: "HR Policy Update",
-      dmsNo: "30000018",
-      status: "Pending",
-      PROJECT_NO: "P1018",
-    },
-    {
-      TASK_ID: 20,
-      TASK_NAME: "Analytics Dashboard",
-      dmsNo: "30000020",
-      status: "In Progress",
-      PROJECT_NO: "P1020",
-    },
-    {
-      TASK_ID: 21,
-      TASK_NAME: "Facility Maintenance",
-      dmsNo: "30000021",
-      status: "Pending",
-      PROJECT_NO: "P1021",
-    },
-    {
-      TASK_ID: 23,
-      TASK_NAME: "E-commerce Platform",
-      dmsNo: "30000023",
-      status: "In Progress",
-      PROJECT_NO: "P1023",
-    },
-    {
-      TASK_ID: 24,
-      TASK_NAME: "Legal Document Review",
-      dmsNo: "30000024",
-      status: "Pending",
-      PROJECT_NO: "P1024",
-    },
-    {
-      TASK_ID: 26,
-      TASK_NAME: "Chatbot Implementation",
-      dmsNo: "30000026",
-      status: "In Progress",
-      PROJECT_NO: "P1026",
-    },
-    {
-      TASK_ID: 27,
-      TASK_NAME: "Annual Report Preparation",
-      dmsNo: "30000027",
-      status: "Pending",
-      PROJECT_NO: "P1027",
-    },
-  ]);
-
-  const colorClasses = [
-    // Blues
-    "bg-blue-100 opacity-90",
-    "bg-blue-200 opacity-85",
-    "bg-blue-300 opacity-80",
-    "bg-sky-100 opacity-90",
-    "bg-sky-200 opacity-85",
-
-    // Greens
-    "bg-green-100 opacity-90",
-    "bg-green-200 opacity-85",
-    "bg-emerald-100 opacity-90",
-    "bg-emerald-200 opacity-85",
-    "bg-lime-100 opacity-90",
-
-    // Yellows/Oranges
-    "bg-yellow-100 opacity-90",
-    "bg-amber-100 opacity-90",
-    "bg-orange-100 opacity-90",
-
-    // Reds
-    "bg-red-100 opacity-90",
-    "bg-rose-100 opacity-90",
-    "bg-pink-100 opacity-90",
-
-    // Purples
-    "bg-purple-100 opacity-90",
-    "bg-violet-100 opacity-90",
-    "bg-indigo-100 opacity-90",
-    "bg-fuchsia-100 opacity-90",
-
-    // Teals/Cyans
-    "bg-teal-100 opacity-90",
-    "bg-cyan-100 opacity-90",
-
-    // Special Colors
-    "bg-amber-50 opacity-95",
-    "bg-rose-50 opacity-95",
-    "bg-indigo-50 opacity-95",
-    "bg-emerald-50 opacity-95",
-
-    // Darker variants
-    "bg-blue-400 opacity-70",
-    "bg-green-400 opacity-70",
-    "bg-purple-400 opacity-70",
-    "bg-pink-400 opacity-70",
-
-    // Unique combinations
-    "bg-gradient-to-br from-blue-100 to-blue-200 opacity-85",
-    "bg-gradient-to-br from-green-100 to-teal-100 opacity-85",
-    "bg-gradient-to-br from-purple-100 to-pink-100 opacity-85",
-    "bg-gradient-to-br from-yellow-100 to-amber-100 opacity-85",
-
-    // Additional colors
-    "bg-cyan-200 opacity-85",
-    "bg-lime-200 opacity-85",
-    "bg-amber-200 opacity-85",
-    "bg-violet-200 opacity-85",
-    "bg-fuchsia-200 opacity-85",
-    "bg-rose-200 opacity-85",
-  ];
-  const getRandomColor = () =>
-    colorClasses[Math.floor(Math.random() * colorClasses.length)];
-
-  const { userData } = useAuth();
+  const [tasks, setTasks] = useState([]);
   const [filteredTasks, setFilteredTasks] = useState(tasks);
   const [selectedTask, setSelectedTask] = useState(null);
   const [timesheetsByDate, setTimesheetsByDate] = useState({});
+  const [pendingChanges, setPendingChanges] = useState([]);
   const [events, setEvents] = useState([]);
   const [activeTab, setActiveTab] = useState("timesheet-tab");
   const [showPopup, setShowPopup] = useState(false);
-  const [taskDetails, setTaskDetails] = useState({
-    TASK_ID: "",
-    TASK_NAME: "",
-    START_TIME: 8,
-    startMinute: "00",
-    END_TIME: 9,
-    endMinute: "00",
-    NO_OF_HOURS: "",
-    NO_OF_MINUTES: "",
-    PROJECT_NO: "",
-    color: getRandomColor(),
-  });
-
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
+  const [activeUser, setActiveUser] = useState([]);
+  const [selectedUser, setSelectedUser] = useState("");
+  const [nextTempRef, setNextTempRef] = useState(-1);
+  const { userData } = useAuth();
+  const { toast } = useToast();
   const datePickerRef = useRef(null);
-  const [resizingEvent, setResizingEvent] = useState(null);
+  const timesheetScrollRef = useRef(null);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const rowHeight = 64;
   const [dragging, setDragging] = useState(false);
   const [dragStart, setDragStart] = useState(null);
   const [dragEnd, setDragEnd] = useState(null);
-
-  const [deletedBlocks, setDeletedBlocks] = useState([]);
-
-  const hours = Array.from({ length: 24 }, (_, i) => i);
-  const minutes = ["00", "15", "30", "45"];
-  const rowHeight = 64; // pixels per hour row
-
-  // Drag/resize constants
-  const STEP = 15; // 15 minutes steps for snapping
-
-  const MIN_DURATION = 15; // Minimum event duration in minutes
-  const START_OF_DAY = 0; // 0:00
-  const END_OF_DAY = 24 * 60; // 24:00
-
-  // Ref for scrolling to 8 AM
-  const timesheetScrollRef = useRef(null);
-
-  // Scroll to 8 AM on mount or tab switch
-  useEffect(() => {
-    if (activeTab === "timesheet-tab" && timesheetScrollRef.current) {
-      // Scroll to 8th hour (8 * rowHeight)
-      timesheetScrollRef.current.scrollTop = 8 * rowHeight;
-    }
-  }, [activeTab, rowHeight]);
-
-  const handleTabChange = (tabId) => {
-    setActiveTab(tabId);
-  };
+  const [resizingEvent, setResizingEvent] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   const formatDateKey = (date) => {
+    if (!date) return "";
     const d = new Date(date);
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, "0");
@@ -328,26 +59,411 @@ export default function TimeSheetPage() {
     return `${year}-${month}-${day}`;
   };
 
-  const updateEventInStorage = (updatedEvent) => {
-    const dateKey = formatDateKey(selectedDate);
-    setTimesheetsByDate((prev) => ({
-      ...prev,
-      [dateKey]: (prev[dateKey] || []).map((event) =>
-        event.id === updatedEvent.id ? updatedEvent : event
-      ),
-    }));
-    setEvents((prev) =>
-      prev.map((event) => (event.id === updatedEvent.id ? updatedEvent : event))
-    );
-  };
+  const colorClasses = [
+    "bg-blue-100 opacity-90",
+    "bg-blue-200 opacity-90",
+    "bg-blue-300 opacity-90",
+    "bg-sky-100 opacity-90",
+    "bg-sky-200 opacity-90",
+    "bg-green-100 opacity-90",
+    "bg-green-200 opacity-90",
+    "bg-emerald-100 opacity-90",
+    "bg-emerald-200 opacity-90",
+    "bg-lime-100 opacity-90",
+    "bg-yellow-100 opacity-90",
+    "bg-amber-100 opacity-90",
+    "bg-orange-100 opacity-90",
+    "bg-red-100 opacity-90",
+    "bg-rose-100 opacity-90",
+    "bg-pink-100 opacity-90",
+    "bg-purple-100 opacity-90",
+    "bg-violet-100 opacity-90",
+    "bg-indigo-100 opacity-90",
+    "bg-fuchsia-100 opacity-90",
+    "bg-teal-100 opacity-90",
+    "bg-cyan-100 opacity-90",
+    "bg-amber-50 opacity-95",
+    "bg-rose-50 opacity-95",
+    "bg-indigo-50 opacity-95",
+    "bg-emerald-50 opacity-95",
+    "bg-blue-400 opacity-70",
+    "bg-green-400 opacity-70",
+    "bg-purple-400 opacity-70",
+    "bg-pink-400 opacity-70",
+    "bg-gradient-to-br from-blue-100 to-blue-200 opacity-85",
+    "bg-gradient-to-br from-green-100 to-teal-100 opacity-85",
+    "bg-gradient-to-br from-purple-100 to-pink-100 opacity-85",
+    "bg-gradient-to-br from-yellow-100 to-amber-100 opacity-85",
+    "bg-cyan-200 opacity-85",
+    "bg-lime-200 opacity-85",
+    "bg-amber-200 opacity-85",
+    "bg-violet-200 opacity-85",
+    "bg-fuchsia-200 opacity-85",
+    "bg-rose-200 opacity-85",
+  ];
 
-  const openDatePicker = () => {
-    if (datePickerRef.current) {
-      datePickerRef.current.showModal();
+  const getRandomColor = () =>
+    colorClasses[Math.floor(Math.random() * colorClasses.length)];
+
+  const [taskDetails, setTaskDetails] = useState({
+    REF_SERIAL_NO: -1,
+    PROJECT_NO: "",
+    dmsNo: "",
+    EMP_NO: userData?.currentUserEmpNo || "",
+    TASK_USER: selectedUser || userData?.userName || "",
+    TASK_ID: "",
+    TRANS_DATE: formatDateKey(new Date()),
+    TASK_NAME: "",
+    TOTAL_DURATION_MINUTES: null,
+    TOTAL_DURATION_HOURS: null,
+    TOTAL_HOURS: null,
+    USER_NAME: userData?.userName || "",
+    ENT_DATE: null,
+    START_HOUR: 8,
+    START_MINIUTE: 0,
+    END_HOUR: 9,
+    END_MINITUE: 0,
+    NO_OF_HOURS: 0,
+    NO_OF_MINUTES: 0,
+    color: getRandomColor(),
+    isCompleted: false,
+    isNewBlock: false,
+    isEditing: false,
+  });
+
+  useEffect(() => {
+    setFilteredTasks(tasks);
+  }, [tasks]);
+
+  useEffect(() => {
+    fetchAllActiveUsers();
+    fetchTasks();
+    fetchTimeSheetData();
+  }, [selectedDate, selectedUser]);
+
+  useEffect(() => {
+    if (activeTab === "timesheet-tab" && timesheetScrollRef.current) {
+      timesheetScrollRef.current.scrollTop = 8 * rowHeight;
+    }
+  }, [activeTab, rowHeight]);
+
+  useEffect(() => {
+    setTaskDetails((prev) => ({
+      ...prev,
+      TASK_USER: selectedUser || userData?.userName || "",
+    }));
+  }, [selectedUser]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (pendingChanges.length > 0 && !loading) {
+        // Only show alert if not saving
+        e.preventDefault();
+        e.returnValue =
+          "You have unsaved changes. Are you sure you want to leave?";
+        return e.returnValue;
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [pendingChanges, loading]); // Add loading to dependencies
+
+  const fetchAllActiveUsers = async () => {
+    try {
+      if (!userData?.userName) return;
+
+      const payload = {
+        UserName: "",
+      };
+      const response = await callSoapService(
+        userData.clientURL,
+        "DMS_Get_All_ActiveUsers",
+        payload
+      );
+
+      if (Array.isArray(response) && response.length > 0) {
+        setActiveUser(response);
+      } else {
+        setActiveUser([]);
+      }
+    } catch (error) {
+      console.error("Error fetching active users:", error);
+      setActiveUser([]);
     }
   };
 
-  // 24-hour format with AM/PM
+  const fetchTasks = async () => {
+    try {
+      if (!userData?.userName) return;
+
+      const payload = {
+        UserName: userData.userName,
+      };
+      const response = await callSoapService(
+        userData.clientURL,
+        "IM_Get_User_Tasks",
+        payload
+      );
+
+      if (Array.isArray(response)) {
+        // Initialize tasks with colors if they have matching events
+        const updatedTasks = response.map((task) => {
+          const matchingEvent = events.find(
+            (ev) => ev.TASK_ID === task.TASK_ID
+          );
+          return matchingEvent ? { ...task, color: matchingEvent.color } : task;
+        });
+        setTasks(updatedTasks);
+        setFilteredTasks(updatedTasks);
+      } else {
+        console.error("Expected array but got:", response);
+        setTasks([]);
+        setFilteredTasks([]);
+      }
+    } catch (error) {
+      console.error("Error fetching tasks:", error);
+      setTasks([]);
+      setFilteredTasks([]);
+    }
+  };
+
+  const SaveServiceData = async (eventData) => {
+    const newChange = {
+      ...eventData,
+      id: `${eventData.REF_SERIAL_NO}_${eventData.START_HOUR}_${eventData.START_MINIUTE}`,
+      blockParentId: eventData.REF_SERIAL_NO,
+      START_MINIUTE: Number(eventData.START_MINIUTE) || 0,
+      END_MINITUE: Number(eventData.END_MINITUE) || 0,
+      isNewBlock: eventData.isNewBlock || false,
+      EMP_NO: userData?.userEmployeeNo || "",
+    };
+
+    setPendingChanges((prev) => {
+      const filtered = prev.filter(
+        (change) => change.REF_SERIAL_NO !== eventData.REF_SERIAL_NO
+      );
+      return [...filtered, newChange];
+    });
+    return newChange;
+  };
+
+  // helper to parse the .NET “/Date(…)/” format
+  function parseDotNetDate(dotNetDate) {
+    // extract the milliseconds
+    const ms = parseInt(dotNetDate.match(/\d+/)[0], 10);
+    const date = new Date(ms);
+
+    // use local date components
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`; // → "2025-06-23" in local time
+  }
+
+  const savePendingChanges = async () => {
+    try {
+      setLoading(true); // Set loading to true when saving starts
+      const dateKey = formatDateKey(selectedDate);
+
+      const changesToSave = [...pendingChanges];
+
+      const changesByRef = changesToSave.reduce((acc, change) => {
+        if (!acc[change.REF_SERIAL_NO]) {
+          acc[change.REF_SERIAL_NO] = [];
+        }
+        acc[change.REF_SERIAL_NO].push(change);
+        return acc;
+      }, {});
+
+      for (const refNo in changesByRef) {
+        const changes = changesByRef[refNo];
+
+        if (refNo > 0) {
+          const deletePayload = {
+            DataModelName: "TASK_TIME_SHEET",
+            WhereCondition: `REF_SERIAL_NO=${refNo}`,
+          };
+          await callSoapService(
+            userData.clientURL,
+            "DataModel_DeleteData",
+            deletePayload
+          );
+        }
+
+        for (const change of changes) {
+          if (
+            typeof change.TRANS_DATE === "string" &&
+            /^\/Date\(\d+\)\/$/.test(change.TRANS_DATE)
+          ) {
+            change.TRANS_DATE = parseDotNetDate(change.TRANS_DATE);
+          }
+
+          const convertedDataModel = convertDataModelToStringData(
+            "TASK_TIME_SHEET",
+            change
+          );
+
+          const payload = {
+            UserName: userData.userName,
+            DModelData: convertedDataModel,
+          };
+
+          const res = await callSoapService(
+            userData.clientURL,
+            "DataModel_SaveData",
+            payload
+          );
+
+          if (change.REF_SERIAL_NO < 0) {
+            const savedRefNo = parseInt(res);
+            if (!isNaN(savedRefNo)) {
+              setEvents((prev) =>
+                prev.map((ev) =>
+                  ev.REF_SERIAL_NO === change.REF_SERIAL_NO
+                    ? { ...ev, REF_SERIAL_NO: savedRefNo }
+                    : ev
+                )
+              );
+              setTimesheetsByDate((prev) => ({
+                ...prev,
+                [dateKey]: prev[dateKey].map((ev) =>
+                  ev.REF_SERIAL_NO === change.REF_SERIAL_NO
+                    ? { ...ev, REF_SERIAL_NO: savedRefNo }
+                    : ev
+                ),
+              }));
+            }
+          }
+        }
+      }
+
+      toast({
+        title: "Success",
+        description: `Data saved successfully`,
+      });
+
+      setPendingChanges([]);
+      return true;
+    } catch (error) {
+      console.error("Error saving pending changes:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save changes",
+        variant: "destructive",
+      });
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchTimeSheetData = async () => {
+    try {
+      const payload = {
+        DataModelName: "TASK_TIME_SHEET",
+        WhereCondition: `TRANS_DATE='${formatDateKey(
+          selectedDate
+        )}' AND TASK_USER='${selectedUser || userData.userName}'`,
+        Orderby: "",
+      };
+
+      const response = await callSoapService(
+        userData.clientURL,
+        "DataModel_GetData",
+        payload
+      );
+
+      if (Array.isArray(response)) {
+        const processedEvents = response.map((event) => {
+          const durationMinutes = calculateDuration(
+            parseInt(event.START_HOUR) || 8,
+            Number(event.START_MINIUTE) || 0,
+            parseInt(event.END_HOUR) || 9,
+            Number(event.END_MINITUE) || 0
+          );
+          const durationHours = parseFloat((durationMinutes / 60).toFixed(2));
+
+          return {
+            ...event,
+            id: event.REF_SERIAL_NO?.toString(),
+            REF_SERIAL_NO: event.REF_SERIAL_NO || -1,
+            START_HOUR: parseInt(event.START_HOUR) || 8,
+            START_MINIUTE: Number(event.START_MINIUTE) || 0,
+            END_HOUR: parseInt(event.END_HOUR) || 9,
+            END_MINITUE: Number(event.END_MINITUE) || 0,
+            color: getRandomColor(),
+            isCompleted: false,
+            TOTAL_DURATION_MINUTES: durationMinutes,
+            TOTAL_DURATION_HOURS: durationHours,
+            TOTAL_HOURS: durationHours,
+            isNewBlock: false,
+          };
+        });
+
+        setEvents(processedEvents);
+        const dateKey = formatDateKey(selectedDate);
+        setTimesheetsByDate((prev) => ({
+          ...prev,
+          [dateKey]: processedEvents,
+        }));
+
+        // Update tasks with colors from events
+        const updatedTasks = tasks.map((task) => {
+          const matchingEvent = processedEvents.find(
+            (ev) => ev.TASK_ID === task.TASK_ID
+          );
+          return matchingEvent ? { ...task, color: matchingEvent.color } : task;
+        });
+        setTasks(updatedTasks);
+        setFilteredTasks(updatedTasks);
+
+        toast({
+          title: "Success",
+          description: "Timesheet data loaded successfully",
+        });
+      } else {
+        console.error("Expected array but got:", response);
+        setEvents([]);
+        toast({
+          title: "Warning",
+          description: "No timesheet data found for selected date",
+          variant: "default",
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching timesheet data:", error);
+      setEvents([]);
+      toast({
+        title: "Error",
+        description: "Failed to fetch timesheet data",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const calculateDuration = (
+    START_HOUR,
+    START_MINIUTE,
+    END_HOUR,
+    END_MINITUE
+  ) => {
+    const startTotalMinutes =
+      parseInt(START_HOUR, 10) * 60 + Number(START_MINIUTE);
+    const endTotalMinutes = parseInt(END_HOUR, 10) * 60 + Number(END_MINITUE);
+    const duration = endTotalMinutes - startTotalMinutes;
+    return duration > 0 ? duration : 0;
+  };
+
+  const formatDuration = (durationInMinutes) => {
+    const hours = Math.floor(durationInMinutes / 60);
+    const minutes = durationInMinutes % 60;
+    return `${hours} hr ${minutes} min`;
+  };
+
   const formatTime = (hour, minute) => {
     const ampm = hour >= 12 ? "PM" : "AM";
     const displayHour = hour % 12 === 0 ? 12 : hour % 12;
@@ -355,307 +471,232 @@ export default function TimeSheetPage() {
     return `${displayHour}:${displayMinute} ${ampm}`;
   };
 
-  function calculateDuration(START_TIME, startMinute, END_TIME, endMinute) {
-    const startTotalMinutes =
-      parseInt(START_TIME, 10) * 60 + parseInt(startMinute, 10);
-    const endTotalMinutes =
-      parseInt(END_TIME, 10) * 60 + parseInt(endMinute, 10);
-    const duration = endTotalMinutes - startTotalMinutes;
-    return duration > 0 ? duration : 0;
-  }
+  const handleDateSelect = async (date) => {
+    if (isFutureDate(date)) {
+      alert("You can only select today's date or earlier.");
+      return;
+    }
 
-  function formatDuration(durationInMinutes) {
-    const hours = Math.floor(durationInMinutes / 60);
-    const minutes = durationInMinutes % 60;
-    return `${hours} hr ${minutes} min`;
-  }
+    if (pendingChanges.length > 0) {
+      const confirmSave = window.confirm(
+        "You have unsaved changes. Save before changing date?"
+      );
+      if (confirmSave) {
+        const success = await savePendingChanges();
+        if (!success) {
+          alert("Failed to save changes. Please try again.");
+          return;
+        }
+      }
+    }
+
+    setSelectedDate(date);
+    if (datePickerRef.current) {
+      datePickerRef.current.close();
+    }
+    fetchTimeSheetData();
+  };
+
+  const splitEventToHourBlocks = (event) => {
+    if (!event) return [];
+    const blocks = [];
+    const startTotal =
+      (event.START_HOUR || 0) * 60 + Number(event.START_MINIUTE || 0);
+    const endTotal =
+      (event.END_HOUR || 0) * 60 + Number(event.END_MINITUE || 0);
+
+    let blockStart = startTotal;
+    while (blockStart < endTotal) {
+      const nextHour = Math.floor(blockStart / 60) + 1;
+      const blockEnd = Math.min(nextHour * 60, endTotal);
+      const startHour = Math.floor(blockStart / 60);
+      const START_MINIUTE = blockStart % 60;
+      const endHour =
+        Math.floor((blockEnd - 1) / 60) + (blockEnd % 60 === 0 ? 0 : 1);
+      const END_MINITUE =
+        blockEnd === endTotal ? Number(event.END_MINITUE || 0) : 0;
+
+      blocks.push({
+        ...event,
+        id: `${event.REF_SERIAL_NO}_${startHour}_${START_MINIUTE}`,
+        blockParentId: event.REF_SERIAL_NO,
+        blockStartHour: startHour,
+        blockStartMinute: START_MINIUTE,
+        blockEndHour:
+          blockEnd === endTotal ? event.END_HOUR || 0 : startHour + 1,
+        blockEndMinute: END_MINITUE,
+        isNewBlock: false,
+      });
+
+      blockStart = blockEnd;
+    }
+    return blocks;
+  };
 
   const handleEdit = (e, event) => {
     e.preventDefault();
     if (!event) return;
 
-    const todayKey = formatDateKey(new Date());
-    const selectedDateKey = formatDateKey(selectedDate);
+    setTaskDetails({
+      ...event,
+      START_HOUR: parseInt(event.START_HOUR) || 8,
+      START_MINIUTE: Number(event.START_MINIUTE) || 0,
+      END_HOUR: parseInt(event.END_HOUR) || 9,
+      END_MINITUE: Number(event.END_MINITUE) || 0,
+      TOTAL_DURATION_MINUTES: calculateDuration(
+        parseInt(event.START_HOUR) || 8,
+        Number(event.START_MINIUTE) || 0,
+        parseInt(event.END_HOUR) || 9,
+        Number(event.END_MINITUE) || 0
+      ),
+      TOTAL_DURATION_HOURS: parseFloat(
+        (
+          calculateDuration(
+            parseInt(event.START_HOUR) || 8,
+            Number(event.START_MINIUTE) || 0,
+            parseInt(event.END_HOUR) || 9,
+            Number(event.END_MINITUE) || 0
+          ) / 60
+        ).toFixed(2)
+      ),
+      REF_SERIAL_NO: event.REF_SERIAL_NO,
+      isNewBlock: false,
+      isEditing: true,
+    });
 
-    // FIX: Allow editing for today only, but allow viewing for other dates
-    if (selectedDateKey !== todayKey) {
-      // Instead of alert, just open the popup in read-only mode or do nothing
-      // Example: return; (no alert)
-      return;
-    }
-    if (event.isCompleted) {
-      alert(
-        "This task is marked as completed. Please uncheck the checkbox to edit it."
-      );
-      return;
-    }
-
-    setTaskDetails(event);
     const foundTask = tasks.find((task) => task.TASK_NAME === event.TASK_NAME);
     setSelectedTask(foundTask || null);
     setShowPopup(true);
   };
 
-  // FIX: Only store parent event, not blocks, to prevent duplication
- // ...existing code...
-const handleSave = (e) => {
-  e.preventDefault();
+  const handleSelectTask = (e, task) => {
+    e.preventDefault();
+    setSelectedTask(task);
+    const currentRefNo = taskDetails.isEditing
+      ? taskDetails.REF_SERIAL_NO
+      : nextTempRef;
 
-  const todayKey = formatDateKey(new Date());
-  const selectedDateKey = formatDateKey(selectedDate);
-
-  if (selectedDateKey !== todayKey) {
-    alert("You can only add events for today's date.");
-    return;
-  }
-
-  const taskTitle = selectedTask
-    ? selectedTask.TASK_NAME
-    : taskDetails.TASK_NAME;
-
-  if (!taskTitle) {
-    alert("Task name is required.");
-    return;
-  }
-
-  const {
-    START_TIME = 0,
-    startMinute = 0,
-    END_TIME = 0,
-    endMinute = 0,
-  } = taskDetails;
-
-  const startMins = parseInt(START_TIME) * 60 + parseInt(startMinute);
-  const endMins = parseInt(END_TIME) * 60 + parseInt(endMinute);
-
-  if (startMins >= endMins) {
-    alert("End time must be after start time.");
-    return;
-  }
-
-  let TASK_ID =
-    taskDetails.TASK_ID || (selectedTask ? selectedTask.TASK_ID : null);
-  let PROJECT_NO =
-    taskDetails.PROJECT_NO || (selectedTask ? selectedTask.PROJECT_NO : null);
-  let dmsNo = taskDetails.dmsNo || (selectedTask ? selectedTask.dmsNo : null);
-
-  const NO_OF_MINUTES = calculateDuration(
-    START_TIME,
-    startMinute,
-    END_TIME,
-    endMinute
-  );
-  const NO_OF_HOURS = parseFloat((NO_OF_MINUTES / 60).toFixed(2));
-  const TRANS_DATE = formatDateKey(selectedDate);
-
-  // --- If editing a block, split parent event into up to 3 events ---
-  if (editingBlock) {
-    const { block, parentEvent } = editingBlock;
-    const parentStart =
-      parentEvent.START_TIME * 60 + Number(parentEvent.startMinute);
-    const parentEnd =
-      parentEvent.END_TIME * 60 + Number(parentEvent.endMinute);
-
-    // The new block's time
-    const newBlockStart = startMins;
-    const newBlockEnd = endMins;
-
-    // Check for overlap with other events (excluding this parent event)
-    const overlappingEvent = events.some((event) => {
-      if (event.id === parentEvent.id) return false;
-      const eventStart = event.START_TIME * 60 + event.startMinute;
-      const eventEnd = event.END_TIME * 60 + event.endMinute;
-      return newBlockStart < eventEnd && newBlockEnd > eventStart;
+    setTaskDetails({
+      ...taskDetails,
+      TASK_NAME: task.TASK_NAME,
+      TASK_ID: task.TASK_ID,
+      PROJECT_NO: task.PROJECT_NO || "",
+      dmsNo: task.dmsNo || "",
+      REF_SERIAL_NO: currentRefNo,
+      START_HOUR: taskDetails.START_HOUR || 8,
+      END_HOUR: taskDetails.END_HOUR || 9,
+      START_MINIUTE: Number(taskDetails.START_MINIUTE) || 0,
+      END_MINITUE: Number(taskDetails.END_MINITUE) || 0,
+      color: task.color || getRandomColor(),
+      isNewBlock: !taskDetails.isEditing,
     });
-    if (overlappingEvent) {
-      alert("This time slot overlaps with another event.");
+
+    if (!taskDetails.isEditing) {
+      setNextTempRef((prev) => prev - 1);
+    }
+  };
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+
+    const startMins =
+      parseInt(taskDetails.START_HOUR) * 60 +
+      Number(taskDetails.START_MINIUTE || 0);
+    const endMins =
+      parseInt(taskDetails.END_HOUR) * 60 +
+      Number(taskDetails.END_MINITUE || 0);
+
+    if (startMins >= endMins) {
+      alert("End time must be after start time.");
       return;
     }
 
-    // Prepare new events: before, edited block, after
-    const newEvents = events.filter((ev) => ev.id !== parentEvent.id);
+    const totalDurationMinutes = endMins - startMins;
+    const totalDurationHours = parseFloat(
+      (totalDurationMinutes / 60).toFixed(2)
+    );
 
-    // Before block
-    if (newBlockStart > parentStart) {
-      newEvents.push({
-        ...parentEvent,
-        id: parentEvent.id + "_before_" + newBlockStart,
-        START_TIME: parentEvent.START_TIME,
-        startMinute: parentEvent.startMinute,
-        END_TIME: Math.floor(newBlockStart / 60),
-        endMinute: newBlockStart % 60,
-        NO_OF_MINUTES: newBlockStart - parentStart,
-        NO_OF_HOURS: parseFloat(
-          ((newBlockStart - parentStart) / 60).toFixed(2)
-        ),
+    const hourBlocks = [];
+    let currentStart = startMins;
+    const endTime = endMins;
+
+    while (currentStart < endTime) {
+      const currentHour = Math.floor(currentStart / 60);
+      const nextHourStart = (currentHour + 1) * 60;
+      const blockEnd = Math.min(nextHourStart, endTime);
+
+      hourBlocks.push({
+        ...taskDetails,
+        START_HOUR: Math.floor(currentStart / 60),
+        START_MINIUTE: currentStart % 60,
+        END_HOUR: Math.floor(blockEnd / 60),
+        END_MINITUE: blockEnd % 60,
+        NO_OF_MINUTES: blockEnd - currentStart,
+        TRANS_DATE: taskDetails.TRANS_DATE || formatDateKey(selectedDate),
+        NO_OF_HOURS: parseFloat(((blockEnd - currentStart) / 60).toFixed(2)),
+        REF_SERIAL_NO:
+          currentStart === startMins && !taskDetails.isNewBlock
+            ? taskDetails.REF_SERIAL_NO
+            : nextTempRef - hourBlocks.length,
+        isNewBlock: currentStart !== startMins || taskDetails.isNewBlock,
       });
+
+      currentStart = blockEnd;
     }
-    // Edited block
-    const updatedColor = taskDetails.color || getRandomColor();
-    newEvents.push({
-      ...parentEvent,
-      id: parentEvent.id + "_edit_" + newBlockStart,
-      TASK_NAME: taskTitle,
-      TASK_ID,
-      PROJECT_NO,
-      dmsNo,
-      START_TIME: parseInt(START_TIME),
-      startMinute: parseInt(startMinute),
-      END_TIME: parseInt(END_TIME),
-      endMinute: parseInt(endMinute),
-      color: updatedColor,
-      USER_NAME: userData?.currentUserName || "",
-      EMP_NO: userData?.currentUserEmpNo || "",
-      NO_OF_HOURS,
-      NO_OF_MINUTES,
-      TRANS_DATE,
-      isCompleted: taskDetails.isCompleted || false,
-    });
-    // After block
-    if (newBlockEnd < parentEnd) {
-      newEvents.push({
-        ...parentEvent,
-        id: parentEvent.id + "_after_" + newBlockEnd,
-        START_TIME: Math.floor(newBlockEnd / 60),
-        startMinute: newBlockEnd % 60,
-        END_TIME: parentEvent.END_TIME,
-        endMinute: parentEvent.endMinute,
-        NO_OF_MINUTES: parentEnd - newBlockEnd,
-        NO_OF_HOURS: parseFloat(((parentEnd - newBlockEnd) / 60).toFixed(2)),
-      });
+
+    const savedEvents = [];
+    for (const block of hourBlocks) {
+      const savedEvent = await SaveServiceData(block);
+      savedEvents.push(savedEvent);
+      if (block.isNewBlock) {
+        setNextTempRef((prev) => prev - 1);
+      }
     }
+
+    const dateKey = formatDateKey(selectedDate);
+    const existingEvents = (timesheetsByDate[dateKey] || []).filter(
+      (e) => e.REF_SERIAL_NO !== taskDetails.REF_SERIAL_NO
+    );
 
     setTimesheetsByDate((prev) => ({
       ...prev,
-      [TRANS_DATE]: newEvents,
+      [dateKey]: [...existingEvents, ...savedEvents],
     }));
-    setEvents(newEvents);
 
-    // --- Update color in pending/filtered tasks ---
+    setEvents((prev) => [
+      ...prev.filter((e) => e.REF_SERIAL_NO !== taskDetails.REF_SERIAL_NO),
+      ...savedEvents,
+    ]);
+
+    // Update task color
+    const savedEvent = savedEvents[0];
     setTasks((prevTasks) =>
       prevTasks.map((t) =>
-        t.TASK_NAME === taskTitle ? { ...t, color: updatedColor } : t
+        t.TASK_ID === taskDetails.TASK_ID
+          ? { ...t, color: savedEvent.color }
+          : t
       )
     );
     setFilteredTasks((prevFiltered) =>
       prevFiltered.map((t) =>
-        t.TASK_NAME === taskTitle ? { ...t, color: updatedColor } : t
+        t.TASK_ID === taskDetails.TASK_ID
+          ? { ...t, color: savedEvent.color }
+          : t
       )
     );
 
-    setEditingBlock(null);
     handleClosePopup();
     setSelectedTask(null);
-    return;
-  }
-
-  // --- Normal add/update for full event ---
-  // Prevent duplicate for same task in same day, except for the current editing event
-  const taskAlreadyExists = events.some(
-    (event) =>
-      event.TASK_NAME === taskTitle &&
-      event.id !== taskDetails.id &&
-      formatDateKey(selectedDate) === event.TRANS_DATE
-  );
-  if (taskAlreadyExists) {
-    alert("This task is already scheduled in the calendar.");
-    return;
-  }
-
-  // Prevent overlap, except for the current editing event
-  const overlappingEvent = events.some((event) => {
-    if (event.id === taskDetails.id) return false;
-    const eventStart = event.START_TIME * 60 + event.startMinute;
-    const eventEnd = event.END_TIME * 60 + event.endMinute;
-    return startMins < eventEnd && endMins > eventStart;
-  });
-  if (overlappingEvent) {
-    alert("This time slot overlaps with another event.");
-    return;
-  }
-
-  // Use the same id for update, or new id for new event
-  const parentId = taskDetails.id || Date.now();
-
-  const updatedColor = taskDetails.color || getRandomColor();
-
-  const baseEvent = {
-    id: parentId,
-    TASK_NAME: taskTitle,
-    TASK_ID,
-    PROJECT_NO,
-    dmsNo,
-    START_TIME: parseInt(START_TIME),
-    startMinute: parseInt(startMinute),
-    END_TIME: parseInt(END_TIME),
-    endMinute: parseInt(endMinute),
-    color: updatedColor,
-    USER_NAME: userData?.currentUserName || "",
-    EMP_NO: userData?.currentUserEmpNo || "",
-    NO_OF_HOURS,
-    NO_OF_MINUTES,
-    TRANS_DATE,
-    isCompleted: taskDetails.isCompleted || false,
+    toast({
+      title: "Success",
+      description: taskDetails.isEditing
+        ? "Time entry updated successfully"
+        : "Time entry saved successfully",
+    });
   };
 
-  // Only store the parent event, not blocks
-  setTimesheetsByDate((prev) => {
-    const prevArr = prev[TRANS_DATE] || [];
-    const filtered = prevArr.filter(
-      (ev) => ev.id !== parentId && ev.id !== taskDetails.id
-    );
-    return {
-      ...prev,
-      [TRANS_DATE]: [...filtered, baseEvent],
-    };
-  });
-  setEvents((prev) => {
-    const filtered = prev.filter(
-      (ev) => ev.id !== parentId && ev.id !== taskDetails.id
-    );
-    return [...filtered, baseEvent];
-  });
-
-  // --- Update color in pending/filtered tasks ---
-  setTasks((prevTasks) =>
-    prevTasks.map((t) =>
-      t.TASK_NAME === taskTitle ? { ...t, color: updatedColor } : t
-    )
-  );
-  setFilteredTasks((prevFiltered) =>
-    prevFiltered.map((t) =>
-      t.TASK_NAME === taskTitle ? { ...t, color: updatedColor } : t
-    )
-  );
-
-  handleClosePopup();
-  setSelectedTask(null);
-};
-// ...existing code...
-
-  const handleSelectTask = (e, task) => {
+  const handleDrop = async (e, hour) => {
     e.preventDefault();
-    setSelectedTask(task);
-    setTaskDetails((prev) => ({
-      ...prev,
-      TASK_NAME: task.TASK_NAME,
-      TASK_ID: task.TASK_ID,
-      PROJECT_NO: task.PROJECT_NO,
-      dmsNo: task.dmsNo,
-    }));
-  };
-
-  // FIX: Only store parent event, not blocks, to prevent duplication
-  const handleDrop = (e, hour) => {
-    e.preventDefault();
-
-    const todayKey = formatDateKey(new Date());
-    const selectedDateKey = formatDateKey(selectedDate);
-
-    if (selectedDateKey !== todayKey) {
-      alert("You can only add events for today's date.");
-      return;
-    }
 
     const taskData = e.dataTransfer.getData("task");
     if (!taskData) return;
@@ -667,170 +708,113 @@ const handleSave = (e) => {
     const width = boundingRect.width;
 
     const minuteOffset = Math.floor((mouseX / width) * 60);
-    let startMinute = Math.floor(minuteOffset / 15) * 15;
+    let START_MINIUTE = Math.floor(minuteOffset / 15) * 15;
 
-    let START_TIME = hour;
-    let endMinute = startMinute + 15;
-    let END_TIME = START_TIME;
+    let START_HOUR = hour;
+    let END_MINITUE = START_MINIUTE + 15;
+    let END_HOUR = START_HOUR;
 
-    if (endMinute >= 60) {
-      endMinute = 0;
-      END_TIME += 1;
+    if (END_MINITUE >= 60) {
+      END_MINITUE = 0;
+      END_HOUR += 1;
     }
 
-    if (START_TIME < 0 || END_TIME > 24 || (END_TIME === 24 && endMinute > 0)) {
+    if (
+      START_HOUR < 0 ||
+      END_HOUR > 24 ||
+      (END_HOUR === 24 && END_MINITUE > 0)
+    ) {
       alert("Tasks can only be scheduled between 12 AM and 12 PM.");
       return;
     }
 
-    // Prepare event details
-    const newId = Date.now();
-    const TRANS_DATE = formatDateKey(selectedDate);
-    const NO_OF_MINUTES =
-      END_TIME * 60 + endMinute - (START_TIME * 60 + startMinute);
+    const startTotalMinutes = START_HOUR * 60 + START_MINIUTE;
+    const endTotalMinutes = END_HOUR * 60 + END_MINITUE;
+    const NO_OF_MINUTES = endTotalMinutes - startTotalMinutes;
     const NO_OF_HOURS = parseFloat((NO_OF_MINUTES / 60).toFixed(2));
-    const color = getRandomColor();
 
-    const baseEvent = {
-      id: newId,
+    const newEvent = {
+      REF_SERIAL_NO: nextTempRef,
       TASK_ID: task.TASK_ID,
       TASK_NAME: task.TASK_NAME,
-      PROJECT_NO: task.PROJECT_NO,
-      dmsNo: task.dmsNo,
-      START_TIME,
-      startMinute,
-      END_TIME,
-      endMinute,
-      color,
-      USER_NAME: userData?.currentUserName || "",
-      EMP_NO: userData?.currentUserEmpNo || "",
-      NO_OF_HOURS,
-      NO_OF_MINUTES,
-      TRANS_DATE,
+      PROJECT_NO: task.PROJECT_NO || "",
+      dmsNo: task.dmsNo || "",
+      EMP_NO: userData.currentUserEmpNo,
+      TASK_USER: selectedUser || userData.userName,
+      TRANS_DATE: formatDateKey(selectedDate),
+      START_HOUR: START_HOUR,
+      START_MINIUTE: START_MINIUTE,
+      END_HOUR: END_HOUR,
+      END_MINITUE: END_MINITUE,
+      TOTAL_DURATION_MINUTES: NO_OF_MINUTES,
+      TOTAL_DURATION_HOURS: NO_OF_HOURS,
+      TOTAL_HOURS: NO_OF_HOURS,
+      USER_NAME: userData.userName,
+      ENT_DATE: new Date().toISOString(),
+      NO_OF_MINUTES: NO_OF_MINUTES,
+      NO_OF_HOURS: NO_OF_HOURS,
+      color: getRandomColor(),
       isCompleted: false,
+      isNewBlock: true,
+      isEditing: false,
     };
 
-    // Prevent duplicate for same task in same day
-    const taskAlreadyExists = events.some(
-      (event) =>
-        event.TASK_NAME === task.TASK_NAME &&
-        formatDateKey(selectedDate) === event.TRANS_DATE
-    );
-    // if (taskAlreadyExists) {
-    //   alert("This task is already scheduled in the calendar.");
-    //   return;
-    // }
+    setNextTempRef((prev) => prev - 1);
 
-    // Prevent overlap
-    const startMins = START_TIME * 60 + startMinute;
-    const endMins = END_TIME * 60 + endMinute;
     const overlappingEvent = events.some((event) => {
-      const eventStart = event.START_TIME * 60 + event.startMinute;
-      const eventEnd = event.END_TIME * 60 + event.endMinute;
-      return startMins < eventEnd && endMins > eventStart;
+      const eventStart = event.START_HOUR * 60 + Number(event.START_MINIUTE);
+      const eventEnd = event.END_HOUR * 60 + Number(event.END_MINITUE);
+      return startTotalMinutes < eventEnd && endTotalMinutes > eventStart;
     });
+
     if (overlappingEvent) {
       alert("This time slot overlaps with another event.");
       return;
     }
 
-    // Only store the parent event, not blocks
-    setTimesheetsByDate((prev) => {
-      const prevArr = prev[TRANS_DATE] || [];
-      return {
-        ...prev,
-        [TRANS_DATE]: [...prevArr, baseEvent],
-      };
-    });
-    setEvents((prev) => [...prev, baseEvent]);
+    try {
+      const savedEvent = await SaveServiceData(newEvent);
 
-    // Optionally update color in pending list
-    setTasks((prevTasks) =>
-      prevTasks.map((t) =>
-        t.TASK_NAME === task.TASK_NAME ? { ...t, color } : t
-      )
-    );
-    setFilteredTasks((prevFiltered) =>
-      prevFiltered.map((t) =>
-        t.TASK_NAME === task.TASK_NAME ? { ...t, color } : t
-      )
-    );
+      // Update task color
+      setTasks((prevTasks) =>
+        prevTasks.map((t) =>
+          t.TASK_ID === task.TASK_ID ? { ...t, color: savedEvent.color } : t
+        )
+      );
+
+      setFilteredTasks((prevFiltered) =>
+        prevFiltered.map((t) =>
+          t.TASK_ID === task.TASK_ID ? { ...t, color: savedEvent.color } : t
+        )
+      );
+
+      setTimesheetsByDate((prev) => ({
+        ...prev,
+        [savedEvent.TRANS_DATE]: [
+          ...(prev[savedEvent.TRANS_DATE] || []),
+          savedEvent,
+        ],
+      }));
+
+      setEvents((prev) => [...prev, savedEvent]);
+    } catch (error) {
+      console.error("Error saving dropped task:", error);
+      alert("Failed to save the task. Please try again.");
+    }
   };
 
-  const handleDelete = (e, eventId) => {
+  const handleDeleteHourBlock = async (e, blockId) => {
     e.preventDefault();
-    const todayKey = formatDateKey(new Date());
-    const selectedDateKey = formatDateKey(selectedDate);
+    e.stopPropagation();
 
-    if (selectedDateKey !== todayKey) {
-      alert("You can only delete events for today's date.");
+    if (!confirm("Are you sure you want to delete this hour block?")) {
       return;
     }
 
-    // Find the parent event (by id)
-    const eventToDelete = events.find((event) => event.id === eventId);
-    if (!eventToDelete) return;
-
-    // Remove the parent event
-    setTimesheetsByDate((prev) => {
-      const updatedEvents = (prev[selectedDateKey] || []).filter(
-        (event) => event.id !== eventToDelete.id
-      );
-      if (updatedEvents.length === 0) {
-        const { [selectedDateKey]: omit, ...rest } = prev;
-        return rest;
-      }
-      return {
-        ...prev,
-        [selectedDateKey]: updatedEvents,
-      };
-    });
-
-    setEvents((prev) => prev.filter((event) => event.id !== eventToDelete.id));
-
-    if (eventToDelete && !eventToDelete.isCompleted) {
-      setTasks((prevTasks) => {
-        const taskExists = prevTasks.some(
-          (t) => t.TASK_NAME === eventToDelete.TASK_NAME
-        );
-        if (!taskExists) {
-          // Add back to pending, but with color removed
-          return [
-            ...prevTasks,
-            {
-              TASK_ID: eventToDelete.TASK_ID,
-              TASK_NAME: eventToDelete.TASK_NAME,
-              dmsNo: eventToDelete.dmsNo,
-              status: "Pending",
-              PROJECT_NO: eventToDelete.PROJECT_NO,
-              color: undefined,
-            },
-          ];
-        }
-        // If already present, remove color
-        return prevTasks.map((t) =>
-          t.TASK_NAME === eventToDelete.TASK_NAME
-            ? { ...t, color: undefined }
-            : t
-        );
-      });
-      setFilteredTasks((prevFiltered) =>
-        prevFiltered.map((t) =>
-          t.TASK_NAME === eventToDelete.TASK_NAME
-            ? { ...t, color: undefined }
-            : t
-        )
-      );
-    }
-
-    handleClosePopup();
-  };
-
-  // Delete a single hour block (not the whole event)
-  const handleDeleteHourBlock = (blockId) => {
-    // Find the block and its parent event
     let blockToDelete = null;
     let parentEvent = null;
+
+    // Find the block and parent event to delete
     for (const event of events) {
       const blocks = splitEventToHourBlocks(event);
       const found = blocks.find((b) => b.id === blockId);
@@ -840,110 +824,112 @@ const handleSave = (e) => {
         break;
       }
     }
+
     if (!blockToDelete || !parentEvent) return;
 
-    // Calculate times in minutes
-    const parentStart =
-      parentEvent.START_TIME * 60 + Number(parentEvent.startMinute);
-    const parentEnd = parentEvent.END_TIME * 60 + Number(parentEvent.endMinute);
-    const blockStart =
-      blockToDelete.blockStartHour * 60 +
-      Number(blockToDelete.blockStartMinute);
-    const blockEnd =
-      blockToDelete.blockEndHour * 60 + Number(blockToDelete.blockEndMinute);
+    // Check if there are other events with the same TASK_ID
+    const hasOtherEvents = events.some(
+      (ev) =>
+        ev.TASK_ID === parentEvent.TASK_ID &&
+        ev.REF_SERIAL_NO !== parentEvent.REF_SERIAL_NO
+    );
 
-    // Prepare new events (before and after the deleted block)
-    const newEvents = events.filter((ev) => ev.id !== parentEvent.id);
+    if (parentEvent.REF_SERIAL_NO > 0) {
+      const deletePayload = {
+        DataModelName: "TASK_TIME_SHEET",
+        WhereCondition: `REF_SERIAL_NO=${parentEvent.REF_SERIAL_NO}`,
+      };
 
-    // Before block
-    if (blockStart > parentStart) {
-      newEvents.push({
-        ...parentEvent,
-        id: parentEvent.id + "_before_" + blockStart,
-        START_TIME: parentEvent.START_TIME,
-        startMinute: parentEvent.startMinute,
-        END_TIME: blockToDelete.blockStartHour,
-        endMinute: blockToDelete.blockStartMinute,
-        NO_OF_MINUTES: blockStart - parentStart,
-        NO_OF_HOURS: parseFloat(((blockStart - parentStart) / 60).toFixed(2)),
-      });
-    }
-    // After block
-    if (blockEnd < parentEnd) {
-      newEvents.push({
-        ...parentEvent,
-        id: parentEvent.id + "_after_" + blockEnd,
-        START_TIME: blockToDelete.blockEndHour,
-        startMinute: blockToDelete.blockEndMinute,
-        END_TIME: parentEvent.END_TIME,
-        endMinute: parentEvent.endMinute,
-        NO_OF_MINUTES: parentEnd - blockEnd,
-        NO_OF_HOURS: parseFloat(((parentEnd - blockEnd) / 60).toFixed(2)),
-      });
+      try {
+        await callSoapService(
+          userData.clientURL,
+          "DataModel_DeleteData",
+          deletePayload
+        );
+      } catch (error) {
+        console.error("Error deleting block:", error);
+        toast({
+          title: "Error",
+          description: "Failed to delete the block from server",
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
-    // If all blocks are deleted (no newEvents for this task), remove color from pending
-    if (
-      newEvents.filter((ev) => ev.TASK_NAME === parentEvent.TASK_NAME)
-        .length === 0
-    ) {
-      setTasks((prevTasks) =>
-        prevTasks.map((t) =>
-          t.TASK_NAME === parentEvent.TASK_NAME ? { ...t, color: undefined } : t
-        )
-      );
-      setFilteredTasks((prevFiltered) =>
-        prevFiltered.map((t) =>
-          t.TASK_NAME === parentEvent.TASK_NAME ? { ...t, color: undefined } : t
-        )
-      );
-    }
+    // Remove the event from state
+    setEvents((prev) =>
+      prev.filter((ev) => ev.REF_SERIAL_NO !== parentEvent.REF_SERIAL_NO)
+    );
 
-    // Update state
-    setEvents(newEvents);
     const dateKey = formatDateKey(selectedDate);
     setTimesheetsByDate((prev) => ({
       ...prev,
-      [dateKey]: newEvents,
+      [dateKey]: prev[dateKey].filter(
+        (ev) => ev.REF_SERIAL_NO !== parentEvent.REF_SERIAL_NO
+      ),
     }));
+
+    // Update task color if there are no other events with the same TASK_ID
+    if (!hasOtherEvents) {
+      setTasks((prevTasks) =>
+        prevTasks.map((task) =>
+          task.TASK_ID === parentEvent.TASK_ID
+            ? { ...task, color: undefined }
+            : task
+        )
+      );
+      setFilteredTasks((prevFiltered) =>
+        prevFiltered.map((task) =>
+          task.TASK_ID === parentEvent.TASK_ID
+            ? { ...task, color: undefined }
+            : task
+        )
+      );
+    }
+
+    toast({
+      title: "Success",
+      description: "Hour block deleted successfully",
+    });
   };
 
   const handleClosePopup = () => {
     setShowPopup(false);
-    setEditingBlock(null);
     setTaskDetails({
-      TASK_ID: "",
+      REF_SERIAL_NO: nextTempRef,
       TASK_NAME: "",
-      START_TIME: 8,
-      startMinute: "00",
-      END_TIME: 9,
-      endMinute: "00",
+      TASK_ID: "",
+      PROJECT_NO: "",
+      dmsNo: "",
+      EMP_NO: userData.currentUserEmpNo,
+      TASK_USER: userData.userName,
+      TRANS_DATE: formatDateKey(new Date()),
+      START_HOUR: 8,
+      START_MINIUTE: 0,
+      END_HOUR: 9,
+      END_MINITUE: 0,
+      NO_OF_HOURS: 0,
+      NO_OF_MINUTES: 0,
+      TOTAL_DURATION_MINUTES: null,
+      TOTAL_DURATION_HOURS: null,
+      TOTAL_HOURS: null,
+      USER_NAME: userData.userName,
+      ENT_DATE: null,
       color: getRandomColor(),
+      isCompleted: false,
+      isNewBlock: false,
+      isEditing: false,
     });
     setSelectedTask(null);
-  };
 
-  const handleSearch = (e) => {
-    const keyword = e.target.value.toLowerCase();
-    const filtered = tasks.filter((task) =>
-      task.TASK_NAME.toLowerCase().includes(keyword)
-    );
-    setFilteredTasks(filtered);
+    if (taskDetails.REF_SERIAL_NO <= 0) {
+      setNextTempRef((prev) => prev - 1);
+    }
   };
 
   const handleMouseDown = (hour) => {
-    const todayKey = formatDateKey(new Date());
-    const selectedDateKey = formatDateKey(selectedDate);
-
-    if (selectedDateKey !== todayKey) {
-      alert("You can only view events on previous dates.");
-      return;
-    }
-
-    if (hour >= 24) {
-      return;
-    }
-
+    if (hour >= 24) return;
     setDragging(true);
     setDragStart(hour);
     setDragEnd(hour);
@@ -951,120 +937,147 @@ const handleSave = (e) => {
 
   const handleMouseMove = (e, hour) => {
     if (!dragging) return;
-
-    if (hour >= 24) {
-      return;
-    }
-
-    if (hour !== dragEnd) {
-      setDragEnd(hour);
-    }
+    if (hour >= 24) return;
+    if (hour !== dragEnd) setDragEnd(hour);
   };
 
   const handleMouseUp = () => {
     if (!dragging) return;
-
     setDragging(false);
-
     const start = Math.min(dragStart, dragEnd);
     const end = Math.max(dragStart, dragEnd) + 1;
-
     if (start >= 24 || end > 24) {
       alert("Tasks cannot start or end after 12 AM.");
       return;
     }
-
     setTaskDetails({
-      id: null,
+      REF_SERIAL_NO: nextTempRef,
       TASK_NAME: "",
-      START_TIME: start,
-      startMinute: "00",
-      END_TIME: end,
-      endMinute: "00",
+      START_HOUR: start,
+      START_MINIUTE: 0,
+      END_HOUR: end,
+      END_MINITUE: 0,
       color: getRandomColor(),
+      isNewBlock: true,
+      isEditing: false,
     });
+    setNextTempRef((prev) => prev - 1);
     setShowPopup(true);
   };
 
   const handleDragStart = (e, task) => {
     e.dataTransfer.setData("task", JSON.stringify(task));
     e.dataTransfer.effectAllowed = "copy";
-    e.dataTransfer.setDragImage(new Image(), 0, 0); // Hide default drag image
+    e.dataTransfer.setDragImage(new Image(), 0, 0);
   };
 
-  const checkOverlap = (newStartMinutes, newEndMinutes, currentEventId) => {
+  const checkOverlap = (newStartMinutes, newEndMinutes, currentRefNo) => {
     return events.some((event) => {
-      if (event.id === currentEventId) return false;
-      const eventStart = event.START_TIME * 60 + event.startMinute;
-      const eventEnd = event.END_TIME * 60 + event.endMinute;
+      if (event.REF_SERIAL_NO === currentRefNo) return false;
+      const eventStart = event.START_HOUR * 60 + Number(event.START_MINIUTE);
+      const eventEnd = event.END_HOUR * 60 + Number(event.END_MINITUE);
       return newStartMinutes < eventEnd && newEndMinutes > eventStart;
     });
   };
 
-  // --- FIX: Correct date check for resize handlers ---
   const handleRightResizeMouseDown = (e, targetEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
-    const todayKey = formatDateKey(new Date());
-    const selectedDateKey = formatDateKey(selectedDate);
-
-    // FIX: Use correct date key comparison
-    if (selectedDateKey !== todayKey) {
-      alert("You can only edit events for today's date.");
-      return;
-    }
-
     const initialX = e.clientX;
-    const initialEndHour = targetEvent.END_TIME;
-    const initialEndMinute = targetEvent.endMinute;
-    const initialStartHour = targetEvent.START_TIME;
-    const initialStartMinute = targetEvent.startMinute;
+    const initialEndHour = targetEvent.END_HOUR;
+    const initialEndMinute = Number(targetEvent.END_MINITUE) || 0;
+    const initialStartHour = targetEvent.START_HOUR;
+    const initialStartMinute = Number(targetEvent.START_MINIUTE) || 0;
 
     setResizingEvent({
-      eventId: targetEvent.id,
+      eventRefNo: targetEvent.REF_SERIAL_NO,
       direction: "right",
     });
 
     document.body.style.cursor = "e-resize";
 
-    const onMouseMove = (moveEvent) => {
+    const onMouseMove = async (moveEvent) => {
       const deltaX = moveEvent.clientX - initialX;
       const sensitivity = Math.abs(deltaX) >= 60 ? 0.1 : 1;
       const pixelsPerMinute = 90 / 60;
       const movedMinutes = Math.round((deltaX * sensitivity) / pixelsPerMinute);
-      const deltaStepMinutes = Math.round(movedMinutes / STEP) * STEP;
+      const deltaStepMinutes = Math.round(movedMinutes / 15) * 15;
 
       const startTotalMinutes = initialStartHour * 60 + initialStartMinute;
       let newEndTotalMinutes =
         initialEndHour * 60 + initialEndMinute + deltaStepMinutes;
 
-      // Enforce minimum duration
-      if (newEndTotalMinutes <= startTotalMinutes + MIN_DURATION) {
-        newEndTotalMinutes = startTotalMinutes + MIN_DURATION;
+      if (newEndTotalMinutes <= startTotalMinutes + 15) {
+        newEndTotalMinutes = startTotalMinutes + 15;
       }
-      if (newEndTotalMinutes > END_OF_DAY) {
-        newEndTotalMinutes = END_OF_DAY;
+      if (newEndTotalMinutes > 24 * 60) {
+        newEndTotalMinutes = 24 * 60;
       }
 
-      if (checkOverlap(startTotalMinutes, newEndTotalMinutes, targetEvent.id)) {
+      if (
+        checkOverlap(
+          startTotalMinutes,
+          newEndTotalMinutes,
+          targetEvent.REF_SERIAL_NO
+        )
+      ) {
         return;
       }
 
-      const newEndHour = Math.floor(newEndTotalMinutes / 60);
-      const newEndMinute = newEndTotalMinutes % 60;
+      // Split into hour blocks
+      const hourBlocks = [];
+      let currentStart = startTotalMinutes;
+      const endTime = newEndTotalMinutes;
 
-      const updatedEvent = {
-        ...targetEvent,
-        END_TIME: newEndHour,
-        endMinute: newEndMinute,
-        NO_OF_MINUTES: newEndTotalMinutes - startTotalMinutes,
-        NO_OF_HOURS: parseFloat(
-          ((newEndTotalMinutes - startTotalMinutes) / 60).toFixed(2)
-        ),
-      };
+      while (currentStart < endTime) {
+        const currentHour = Math.floor(currentStart / 60);
+        const nextHourStart = (currentHour + 1) * 60;
+        const blockEnd = Math.min(nextHourStart, endTime);
 
-      updateEventInStorage(updatedEvent);
+        hourBlocks.push({
+          ...targetEvent,
+          START_HOUR: Math.floor(currentStart / 60),
+          START_MINIUTE: currentStart % 60,
+          END_HOUR: Math.floor(blockEnd / 60),
+          END_MINITUE: blockEnd % 60,
+          NO_OF_MINUTES: blockEnd - currentStart,
+          NO_OF_HOURS: parseFloat(((blockEnd - currentStart) / 60).toFixed(2)),
+          REF_SERIAL_NO:
+            currentStart === startTotalMinutes
+              ? targetEvent.REF_SERIAL_NO
+              : nextTempRef - hourBlocks.length,
+          isNewBlock: currentStart !== startTotalMinutes,
+        });
+
+        currentStart = blockEnd;
+      }
+
+      // Save all hour blocks
+      const savedEvents = [];
+      for (const block of hourBlocks) {
+        const savedEvent = await SaveServiceData(block);
+        savedEvents.push(savedEvent);
+        if (block.isNewBlock) {
+          setNextTempRef((prev) => prev - 1);
+        }
+      }
+
+      // Update state with the new blocks
+      const dateKey = formatDateKey(selectedDate);
+      const existingEvents = (timesheetsByDate[dateKey] || []).filter(
+        (e) => e.REF_SERIAL_NO !== targetEvent.REF_SERIAL_NO
+      );
+
+      setTimesheetsByDate((prev) => ({
+        ...prev,
+        [dateKey]: [...existingEvents, ...savedEvents],
+      }));
+
+      setEvents((prev) => [
+        ...prev.filter((e) => e.REF_SERIAL_NO !== targetEvent.REF_SERIAL_NO),
+        ...savedEvents,
+      ]);
     };
 
     const onMouseUp = () => {
@@ -1072,6 +1085,12 @@ const handleSave = (e) => {
       document.removeEventListener("mousemove", onMouseMove);
       document.removeEventListener("mouseup", onMouseUp);
       document.body.style.cursor = "default";
+
+      toast({
+        title: "Changes made",
+        description: "Don't forget to save your changes before switching dates",
+        variant: "default",
+      });
     };
 
     document.addEventListener("mousemove", onMouseMove);
@@ -1082,65 +1101,100 @@ const handleSave = (e) => {
     e.preventDefault();
     e.stopPropagation();
 
-    const todayKey = formatDateKey(new Date());
-    const selectedDateKey = formatDateKey(selectedDate);
-
-    if (selectedDateKey !== todayKey) {
-      alert("You can only edit events for today's date.");
-      return;
-    }
-
     const initialX = e.clientX;
-    const initialStartHour = targetEvent.START_TIME;
-    const initialStartMinute = targetEvent.startMinute;
-    const initialEndHour = targetEvent.END_TIME;
-    const initialEndMinute = targetEvent.endMinute;
+    const initialStartHour = targetEvent.START_HOUR;
+    const initialStartMinute = Number(targetEvent.START_MINIUTE) || 0;
+    const initialEndHour = targetEvent.END_HOUR;
+    const initialEndMinute = Number(targetEvent.END_MINITUE) || 0;
 
     setResizingEvent({
-      eventId: targetEvent.id,
+      eventRefNo: targetEvent.REF_SERIAL_NO,
       direction: "left",
     });
 
     document.body.style.cursor = "w-resize";
 
-    const onMouseMove = (moveEvent) => {
+    const onMouseMove = async (moveEvent) => {
       const deltaX = moveEvent.clientX - initialX;
       const sensitivity = Math.abs(deltaX) >= 60 ? 0.1 : 1;
       const pixelsPerMinute = 90 / 60;
       const movedMinutes = Math.round((deltaX * sensitivity) / pixelsPerMinute);
-      const deltaStepMinutes = Math.round(movedMinutes / STEP) * STEP;
+      const deltaStepMinutes = Math.round(movedMinutes / 15) * 15;
 
       const startTotalMinutes = initialStartHour * 60 + initialStartMinute;
       const endTotalMinutes = initialEndHour * 60 + initialEndMinute;
-      // For left resize, subtract the delta
       let newStartTotalMinutes = startTotalMinutes + deltaStepMinutes;
 
-      // Clamp to bounds and minimum duration
-      if (newStartTotalMinutes < START_OF_DAY) {
-        newStartTotalMinutes = START_OF_DAY;
+      if (newStartTotalMinutes < 0) {
+        newStartTotalMinutes = 0;
       }
-      if (newStartTotalMinutes > endTotalMinutes - MIN_DURATION) {
-        newStartTotalMinutes = endTotalMinutes - MIN_DURATION;
+      if (newStartTotalMinutes > endTotalMinutes - 15) {
+        newStartTotalMinutes = endTotalMinutes - 15;
       }
 
-      if (checkOverlap(newStartTotalMinutes, endTotalMinutes, targetEvent.id)) {
+      if (
+        checkOverlap(
+          newStartTotalMinutes,
+          endTotalMinutes,
+          targetEvent.REF_SERIAL_NO
+        )
+      ) {
         return;
       }
 
-      const newStartHour = Math.floor(newStartTotalMinutes / 60);
-      const newStartMinute = newStartTotalMinutes % 60;
+      // Split into hour blocks
+      const hourBlocks = [];
+      let currentStart = newStartTotalMinutes;
+      const endTime = endTotalMinutes;
 
-      const updatedEvent = {
-        ...targetEvent,
-        START_TIME: newStartHour,
-        startMinute: newStartMinute,
-        NO_OF_MINUTES: endTotalMinutes - newStartTotalMinutes,
-        NO_OF_HOURS: parseFloat(
-          ((endTotalMinutes - newStartTotalMinutes) / 60).toFixed(2)
-        ),
-      };
+      while (currentStart < endTime) {
+        const currentHour = Math.floor(currentStart / 60);
+        const nextHourStart = (currentHour + 1) * 60;
+        const blockEnd = Math.min(nextHourStart, endTime);
 
-      updateEventInStorage(updatedEvent);
+        hourBlocks.push({
+          ...targetEvent,
+          START_HOUR: Math.floor(currentStart / 60),
+          START_MINIUTE: currentStart % 60,
+          END_HOUR: Math.floor(blockEnd / 60),
+          END_MINITUE: blockEnd % 60,
+          NO_OF_MINUTES: blockEnd - currentStart,
+          NO_OF_HOURS: parseFloat(((blockEnd - currentStart) / 60).toFixed(2)),
+          REF_SERIAL_NO:
+            currentStart === newStartTotalMinutes
+              ? targetEvent.REF_SERIAL_NO
+              : nextTempRef - hourBlocks.length,
+          isNewBlock: currentStart !== newStartTotalMinutes,
+        });
+
+        currentStart = blockEnd;
+      }
+
+      // Save all hour blocks
+      const savedEvents = [];
+      for (const block of hourBlocks) {
+        const savedEvent = await SaveServiceData(block);
+        savedEvents.push(savedEvent);
+        if (block.isNewBlock) {
+          setNextTempRef((prev) => prev - 1);
+        }
+      }
+
+      // Update state with the new blocks
+      const dateKey = formatDateKey(selectedDate);
+      const existingEvents = (timesheetsByDate[dateKey] || []).filter(
+        (e) => e.REF_SERIAL_NO !== targetEvent.REF_SERIAL_NO
+      );
+
+      setTimesheetsByDate((prev) => ({
+        ...prev,
+        [dateKey]: [...existingEvents, ...savedEvents],
+      }));
+
+      setEvents((prev) => [
+        ...prev.filter((e) => e.REF_SERIAL_NO !== targetEvent.REF_SERIAL_NO),
+        ...savedEvents,
+      ]);
     };
 
     const onMouseUp = () => {
@@ -1148,81 +1202,115 @@ const handleSave = (e) => {
       document.removeEventListener("mousemove", onMouseMove);
       document.removeEventListener("mouseup", onMouseUp);
       document.body.style.cursor = "default";
+
+      toast({
+        title: "Changes made",
+        description: "Don't forget to save your changes before switching dates",
+        variant: "default",
+      });
     };
 
     document.addEventListener("mousemove", onMouseMove);
     document.addEventListener("mouseup", onMouseUp);
   };
-  // --- END FIX ---
 
   const handleDragMouseDown = (e, targetEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
-    // Check if selected date is today
-    const todayKey = formatDateKey(new Date());
-    const selectedDateKey = formatDateKey(selectedDate);
-
-    // FIX: Use correct date key comparison
-    if (selectedDateKey !== todayKey) {
-      alert("You can only edit events for today's date.");
-      return;
-    }
-
     const initialY = e.clientY;
-    const START_TIME = targetEvent.START_TIME;
-    const startMinute = targetEvent.startMinute;
-    const END_TIME = targetEvent.END_TIME;
-    const endMinute = targetEvent.endMinute;
-
-    const initialStartMinutes = START_TIME * 60 + startMinute;
-    const initialEndMinutes = END_TIME * 60 + endMinute;
+    const START_HOUR = targetEvent.START_HOUR;
+    const START_MINIUTE = Number(targetEvent.START_MINIUTE);
+    const END_HOUR = targetEvent.END_HOUR;
+    const END_MINITUE = Number(targetEvent.END_MINITUE);
+    const initialStartMinutes = START_HOUR * 60 + START_MINIUTE;
+    const initialEndMinutes = END_HOUR * 60 + END_MINITUE;
+    const duration = initialEndMinutes - initialStartMinutes;
 
     setResizingEvent({
-      eventId: targetEvent.id,
+      eventRefNo: targetEvent.REF_SERIAL_NO,
       direction: "move",
     });
 
     document.body.style.cursor = "grabbing";
 
-    const onMouseMove = (moveEvent) => {
+    const onMouseMove = async (moveEvent) => {
       const deltaY = moveEvent.clientY - initialY;
       const pixelsPerMinute = rowHeight / 60;
       const movedMinutes = Math.round(deltaY / pixelsPerMinute);
-      const deltaStepMinutes = Math.round(movedMinutes / STEP) * STEP;
+      const deltaStepMinutes = Math.round(movedMinutes / 15) * 15;
 
       let newStartMinutes = initialStartMinutes + deltaStepMinutes;
-      let newEndMinutes = initialEndMinutes + deltaStepMinutes;
+      let newEndMinutes = newStartMinutes + duration;
 
-      const duration = initialEndMinutes - initialStartMinutes;
-
-      if (newStartMinutes < START_OF_DAY) {
-        newStartMinutes = START_OF_DAY;
-        newEndMinutes = START_OF_DAY + duration;
+      if (newStartMinutes < 0) {
+        newStartMinutes = 0;
+        newEndMinutes = duration;
       }
-      if (newEndMinutes > END_OF_DAY) {
-        newEndMinutes = END_OF_DAY;
-        newStartMinutes = END_OF_DAY - duration;
+      if (newEndMinutes > 24 * 60) {
+        newEndMinutes = 24 * 60;
+        newStartMinutes = 24 * 60 - duration;
       }
 
-      if (checkOverlap(newStartMinutes, newEndMinutes, targetEvent.id)) {
+      if (
+        checkOverlap(newStartMinutes, newEndMinutes, targetEvent.REF_SERIAL_NO)
+      ) {
         return;
       }
 
-      const newStartHour = Math.floor(newStartMinutes / 60);
-      const newStartMinute = newStartMinutes % 60;
-      const newEndHour = Math.floor(newEndMinutes / 60);
-      const newEndMinute = newEndMinutes % 60;
+      // Split into hour blocks
+      const hourBlocks = [];
+      let currentStart = newStartMinutes;
+      const endTime = newEndMinutes;
 
-      const updatedEvent = {
-        ...targetEvent,
-        START_TIME: newStartHour,
-        startMinute: newStartMinute,
-        END_TIME: newEndHour,
-        endMinute: newEndMinute,
-      };
+      while (currentStart < endTime) {
+        const currentHour = Math.floor(currentStart / 60);
+        const nextHourStart = (currentHour + 1) * 60;
+        const blockEnd = Math.min(nextHourStart, endTime);
 
-      updateEventInStorage(updatedEvent);
+        hourBlocks.push({
+          ...targetEvent,
+          START_HOUR: Math.floor(currentStart / 60),
+          START_MINIUTE: currentStart % 60,
+          END_HOUR: Math.floor(blockEnd / 60),
+          END_MINITUE: blockEnd % 60,
+          NO_OF_MINUTES: blockEnd - currentStart,
+          NO_OF_HOURS: parseFloat(((blockEnd - currentStart) / 60).toFixed(2)),
+          REF_SERIAL_NO:
+            currentStart === newStartMinutes
+              ? targetEvent.REF_SERIAL_NO
+              : nextTempRef - hourBlocks.length,
+          isNewBlock: currentStart !== newStartMinutes,
+        });
+
+        currentStart = blockEnd;
+      }
+
+      // Save all hour blocks
+      const savedEvents = [];
+      for (const block of hourBlocks) {
+        const savedEvent = await SaveServiceData(block);
+        savedEvents.push(savedEvent);
+        if (block.isNewBlock) {
+          setNextTempRef((prev) => prev - 1);
+        }
+      }
+
+      // Update state with the new blocks
+      const dateKey = formatDateKey(selectedDate);
+      const existingEvents = (timesheetsByDate[dateKey] || []).filter(
+        (e) => e.REF_SERIAL_NO !== targetEvent.REF_SERIAL_NO
+      );
+
+      setTimesheetsByDate((prev) => ({
+        ...prev,
+        [dateKey]: [...existingEvents, ...savedEvents],
+      }));
+
+      setEvents((prev) => [
+        ...prev.filter((e) => e.REF_SERIAL_NO !== targetEvent.REF_SERIAL_NO),
+        ...savedEvents,
+      ]);
     };
 
     const onMouseUp = () => {
@@ -1230,6 +1318,12 @@ const handleSave = (e) => {
       document.removeEventListener("mousemove", onMouseMove);
       document.removeEventListener("mouseup", onMouseUp);
       document.body.style.cursor = "default";
+
+      toast({
+        title: "Changes made",
+        description: "Don't forget to save your changes before switching dates",
+        variant: "default",
+      });
     };
 
     document.addEventListener("mousemove", onMouseMove);
@@ -1242,1078 +1336,733 @@ const handleSave = (e) => {
     return date > today;
   };
 
-  // Fill only the double-clicked hour block to full hour, others remain unchanged
-  const handleFillHourRight = (e, blockStartHour, blockStartMinute) => {
+  const handleFillHourRight = async (e, blockStartHour, blockStartMinute) => {
     e.preventDefault();
     e.stopPropagation();
 
-    const todayKey = formatDateKey(new Date());
-    const selectedDateKey = formatDateKey(selectedDate);
-    if (selectedDateKey !== todayKey) {
-      alert("You can only edit events for today's date.");
-      return;
-    }
+    // Find all blocks that belong to the same parent event
+    const parentBlocks = events.filter(
+      (event) =>
+        event.blockParentId &&
+        event.START_HOUR === blockStartHour &&
+        Number(event.START_MINIUTE) === Number(blockStartMinute)
+    );
 
-    // Find the parent event and all its blocks
-    let parentEvent = null;
-    let parentBlocks = [];
-    for (const event of events) {
-      const blocks = splitEventToHourBlocks(event);
+    if (!parentBlocks.length) return;
+
+    // Get the parent ID (either REF_SERIAL_NO or blockParentId)
+    const parentId =
+      parentBlocks[0].blockParentId || parentBlocks[0].REF_SERIAL_NO;
+
+    // Find the last block of this event
+    const lastBlock = [...parentBlocks].sort((a, b) => {
+      const aEnd = a.END_HOUR * 60 + Number(a.END_MINITUE);
+      const bEnd = b.END_HOUR * 60 + Number(b.END_MINITUE);
+      return bEnd - aEnd;
+    })[0];
+
+    // Calculate potential new end time (next hour mark)
+    const potentialNewEndHour = lastBlock.END_HOUR + 1;
+    const potentialNewEndMinute = 0;
+    const potentialNewEndTotalMinutes =
+      potentialNewEndHour * 60 + potentialNewEndMinute;
+
+    // Find the earliest start time of any event that comes after our last block
+    let earliestNextEventStart = 24 * 60; // Initialize with end of day
+
+    events.forEach((event) => {
+      if (event.REF_SERIAL_NO === parentId) return; // Skip our own event
+
+      const eventStart = event.START_HOUR * 60 + Number(event.START_MINIUTE);
+      const eventEnd = event.END_HOUR * 60 + Number(event.END_MINITUE);
+
+      // If event is after our last block but starts before our potential new end
       if (
-        blocks.some(
-          (b) =>
-            b.blockStartHour === blockStartHour &&
-            Number(b.blockStartMinute) === Number(blockStartMinute)
-        )
+        eventStart >
+        lastBlock.END_HOUR * 60 + Number(lastBlock.END_MINITUE)
       ) {
-        parentEvent = event;
-        parentBlocks = blocks;
-        break;
-      }
-    }
-    if (!parentEvent) return;
-
-    // Prepare new events: all blocks except the clicked one remain, clicked one is filled to hour
-    const newEvents = events.filter((ev) => ev.id !== parentEvent.id);
-
-    parentBlocks.forEach((block) => {
-      if (
-        block.blockStartHour === blockStartHour &&
-        Number(block.blockStartMinute) === Number(blockStartMinute)
-      ) {
-        // Fill this block to the end of the hour
-        const startTotal =
-          block.blockStartHour * 60 + Number(block.blockStartMinute);
-        const endTotal = (block.blockStartHour + 1) * 60;
-        // Prevent overflow and overlap
-        if (endTotal > END_OF_DAY) return;
-        if (checkOverlap(startTotal, endTotal, parentEvent.id)) return;
-        newEvents.push({
-          ...parentEvent,
-          id: `${parentEvent.id}_fill_${block.blockStartHour}`,
-          START_TIME: block.blockStartHour,
-          startMinute: Number(block.blockStartMinute),
-          END_TIME: block.blockStartHour + 1,
-          endMinute: 0,
-          NO_OF_MINUTES: endTotal - startTotal,
-          NO_OF_HOURS: parseFloat(((endTotal - startTotal) / 60).toFixed(2)),
-        });
-      } else {
-        // Keep other blocks as they are
-        const startTotal =
-          block.blockStartHour * 60 + Number(block.blockStartMinute);
-        const endTotal = block.blockEndHour * 60 + Number(block.blockEndMinute);
-        newEvents.push({
-          ...parentEvent,
-          id: `${parentEvent.id}_keep_${block.blockStartHour}`,
-          START_TIME: block.blockStartHour,
-          startMinute: Number(block.blockStartMinute),
-          END_TIME: block.blockEndHour,
-          endMinute: Number(block.blockEndMinute),
-          NO_OF_MINUTES: endTotal - startTotal,
-          NO_OF_HOURS: parseFloat(((endTotal - startTotal) / 60).toFixed(2)),
-        });
+        if (eventStart < earliestNextEventStart) {
+          earliestNextEventStart = eventStart;
+        }
       }
     });
 
-    setEvents(newEvents);
+    // Determine the actual new end time - either the next hour mark or the start of the next event
+    const newEndTotalMinutes = Math.min(
+      potentialNewEndTotalMinutes,
+      earliestNextEventStart
+    );
+
+    // If we can't extend at all (already at next event's start)
+    if (
+      newEndTotalMinutes <=
+      lastBlock.END_HOUR * 60 + Number(lastBlock.END_MINITUE)
+    ) {
+      toast({
+        title: "Cannot extend",
+        description: "Event is already adjacent to another event",
+        variant: "default",
+      });
+      return;
+    }
+
+    const newEndHour = Math.floor(newEndTotalMinutes / 60);
+    const newEndMinute = newEndTotalMinutes % 60;
+
+    // Update the last block
+    const updatedLastBlock = {
+      ...lastBlock,
+      END_HOUR: newEndHour,
+      END_MINITUE: newEndMinute,
+      NO_OF_MINUTES:
+        newEndTotalMinutes -
+        (lastBlock.START_HOUR * 60 + Number(lastBlock.START_MINIUTE)),
+      NO_OF_HOURS: parseFloat(
+        (
+          (newEndTotalMinutes -
+            (lastBlock.START_HOUR * 60 + Number(lastBlock.START_MINIUTE))) /
+          60
+        ).toFixed(2)
+      ),
+      isNewBlock: false,
+    };
+
+    // Update state
+    setEvents((prev) =>
+      prev.map((ev) =>
+        ev.REF_SERIAL_NO === lastBlock.REF_SERIAL_NO ? updatedLastBlock : ev
+      )
+    );
+
     const dateKey = formatDateKey(selectedDate);
     setTimesheetsByDate((prev) => ({
       ...prev,
-      [dateKey]: newEvents,
+      [dateKey]: (prev[dateKey] || []).map((ev) =>
+        ev.REF_SERIAL_NO === lastBlock.REF_SERIAL_NO ? updatedLastBlock : ev
+      ),
     }));
+
+    await SaveServiceData(updatedLastBlock);
+
+    toast({
+      title: "Event extended",
+      description: `Extended to ${formatTime(newEndHour, newEndMinute)}`,
+      variant: "default",
+    });
   };
 
-  const handleFillHourLeft = (e, blockStartHour, blockStartMinute) => {
+  const handleFillHourLeft = async (e, blockStartHour, blockStartMinute) => {
     e.preventDefault();
     e.stopPropagation();
 
-    const todayKey = formatDateKey(new Date());
-    const selectedDateKey = formatDateKey(selectedDate);
-    if (selectedDateKey !== todayKey) {
-      alert("You can only edit events for today's date.");
-      return;
-    }
+    // Find all blocks that belong to the same parent event
+    const parentBlocks = events.filter(
+      (event) =>
+        event.blockParentId &&
+        event.START_HOUR === blockStartHour &&
+        Number(event.START_MINIUTE) === Number(blockStartMinute)
+    );
 
-    // Find the parent event and all its blocks
-    let parentEvent = null;
-    let parentBlocks = [];
-    for (const event of events) {
-      const blocks = splitEventToHourBlocks(event);
+    if (!parentBlocks.length) return;
+
+    // Get the parent ID (either REF_SERIAL_NO or blockParentId)
+    const parentId =
+      parentBlocks[0].blockParentId || parentBlocks[0].REF_SERIAL_NO;
+
+    // Find the first block of this event
+    const firstBlock = [...parentBlocks].sort((a, b) => {
+      const aStart = a.START_HOUR * 60 + Number(a.START_MINIUTE);
+      const bStart = b.START_HOUR * 60 + Number(b.START_MINIUTE);
+      return aStart - bStart;
+    })[0];
+
+    // Calculate potential new start time (previous hour mark)
+    const potentialNewStartHour = firstBlock.START_HOUR;
+    const potentialNewStartMinute = 0;
+    const potentialNewStartTotalMinutes =
+      potentialNewStartHour * 60 + potentialNewStartMinute;
+
+    // Find the latest end time of any event that comes before our first block
+    let latestPreviousEventEnd = 0; // Initialize with start of day
+
+    events.forEach((event) => {
+      if (event.REF_SERIAL_NO === parentId) return; // Skip our own event
+
+      const eventStart = event.START_HOUR * 60 + Number(event.START_MINIUTE);
+      const eventEnd = event.END_HOUR * 60 + Number(event.END_MINITUE);
+
+      // If event is before our first block but ends after our potential new start
       if (
-        blocks.some(
-          (b) =>
-            b.blockStartHour === blockStartHour &&
-            Number(b.blockStartMinute) === Number(blockStartMinute)
-        )
+        eventEnd <
+        firstBlock.START_HOUR * 60 + Number(firstBlock.START_MINIUTE)
       ) {
-        parentEvent = event;
-        parentBlocks = blocks;
-        break;
-      }
-    }
-    if (!parentEvent) return;
-
-    // Prepare new events: all blocks except the clicked one remain, clicked one is filled from start of hour
-    const newEvents = events.filter((ev) => ev.id !== parentEvent.id);
-
-    parentBlocks.forEach((block) => {
-      if (
-        block.blockStartHour === blockStartHour &&
-        Number(block.blockStartMinute) === Number(blockStartMinute)
-      ) {
-        // Fill this block from the start of the hour
-        const startTotal = block.blockStartHour * 60;
-        const endTotal =
-          block.blockStartHour * 60 + Number(block.blockEndMinute);
-        // Prevent underflow and overlap
-        if (startTotal < START_OF_DAY) return;
-        if (checkOverlap(startTotal, endTotal, parentEvent.id)) return;
-        newEvents.push({
-          ...parentEvent,
-          id: `${parentEvent.id}_fill_left_${block.blockStartHour}`,
-          START_TIME: block.blockStartHour,
-          startMinute: 0,
-          END_TIME: block.blockEndHour,
-          endMinute: Number(block.blockEndMinute),
-          NO_OF_MINUTES: endTotal - startTotal,
-          NO_OF_HOURS: parseFloat(((endTotal - startTotal) / 60).toFixed(2)),
-        });
-      } else {
-        // Keep other blocks as they are
-        const startTotal =
-          block.blockStartHour * 60 + Number(block.blockStartMinute);
-        const endTotal = block.blockEndHour * 60 + Number(block.blockEndMinute);
-        newEvents.push({
-          ...parentEvent,
-          id: `${parentEvent.id}_keep_${block.blockStartHour}`,
-          START_TIME: block.blockStartHour,
-          startMinute: Number(block.blockStartMinute),
-          END_TIME: block.blockEndHour,
-          endMinute: Number(block.blockEndMinute),
-          NO_OF_MINUTES: endTotal - startTotal,
-          NO_OF_HOURS: parseFloat(((endTotal - startTotal) / 60).toFixed(2)),
-        });
+        if (eventEnd > latestPreviousEventEnd) {
+          latestPreviousEventEnd = eventEnd;
+        }
       }
     });
 
-    setEvents(newEvents);
+    // Determine the actual new start time - either the hour mark or the end of the previous event
+    const newStartTotalMinutes = Math.max(
+      potentialNewStartTotalMinutes,
+      latestPreviousEventEnd
+    );
+
+    // If we can't extend at all (already at previous event's end)
+    if (
+      newStartTotalMinutes >=
+      firstBlock.START_HOUR * 60 + Number(firstBlock.START_MINIUTE)
+    ) {
+      toast({
+        title: "Cannot extend",
+        description: "Event is already adjacent to another event",
+        variant: "default",
+      });
+      return;
+    }
+
+    const newStartHour = Math.floor(newStartTotalMinutes / 60);
+    const newStartMinute = newStartTotalMinutes % 60;
+
+    // Update the first block
+    const updatedFirstBlock = {
+      ...firstBlock,
+      START_HOUR: newStartHour,
+      START_MINIUTE: newStartMinute,
+      NO_OF_MINUTES:
+        firstBlock.END_HOUR * 60 +
+        Number(firstBlock.END_MINITUE) -
+        newStartTotalMinutes,
+      NO_OF_HOURS: parseFloat(
+        (
+          (firstBlock.END_HOUR * 60 +
+            Number(firstBlock.END_MINITUE) -
+            newStartTotalMinutes) /
+          60
+        ).toFixed(2)
+      ),
+      isNewBlock: false,
+    };
+
+    // Update state
+    setEvents((prev) =>
+      prev.map((ev) =>
+        ev.REF_SERIAL_NO === firstBlock.REF_SERIAL_NO ? updatedFirstBlock : ev
+      )
+    );
+
     const dateKey = formatDateKey(selectedDate);
     setTimesheetsByDate((prev) => ({
       ...prev,
-      [dateKey]: newEvents,
+      [dateKey]: (prev[dateKey] || []).map((ev) =>
+        ev.REF_SERIAL_NO === firstBlock.REF_SERIAL_NO ? updatedFirstBlock : ev
+      ),
     }));
+
+    await SaveServiceData(updatedFirstBlock);
+
+    toast({
+      title: "Event extended",
+      description: `Extended to start at ${formatTime(
+        newStartHour,
+        newStartMinute
+      )}`,
+      variant: "default",
+    });
   };
 
-  // Add this helper function inside your component
-  function saveBlocksToState(blocks, dateKey) {
-    setTimesheetsByDate((prev) => ({
-      ...prev,
-      [dateKey]: [...(prev[dateKey] || []), ...blocks],
-    }));
-    setEvents((prev) => [...prev, ...blocks]);
-  }
-
-  // --- NEW: Track which block is being edited ---
-  const [editingBlock, setEditingBlock] = useState(null);
-
-  // --- MODIFIED: Open popup for editing a specific hour block ---
   const handleEditBlock = (e, block, parentEvent) => {
     e.preventDefault();
-    setEditingBlock({ block, parentEvent });
+    e.stopPropagation();
+
+    const fullEvent = events.find(
+      (ev) => ev.REF_SERIAL_NO === parentEvent.REF_SERIAL_NO
+    );
+    if (!fullEvent) return;
+
     setTaskDetails({
-      ...parentEvent,
-      START_TIME: block.blockStartHour,
-      startMinute: block.blockStartMinute,
-      END_TIME: block.blockEndHour,
-      endMinute: block.blockEndMinute,
-      color: parentEvent.color,
-      id: parentEvent.id,
+      ...fullEvent,
+      START_HOUR: parseInt(fullEvent.START_HOUR) || 8,
+      START_MINIUTE: Number(fullEvent.START_MINIUTE) || 0,
+      END_HOUR: parseInt(fullEvent.END_HOUR) || 9,
+      END_MINITUE: Number(fullEvent.END_MINITUE) || 0,
+      TOTAL_DURATION_MINUTES: calculateDuration(
+        parseInt(fullEvent.START_HOUR) || 8,
+        Number(fullEvent.START_MINIUTE) || 0,
+        parseInt(fullEvent.END_HOUR) || 9,
+        Number(fullEvent.END_MINITUE) || 0
+      ),
+      TOTAL_DURATION_HOURS: parseFloat(
+        (
+          calculateDuration(
+            parseInt(fullEvent.START_HOUR) || 8,
+            Number(fullEvent.START_MINIUTE) || 0,
+            parseInt(fullEvent.END_HOUR) || 9,
+            Number(fullEvent.END_MINITUE) || 0
+          ) / 60
+        ).toFixed(2)
+      ),
+      REF_SERIAL_NO: fullEvent.REF_SERIAL_NO,
+      isNewBlock: false,
+      isEditing: true,
     });
+
     const foundTask = tasks.find(
-      (task) => task.TASK_NAME === parentEvent.TASK_NAME
+      (task) => task.TASK_NAME === fullEvent.TASK_NAME
     );
     setSelectedTask(foundTask || null);
     setShowPopup(true);
   };
 
+  const parseDateFromString = (dateString) => {
+    if (!dateString) return "N/A";
+    const date = new Date(dateString);
+    if (!isNaN(date.getTime())) return date.toLocaleDateString();
+
+    const match = dateString.match(/\/Date\((\d+)\)\//);
+    if (match) {
+      return new Date(parseInt(match[1])).toLocaleDateString();
+    }
+
+    return "N/A";
+  };
+
+  const updateEventInStorage = (updatedEvent) => {
+    const dateKey = formatDateKey(selectedDate);
+
+    setTimesheetsByDate((prev) => ({
+      ...prev,
+      [dateKey]: (prev[dateKey] || []).map((event) =>
+        event.REF_SERIAL_NO === updatedEvent.REF_SERIAL_NO
+          ? updatedEvent
+          : event
+      ),
+    }));
+
+    setEvents((prev) =>
+      prev.map((event) =>
+        event.REF_SERIAL_NO === updatedEvent.REF_SERIAL_NO
+          ? updatedEvent
+          : event
+      )
+    );
+  };
+
   return (
-    <>
-      <form>
-        <div className="flex flex-col md:flex-row w-[100%] h-full">
-          {/* Sidebar: Pending & Completed Tasks */}
-          <div className="w-[100%] md:w-[20%] h-[70vh] overflow-y-auto">
-            <div className="mt-4 mb-2 w-full sticky top-0 z-10">
-              <h3 className="text-sm rounded font-bold bg-orange-100 text-center border text-black border-gray-300 p-2">
-                Pending Task
-              </h3>
-            </div>
-            {tasks.filter((task) => task.status !== "Completed").length ===
-            0 ? (
-              <div className="p-4 text-xs text-center text-gray-500">
-                No pending tasks
-              </div>
-            ) : (
-              tasks
-                .filter((task) => task.status !== "Completed")
-                .map((task) => {
-                  // Only show color if the task is present in events for the selected date
-                  const isInTimesheet = events.some(
-                    (ev) =>
-                      ev.TASK_NAME === task.TASK_NAME &&
-                      ev.TRANS_DATE === formatDateKey(selectedDate)
-                  );
-                  return (
-                    <div
-                      key={task.TASK_ID}
-                      className={`
-                        ${
-                          isInTimesheet && task.color
-                            ? task.color
-                            : "bg-transparent"
-                        }
-                        flex items-center mb-1 justify-between text-black dark:text-white dark:hover:bg-gray-800  p-3 border border-gray-400
-                        hover:bg-blue-100 transition-all duration-300 rounded-md shadow-sm hover:shadow-md cursor-pointer
-                      `}
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, task)}
-                    >
-                      <div className="flex text-xs text-gray-500  dark:text-gray-600  items-center gap-2">
-                        <div className="w-3 h-3 rounded-full text-xs animate-pulse bg-blue-500" />
-                        <p className="font-medium">{task.TASK_NAME}</p>
-                      </div>
-                    </div>
-                  );
-                })
-            )}
+    <form>
+      <div className="flex flex-col md:flex-row w-[100%] h-full">
+        <PendingTaskComponent
+          tasks={tasks}
+          selectedUser={selectedUser}
+          activeUser={activeUser}
+          setSelectedUser={setSelectedUser}
+          handleDragStart={handleDragStart}
+          handleSelectTask={handleSelectTask}
+          events={events}
+          formatDateKey={formatDateKey}
+          selectedDate={selectedDate}
+          userData={userData}
+        />
 
-            {/* Completed Tasks Section */}
-            <div className="mt-4 mb-2 w-full sticky top-0 z-10 md:w-[100%]">
-              <h3 className="text-xs rounded font-bold bg-green-100 text-center border text-black border-gray-300 p-2">
-                Completed Task
-              </h3>
-            </div>
-            {tasks.filter((task) => task.status === "Completed").length ===
-            0 ? (
-              <div className="p-4 text-xs text-center text-gray-500">
-                No completed tasks
-              </div>
-            ) : (
-              tasks
-                .filter((task) => task.status === "Completed")
-                .map((task) => (
-                  <div
-                    key={task.TASK_ID}
-                    className="flex items-center text-xs mb-1 justify-between p-3 border border-gray-400 hover:bg-green-50 transition-all duration-300 rounded-md shadow-sm hover:shadow-md cursor-pointer"
-                  >
-                    <div className="flex items-center text-gray-500  dark:text-gray-600  text-xs gap-2">
-                      <div className="w-3 h-3  rounded-full text-xs  bg-green-500 animate-pulse" />
-                      <p className="font-medium ">{task.TASK_NAME}</p>
-                    </div>
-                  </div>
-                ))
-            )}
-          </div>
-
-          {/* Main Content */}
-          <div
-            className="w-full md:w-[80%] bg-transparent h-full"
-            style={{ minHeight: "400px" }}
-          >
-            <div className="flex border-b border-gray-300">
-              <input
-                type="radio"
-                name="my_tabs_3"
-                id="timesheet-tab"
-                className="hidden"
-                checked={activeTab === "timesheet-tab"}
-                onChange={() => handleTabChange("timesheet-tab")}
-              />
-              <label
-                htmlFor="timesheet-tab"
-                className={`px-4 py-2 font-bold border-b-2 text-xs cursor-pointer ${
-                  activeTab === "timesheet-tab"
-                    ? "border-blue-500 text-blue-600"
-                    : "border-transparent text-gray-600"
-                }`}
-              >
-                TimeSheet
-              </label>
-
-              <input
-                type="radio"
-                name="my_tabs_3"
-                id="table-tab"
-                className="hidden"
-                checked={activeTab === "table-tab"}
-                onChange={() => handleTabChange("table-tab")}
-              />
-              <label
-                htmlFor="table-tab"
-                className={`px-4 py-2 font-bold border-b-2 text-xs cursor-pointer ${
-                  activeTab === "table-tab"
-                    ? "border-blue-500 text-blue-600"
-                    : "border-transparent text-gray-600"
-                }`}
-              >
-                Table
-              </label>
-            </div>
-
-            {/* Timesheet Tab Content */}
-            <div
-              className={`tab-content h-[calc(100%-40px)] ${
-                activeTab !== "timesheet-tab" ? "hidden" : ""
+        <div
+          className="w-full md:w-[80%] bg-transparent h-full"
+          style={{ minHeight: "400px" }}
+        >
+          <div className="flex border-b border-gray-300">
+            <input
+              type="radio"
+              name="my_tabs_3"
+              id="timesheet-tab"
+              className="hidden"
+              checked={activeTab === "timesheet-tab"}
+              onChange={() => setActiveTab("timesheet-tab")}
+            />
+            <label
+              htmlFor="timesheet-tab"
+              className={`px-4 py-2 font-bold border-b-2 text-xs cursor-pointer ${
+                activeTab === "timesheet-tab"
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-gray-600"
               }`}
             >
-              <div
-                className="w-full"
-                style={{
-                  minHeight: "400px",
-                  height: "100%",
-                }}
-              >
-                <div className="rounded-xl p-2 relative w-full overflow-x-auto md:overflow-x-hidden h-full">
-                  <div className="flex items-center justify-between gap-2 mb-1">
-                    <h2 className="text-xl tracking-wider font-bold">
-                      Time Sheet -{" "}
-                      {selectedDate?.toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      })}
-                    </h2>
-                    <button
-                      type="button"
-                      className="mt-1 text-xs shadow-lg border border-gray-300 rounded px-3 py-1 dark:hover:bg-gray-800 hover:bg-gray-100"
-                      onClick={openDatePicker}
-                    >
-                      Change Date{" "}
-                      <Rotate3DIcon className="w-3 h-3 inline ml-1" />
-                    </button>
+              TimeSheet
+            </label>
 
-                    <dialog
-                      ref={datePickerRef}
-                      className="fixed z-10 inset-0 overflow-y-auto"
-                    >
-                      <div className="flex items-center bg-black bg-opacity-50 dark:bg-opacity-100 justify-center overflow-y-auto overflow-x-auto h-[68vh] p-2 text-center">
-                        <div
-                          className="fixed inset-0 transition-opacity "
-                          onClick={() => datePickerRef.current.close()}
-                        >
-                          <div className="absolute inset-0 bg-gray-500 dark:bg-gray-900 opacity-75"></div>
-                        </div>
-                        <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-                          <div className="bg-white dark:bg-gray-800 text-black dark:text-gray-100 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                            <div className="sm:flex bg-white dark:bg-gray-800 sm:items-start">
-                              <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                                <div className="flex justify-end">
-                                  <button
-                                    type="button"
-                                    className="text-gray-400 hover:text-gray-500"
-                                    onClick={() =>
-                                      datePickerRef.current.close()
-                                    }
-                                  >
-                                    <span className="sr-only">Close</span>
-                                    <svg
-                                      className="h-6 w-6"
-                                      fill="none"
-                                      viewBox="0 0 24 24"
-                                      stroke="currentColor"
-                                    >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth="2"
-                                        d="M6 18L18 6M6 6l12 12"
-                                      />
-                                    </svg>
-                                  </button>
-                                </div>
-                                <DayPicker
-                                  mode="single"
-                                  selected={selectedDate}
-                                  onSelect={(date) => {
-                                    if (isFutureDate(date)) {
-                                      alert(
-                                        "You can only select today's date."
-                                      );
-                                      return;
-                                    }
-                                    setSelectedDate(date);
-                                    datePickerRef.current.close();
-                                  }}
-                                  disabled={isFutureDate}
-                                  className="rounded-lg mt-2 text-xs"
-                                  classNames={{
-                                    selected: "bg-blue-500 text-white rounded",
-                                  }}
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </dialog>
-                  </div>
-
-                  <div className="flex mb-2 min-w-[600px]">
-                    <p className="w-[22%] md:w-[10%] absolute text-center left-1 bg-gradient-to-r from-cyan-400 to-blue-600 text-white border border-blue-300 font-semibold text-xs p-1 rounded">
-                      Time
-                    </p>
-                    <div className="w-full flex flex-row gap-1 ml-[10%] md:ml-[10%] me-3">
-                      {minutes.map((min, index) => {
-                        const nextMin = minutes[index + 1] || "60";
-                        return (
-                          <div
-                            key={min}
-                            className="text-center w-full border border-gray-400 font-semibold text-xs p-1 rounded"
-                          >
-                            {min}m - {nextMin}m
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* SCROLLABLE HOURS */}
-                  <div
-                    className="relative rounded-xl p-1 overflow-y-auto min-w-[600px]"
-                    ref={timesheetScrollRef}
-                    style={{
-                      maxHeight: "calc(80vh - 120px)",
-                      minHeight: "100px",
-                      height: "100%",
-                      scrollBehavior: "smooth",
-                    }}
-                  >
-                    {hours.map((hour) => (
-                      <div
-                        key={hour}
-                        className="flex border-t border-gray-200 relative"
-                        style={{ height: `${rowHeight}px` }}
-                        onMouseDown={() => handleMouseDown(hour)}
-                        onMouseMove={(e) => handleMouseMove(e, hour)}
-                        onMouseUp={handleMouseUp}
-                        onDragOver={(e) => e.preventDefault()}
-                        onDrop={(e) => handleDrop(e, hour)}
-                      >
-                        <div className="w-[10%] md:w-[10%] flex items-center justify-center text-sm font-semibold text-gray-600">
-                          {formatTime(hour, "00")}
-                        </div>
-                        {/* Responsive grid: 4 cols on md+, 2 cols on sm, 1 col on xs */}
-                        <div className="w-full grid grid-cols-4 sm:grid-cols-4 md:grid-cols-4 gap-1 min-w-[320px]">
-                          {minutes.map((_, i) => (
-                            <div
-                              key={i}
-                              className="h-full w-full transition hover:bg-blue-100 dark:hover:bg-blue-800/20 rounded cursor-pointer"
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-
-                    {/* Render hour blocks with unique ids and delete per block */}
-                    {events.flatMap((event, index) => {
-                      const blocks = splitEventToHourBlocks(event).filter(
-                        (block) => !deletedBlocks.includes(block.id)
-                      );
-                      return blocks.map((block, blockIndex) => {
-                        const startTotalMinutes =
-                          block.blockStartHour * 60 +
-                          Number(block.blockStartMinute);
-                        const endTotalMinutes =
-                          block.blockEndHour * 60 +
-                          Number(block.blockEndMinute);
-                        const minuteInHour = startTotalMinutes % 60;
-                        const durationInThisBlock =
-                          endTotalMinutes - startTotalMinutes;
-
-                        // Hide time range only if this block is exactly 15min (not the whole event)
-                        const shortFormatTime = durationInThisBlock === 15;
-
-                        // 10% for time label, 90% for grid
-                        const leftPercent = (minuteInHour / 60) * 90;
-                        const widthPercent = (durationInThisBlock / 60) * 90;
-
-                        return (
-                          <div
-                            key={block.id}
-                            className={`
-                              absolute p-2 rounded-lg shadow-sm  flex justify-between items-start text-sm overflow-hidden
-                              border border-transparent
-                              ${block.color}
-                              group
-                              will-change-[top,left,width,height,transform,opacity]
-                              transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)]
-                              hover:shadow-md
-                            `}
-                            style={{
-                              top: `calc(${
-                                Math.floor(startTotalMinutes / 60) * rowHeight +
-                                8
-                              }px)`,
-                              left: `calc(10% + ${leftPercent}%)`,
-                              width: `calc(${widthPercent}% - 0.4px)`,
-                              height: `${rowHeight - 8}px`,
-                              transform: "translateZ(0)",
-                            }}
-                            onMouseDown={(e) => handleDragMouseDown(e, event)}
-                            onDoubleClick={(e) => {
-                              e.stopPropagation();
-                              handleEditBlock(e, block, event);
-                            }}
-                            title="Double click to edit"
-                          >
-                            <div className="flex-1 pr-2 cursor-pointer relative z-10 transition-opacity duration-150 hover:opacity-90">
-                              <div className="flex items-center whitespace-wrap gap-1">
-                                <span className="text-xs font-semibold text-gray-900 truncate transition-all duration-200 hover:text-gray-700">
-                                  {block.TASK_NAME}
-                                </span>
-                                {!shortFormatTime && (
-                                  <span className="text-xs text-gray-700 whitespace-nowrap transition-opacity duration-200 group-hover:opacity-90">
-                                    (
-                                    {formatTime(
-                                      block.blockStartHour,
-                                      block.blockStartMinute
-                                    )}{" "}
-                                    -{" "}
-                                    {formatTime(
-                                      block.blockEndHour,
-                                      block.blockEndMinute
-                                    )}
-                                    )
-                                  </span>
-                                )}
-                              </div>
-
-                              <span className="text-xs text-black transition-opacity duration-200 group-hover:opacity-90">
-                                Duration:{" "}
-                                {formatDuration(
-                                  calculateDuration(
-                                    event.START_TIME,
-                                    event.startMinute,
-                                    event.END_TIME,
-                                    event.endMinute
-                                  )
-                                )}
-                              </span>
-                            </div>
-
-                            <div className="flex flex-col gap-1 relative z-10">
-                              <button
-                                className="text-gray-700 hover:text-red-600 mt-2 transition-colors duration-200 ease-out text-xs transform hover:scale-110 active:scale-95"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteHourBlock(block.id);
-                                }}
-                              >
-                                <XIcon
-                                  size={18}
-                                  className="hover:bg-red-100 rounded-full p-0.5 transition-all duration-150"
-                                />
-                              </button>
-                            </div>
-
-                            {/* Left resize handle */}
-                            <div
-                              className="absolute top-0 bottom-0 left-0 w-2 bg-transparent hover:bg-white/30 cursor-w-resize transition-all duration-200 z-20 opacity-0 group-hover:opacity-100"
-                              onMouseDown={(e) => {
-                                e.stopPropagation();
-                                handleLeftResizeMouseDown(e, event);
-                              }}
-                              onDoubleClick={(e) => {
-                                e.stopPropagation();
-                                handleFillHourLeft(
-                                  e,
-                                  block.blockStartHour,
-                                  block.blockStartMinute
-                                );
-                              }}
-                              title="Double click to fill hour"
-                            >
-                              <div className="absolute top-1/2 left-0.5 w-1 h-6 bg-gray-400 rounded-full transform -translate-y-1/2 transition-all duration-300 group-hover:bg-gray-500" />
-                            </div>
-
-                            {/* Right resize handle with dedicated tooltip */}
-                            <div
-                              className="absolute top-0 bottom-0 right-0 w-2 bg-transparent hover:bg-white/30 cursor-e-resize transition-all duration-200 z-20 opacity-0 group-hover:opacity-100"
-                              onMouseDown={(e) => {
-                                e.stopPropagation();
-                                handleRightResizeMouseDown(e, event);
-                              }}
-                              onDoubleClick={(e) => {
-                                e.stopPropagation();
-                                handleFillHourRight(
-                                  e,
-                                  block.blockStartHour,
-                                  block.blockStartMinute
-                                );
-                              }}
-                              title="Double click to fill hour"
-                            >
-                              <div className="absolute top-1/2 right-0.5 w-1 h-6 bg-gray-400 rounded-full transform -translate-y-1/2 transition-all duration-300 group-hover:bg-gray-500" />
-                            </div>
-
-                            {/* Tooltips */}
-                            <div className="absolute -top-8 -right-2 text-gray-800 text-xs px-2 py-1 rounded-md pointer-events-none opacity-0 group-hover:opacity-100 transition-all duration-300 ease-out bg-white shadow-md border border-gray-200 whitespace-nowrap transform group-hover:translate-y-0 translate-y-1">
-                              Double click to fill hour
-                            </div>
-
-                            <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 text-gray-800 text-xs px-2 py-1 rounded-md pointer-events-none opacity-0 group-hover:opacity-100 transition-all duration-300 ease-out bg-white shadow-md border border-gray-200 whitespace-nowrap transform group-hover:translate-y-0 translate-y-1">
-                              Double click to edit • Drag to move
-                            </div>
-                          </div>
-                        );
-                      });
-                    })}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Table Tab Content */}
-            <div
-              className={`tab-content h-[calc(100%-40px)] ${
-                activeTab !== "table-tab" ? "hidden" : ""
+            <input
+              type="radio"
+              name="my_tabs_3"
+              id="table-tab"
+              className="hidden"
+              checked={activeTab === "table-tab"}
+              onChange={() => setActiveTab("table-tab")}
+            />
+            <label
+              htmlFor="table-tab"
+              className={`px-4 py-2 font-bold border-b-2 text-xs cursor-pointer ${
+                activeTab === "table-tab"
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-gray-600"
               }`}
             >
-              <div className="h-full overflow-auto">
-                <table className="min-w-full">
-                  <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Date
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Task ID
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Task Name
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Project No
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Start Time
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        End Time
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Duration
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Hours
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white dark:bg-gray-900 ">
-                    {Object.entries(timesheetsByDate).filter(
-                      ([_, arr]) => arr.length > 0
-                    ).length === 0 ? (
-                      <tr>
-                        <td
-                          colSpan="10"
-                          className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500"
-                        >
-                          No tasks added yet. Start by adding your first task!
-                        </td>
-                      </tr>
-                    ) : (
-                      Object.entries(timesheetsByDate)
-                        .filter(([_, arr]) => arr.length > 0)
-                        .flatMap(([date, dateEvents]) =>
-                          dateEvents.flatMap((event) =>
-                            splitEventToHourBlocks(event).map((block) => {
-                              // Calculate duration for this block
-                              const durationMinutes = calculateDuration(
-                                block.blockStartHour,
-                                block.blockStartMinute,
-                                block.blockEndHour,
-                                block.blockEndMinute
-                              );
-                              return (
-                                <tr
-                                  key={`${date}-${block.id}`}
-                                  className="hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-400"
-                                >
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {date}
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {block.TASK_ID}
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {block.TASK_NAME}
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {block.PROJECT_NO}
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {formatTime(
-                                      block.blockStartHour,
-                                      block.blockStartMinute
-                                    )}
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {formatTime(
-                                      block.blockEndHour,
-                                      block.blockEndMinute
-                                    )}
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {formatDuration(durationMinutes)}
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {(durationMinutes / 60).toFixed(2)}
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    <div className="flex items-center gap-1">
-                                      {block.isCompleted
-                                        ? "Completed"
-                                        : "Pending"}
-                                      {block.isCompleted ? (
-                                        <svg
-                                          xmlns="http://www.w3.org/2000/svg"
-                                          className="h-4 w-4 text-green-500"
-                                          viewBox="0 0 20 20"
-                                          fill="currentColor"
-                                        >
-                                          <path
-                                            fillRule="evenodd"
-                                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1  1 0 011.414 0z"
-                                            clipRule="evenodd"
-                                          />
-                                        </svg>
-                                      ) : (
-                                        <AlertTriangleIcon className="h-4 w-4 text-yellow-500" />
-                                      )}
-                                    </div>
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    <button
-                                      className="text-gray-400 hover:text-red-500"
-                                      onClick={(e) => {
-                                        e.preventDefault();
-                                        handleDeleteHourBlock(block.id);
-                                      }}
-                                    >
-                                      <Trash2Icon className="h-4 w-4" />
-                                    </button>
-                                  </td>
-                                </tr>
-                              );
-                            })
-                          )
-                        )
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+              Table
+            </label>
           </div>
+
+          {activeTab === "timesheet-tab" ? (
+            <TimeSheetComponent
+              selectedDate={selectedDate}
+              events={events}
+              tasks={tasks}
+              rowHeight={rowHeight}
+              handleDateSelect={handleDateSelect}
+              handleDrop={handleDrop}
+              handleMouseDown={handleMouseDown}
+              handleMouseMove={handleMouseMove}
+              handleMouseUp={handleMouseUp}
+              dragging={dragging}
+              dragStart={dragStart}
+              dragEnd={dragEnd}
+              handleEditBlock={handleEditBlock}
+              handleDeleteHourBlock={handleDeleteHourBlock}
+              handleRightResizeMouseDown={handleRightResizeMouseDown}
+              handleLeftResizeMouseDown={handleLeftResizeMouseDown}
+              handleDragMouseDown={handleDragMouseDown}
+              handleFillHourRight={handleFillHourRight}
+              handleFillHourLeft={handleFillHourLeft}
+              datePickerRef={datePickerRef}
+              isFutureDate={isFutureDate}
+              pendingChanges={pendingChanges}
+              savePendingChanges={savePendingChanges}
+              fetchTimeSheetData={fetchTimeSheetData}
+              formatTime={formatTime}
+              calculateDuration={calculateDuration}
+              formatDuration={formatDuration}
+              splitEventToHourBlocks={splitEventToHourBlocks}
+              timesheetScrollRef={timesheetScrollRef}
+            />
+          ) : (
+            <TableComponent
+              events={events}
+              handleEdit={handleEdit}
+              userData={userData}
+              toast={toast}
+              selectedDate={selectedDate}
+              setEvents={setEvents}
+              setTimesheetsByDate={setTimesheetsByDate}
+              formatDateKey={formatDateKey}
+              parseDateFromString={parseDateFromString}
+              calculateDuration={calculateDuration}
+              formatDuration={formatDuration}
+              formatTime={formatTime}
+            />
+          )}
         </div>
+      </div>
 
-        {/* Popup for Add/Edit Task */}
-        {showPopup && (
-          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-6 w-full max-w-sm h-[80vh] overflow-y-auto">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-bold text-base">
-                  {taskDetails.id ? "Update Task" : "Add Task"}
-                </h3>
-              </div>
-              <div className="space-y-4">
-                <input
+      {showPopup && (
+        <Dialog open={showPopup} onOpenChange={setShowPopup}>
+          <DialogContent className="sm:max-w-[425px] max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                {taskDetails.isEditing ? "Update Task" : "Add Task"}
+                {taskDetails.REF_SERIAL_NO}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="">
+              <div className="space-y-4 w-[80%] ">
+                <Input
                   type="text"
                   value={taskDetails.TASK_NAME}
                   placeholder="Search For A Task..."
+                  className=""
                   onChange={(e) => {
                     setTaskDetails({
                       ...taskDetails,
                       TASK_NAME: e.target.value,
                     });
-                    handleSearch(e);
-                  }}
-                  className="w-full px-3 py-2 border border-gray-300 bg-white dark:bg-gray-800 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
-                />
-                {filteredTasks.filter(
-                  (task) =>
-                    task.status !== "Completed" &&
-                    !events.some((event) => event.TASK_NAME === task.TASK_NAME)
-                ).length > 0 ? (
-                  <ul className="bg-gray-100 dark:bg-gray-800 text-xs rounded-lg p-1 h-36 overflow-y-scroll space-y-2">
-                    {filteredTasks
-                      .filter(
-                        (task) =>
-                          task.status !== "Completed" &&
-                          !events.some(
-                            (event) => event.TASK_NAME === task.TASK_NAME
-                          )
+                    const keyword = e.target.value.toLowerCase();
+                    setFilteredTasks(
+                      tasks.filter((task) =>
+                        task.TASK_NAME?.toLowerCase().includes(keyword)
                       )
+                    );
+                  }}
+                />
+                {filteredTasks.filter((task) => task.STATUS === "NEW").length >
+                0 ? (
+                  <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-2 h-36 overflow-y-auto w-full space-y-2">
+                    {filteredTasks
+                      .filter((task) => task.STATUS === "NEW")
                       .map((task) => (
-                        <li key={task.TASK_ID}>
-                          <button
-                            className={`flex justify-between items-center w-full p-2 rounded-lg hover:bg-blue-50 ${
-                              selectedTask?.TASK_ID === task.TASK_ID
-                                ? "bg-blue-100"
-                                : "bg-transparent"
-                            }`}
-                            onClick={(e) => handleSelectTask(e, task)}
+                        <Button
+                          key={task.TASK_ID}
+                          variant={
+                            selectedTask?.TASK_ID === task.TASK_ID
+                              ? "secondary"
+                              : "ghost"
+                          }
+                          className={`w-full justify-between ${
+                            selectedTask?.TASK_ID === task.TASK_ID
+                              ? "bg-blue-100 dark:bg-blue-900"
+                              : ""
+                          }`}
+                          onClick={(e) => handleSelectTask(e, task)}
+                        >
+                          <div className="flex flex-col items-start">
+                            <span className="font-semibold">
+                              {task.TASK_NAME}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              TASK ID: {task.TASK_ID}
+                            </span>
+                          </div>
+                          <Badge
+                            variant={
+                              task.STATUS === "Pending"
+                                ? "warning"
+                                : task.STATUS === "In Progress"
+                                ? "default"
+                                : "outline"
+                            }
+                            className="flex items-center gap-1"
                           >
-                            <div className="flex flex-col text-left">
-                              <span className="font-semibold">
-                                {task.TASK_NAME}
-                              </span>
-                              <span className="text-xs text-gray-500">{`DMS No: ${task.dmsNo}`}</span>
-                            </div>
-                            <div
-                              className={`flex items-center space-x-1 text-xs font-semibold py-1 px-2 rounded-full ${
-                                task.status === "Pending"
-                                  ? "bg-yellow-100 text-yellow-700"
-                                  : task.status === "In Progress"
-                                  ? "bg-blue-100 text-blue-700"
-                                  : "bg-gray-100 text-gray-700"
-                              }`}
-                            >
-                              <span>{task.status}</span>
-                              <AlertTriangleIcon className="w-3 h-3" />
-                            </div>
-                          </button>
-                        </li>
+                            <span>{task.STATUS}</span>
+                            <AlertTriangleIcon className="w-3 h-3" />
+                          </Badge>
+                        </Button>
                       ))}
-                  </ul>
+                  </div>
                 ) : (
-                  <div className="bg-gray-100 rounded-lg p-4 h-24 flex items-center justify-center text-gray-500">
+                  <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 h-24 flex items-center justify-center text-muted-foreground">
                     No pending tasks available
                   </div>
                 )}
 
-                {/* Start Time */}
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Start Time
-                  </label>
+                <div className="space-y-2">
+                  <Label>Start Time</Label>
                   <div className="flex gap-2">
-                    <select
-                      className="block w-1/2 rounded-md border-gray-300 bg-white dark:bg-gray-800 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-1.5 dark:text-gray-200"
-                      value={taskDetails.START_TIME ?? 8}
-                      onChange={(e) => {
-                        const hour24 = Number(e.target.value);
+                    <Select
+                      value={taskDetails.START_HOUR?.toString() ?? "8"}
+                      onValueChange={(value) => {
+                        const hour24 = Number(value);
                         const suffix = hour24 >= 12 ? "PM" : "AM";
                         const hour12 = hour24 % 12 === 0 ? 12 : hour24 % 12;
 
                         setTaskDetails((prev) => ({
                           ...prev,
-                          START_TIME: hour24,
+                          START_HOUR: hour24,
                           timeSuffixStart: suffix,
                           formattedStartTime: `${hour12}:${
-                            prev.startMinute?.toString().padStart(2, "0") ||
+                            prev.START_MINIUTE?.toString().padStart(2, "0") ||
                             "00"
                           } ${suffix}`,
                         }));
 
-                        // If new start time is after end time, adjust end time
                         if (
-                          hour24 > (prev.END_TIME ?? 17) ||
-                          (hour24 === prev.END_TIME &&
-                            (prev.startMinute ?? 0) > (prev.endMinute ?? 0))
+                          hour24 > (prev.END_HOUR ?? 17) ||
+                          (hour24 === prev.END_HOUR &&
+                            (prev.START_MINIUTE ?? 0) > (prev.END_MINITUE ?? 0))
                         ) {
                           const newEndTime = Math.min(hour24 + 1, 24);
                           setTaskDetails((prev) => ({
                             ...prev,
-                            END_TIME: newEndTime,
-                            endMinute:
-                              newEndTime === 24 ? 0 : prev.endMinute ?? 0,
+                            END_HOUR: newEndTime,
+                            END_MINITUE:
+                              newEndTime === 24 ? 0 : prev.END_MINITUE ?? 0,
                             timeSuffixEnd: newEndTime >= 12 ? "PM" : "AM",
                             formattedEndTime: `${
                               newEndTime % 12 === 0 ? 12 : newEndTime % 12
                             }:${
                               newEndTime === 24
                                 ? "00"
-                                : prev.endMinute?.toString().padStart(2, "0") ||
-                                  "00"
+                                : prev.END_MINITUE?.toString().padStart(
+                                    2,
+                                    "0"
+                                  ) || "00"
                             } ${suffix}`,
                           }));
                         }
                       }}
                     >
-                      {Array.from({ length: 24 }, (_, i) => {
-                        const hour12 = i % 12 === 0 ? 12 : i % 12;
-                        return (
-                          <option key={i} value={i}>
-                            {hour12} {i >= 12 ? "PM" : "AM"}
-                          </option>
-                        );
-                      })}
-                    </select>
-                    <div className="flex gap-1 w-1/2">
-                      {["00", "15", "30", "45"].map((min) => (
-                        <button
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Select start hour" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 24 }, (_, i) => {
+                          const hour12 = i % 12 === 0 ? 12 : i % 12;
+                          return (
+                            <SelectItem key={i} value={i.toString()}>
+                              {hour12} {i >= 12 ? "PM" : "AM"}
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                    <div className="flex gap-1">
+                      {[0, 15, 30, 45].map((min) => (
+                        <Button
                           type="button"
+                          variant={
+                            Number(taskDetails.START_MINIUTE) === min
+                              ? "default"
+                              : "outline"
+                          }
+                          size="sm"
                           key={min}
-                          className={`px-2 py-1 text-xs rounded border ${
-                            Number(taskDetails.startMinute) === Number(min)
-                              ? "bg-blue-500 text-white border-blue-500"
-                              : "bg-white dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 text-gray-700 border-gray-300 hover:bg-gray-50"
-                          }`}
+                          className="px-2"
                           onClick={() => {
                             const minuteValue = Number(min);
                             setTaskDetails((prev) => ({
                               ...prev,
-                              startMinute: minuteValue,
+                              START_MINIUTE: minuteValue,
                               formattedStartTime: `${
-                                prev.START_TIME % 12 === 0
+                                prev.START_HOUR % 12 === 0
                                   ? 12
-                                  : prev.START_TIME % 12
-                              }:${min} ${prev.timeSuffixStart}`,
+                                  : prev.START_HOUR % 12
+                              }:${min.toString().padStart(2, "0")} ${
+                                prev.timeSuffixStart
+                              }`,
                             }));
 
-                            // Validate against end time
                             if (
-                              prev.START_TIME === prev.END_TIME &&
-                              minuteValue > (prev.endMinute ?? 0)
+                              prev.START_HOUR === prev.END_HOUR &&
+                              minuteValue > (prev.END_MINITUE ?? 0)
                             ) {
                               setTaskDetails((prev) => ({
                                 ...prev,
-                                endMinute: minuteValue,
+                                END_MINITUE: minuteValue,
                                 formattedEndTime: `${
-                                  prev.END_TIME % 12 === 0
+                                  prev.END_HOUR % 12 === 0
                                     ? 12
-                                    : prev.END_TIME % 12
-                                }:${min} ${prev.timeSuffixEnd}`,
+                                    : prev.END_HOUR % 12
+                                }:${min.toString().padStart(2, "0")} ${
+                                  prev.timeSuffixEnd
+                                }`,
                               }));
                             }
                           }}
                         >
-                          {min}
-                        </button>
+                          {min.toString().padStart(2, "0")}
+                        </Button>
                       ))}
                     </div>
                   </div>
                 </div>
 
-                {/* End Time */}
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    End Time
-                  </label>
+                <div className="space-y-2">
+                  <Label>End Time</Label>
                   <div className="flex gap-2">
-                    <select
-                      className="block w-1/2 rounded-md border-gray-300 bg-white dark:bg-gray-800 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-1.5 dark:text-gray-200"
-                      value={taskDetails.END_TIME ?? 17}
-                      onChange={(e) => {
-                        const hour24 = Number(e.target.value);
+                    <Select
+                      value={taskDetails.END_HOUR?.toString() ?? "17"}
+                      onValueChange={(value) => {
+                        const hour24 = Number(value);
                         const suffix = hour24 >= 12 ? "PM" : "AM";
                         const hour12 = hour24 % 12 === 0 ? 12 : hour24 % 12;
 
-                        if (hour24 < taskDetails.START_TIME) {
-                          alert("End Time cannot be earlier than Start Time.");
+                        if (hour24 < taskDetails.START_HOUR) {
+                          toast({
+                            title: "Invalid Time",
+                            description:
+                              "End Time cannot be earlier than Start Time.",
+                            variant: "destructive",
+                          });
                           return;
                         }
 
                         setTaskDetails((prev) => ({
                           ...prev,
-                          END_TIME: hour24,
+                          END_HOUR: hour24,
                           timeSuffixEnd: suffix,
-                          endMinute: hour24 === 24 ? 0 : prev.endMinute ?? 0,
+                          END_MINITUE:
+                            hour24 === 24 ? 0 : prev.END_MINITUE ?? 0,
                           formattedEndTime: `${hour12}:${
                             hour24 === 24
                               ? "00"
-                              : prev.endMinute?.toString().padStart(2, "0") ||
+                              : prev.END_MINITUE?.toString().padStart(2, "0") ||
                                 "00"
                           } ${suffix}`,
                         }));
                       }}
                     >
-                      {Array.from({ length: 24 }, (_, i) => {
-                        const hour12 = i % 12 === 0 ? 12 : i % 12;
-                        return (
-                          <option key={i} value={i}>
-                            {hour12} {i >= 12 ? "PM" : "AM"}
-                          </option>
-                        );
-                      })}
-                      <option value={24}>12 AM</option>
-                    </select>
-                    <div className="flex gap-1 w-1/2">
-                      {["00", "15", "30", "45"].map((min) => {
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Select end hour" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 24 }, (_, i) => {
+                          const hour12 = i % 12 === 0 ? 12 : i % 12;
+                          return (
+                            <SelectItem key={i} value={i.toString()}>
+                              {hour12} {i >= 12 ? "PM" : "AM"}
+                            </SelectItem>
+                          );
+                        })}
+                        <SelectItem value="24">12 AM</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <div className="flex gap-1">
+                      {[0, 15, 30, 45].map((min) => {
                         const minuteValue = Number(min);
-                        const is12AM = taskDetails.END_TIME === 24;
+                        const is12AM = taskDetails.END_HOUR === 24;
                         const isDisabled = is12AM && minuteValue !== 0;
                         const isSelected =
-                          Number(taskDetails.endMinute) === minuteValue;
+                          Number(taskDetails.END_MINITUE) === minuteValue;
 
                         return (
-                          <button
+                          <Button
                             type="button"
+                            variant={isSelected ? "default" : "outline"}
+                            size="sm"
                             key={min}
-                            className={`px-2 py-1 text-xs rounded border ${
-                              isSelected
-                                ? "bg-blue-500 text-white border-blue-500"
-                                : "bg-white dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 text-gray-700 border-gray-300 hover:bg-gray-50"
-                            } ${
-                              isDisabled ? "opacity-50 cursor-not-allowed" : ""
-                            }`}
+                            className="px-2"
                             disabled={isDisabled}
                             onClick={() => {
                               if (
-                                taskDetails.START_TIME ===
-                                  taskDetails.END_TIME &&
-                                minuteValue < (taskDetails.startMinute ?? 0)
+                                taskDetails.START_HOUR ===
+                                  taskDetails.END_HOUR &&
+                                minuteValue < (taskDetails.START_MINIUTE ?? 0)
                               ) {
-                                alert(
-                                  "End Time cannot be earlier than Start Time."
-                                );
+                                toast({
+                                  title: "Invalid Time",
+                                  description:
+                                    "End Time cannot be earlier than Start Time.",
+                                  variant: "destructive",
+                                });
                                 return;
                               }
 
                               setTaskDetails((prev) => ({
                                 ...prev,
-                                endMinute: minuteValue,
+                                END_MINITUE: minuteValue,
                                 formattedEndTime: `${
-                                  prev.END_TIME % 12 === 0
+                                  prev.END_HOUR % 12 === 0
                                     ? 12
-                                    : prev.END_TIME % 12
-                                }:${min} ${prev.timeSuffixEnd}`,
+                                    : prev.END_HOUR % 12
+                                }:${min.toString().padStart(2, "0")} ${
+                                  prev.timeSuffixEnd
+                                }`,
                               }));
                             }}
                           >
-                            {min}
-                          </button>
+                            {min.toString().padStart(2, "0")}
+                          </Button>
                         );
                       })}
                     </div>
                   </div>
                 </div>
               </div>
-              {/* Action Buttons */}
-              <div className="flex gap-2 justify-end mt-8">
-                <button
-                  className="px-3 py-1 border border-gray-300 text-xs rounded hover:bg-gray-100"
-                  onClick={() => setShowPopup(false)}
-                >
-                  Cancel
-                </button>
-                <button
-                  className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
-                  onClick={handleSave}
-                >
-                  {taskDetails.id ? "Update" : "Save"}
-                </button>
-              </div>
             </div>
-          </div>
-        )}
-      </form>
-    </>
+            <DialogFooter className={"w-[80%]"}>
+              <Button variant="outline" onClick={handleClosePopup}>
+                Cancel
+              </Button>
+              <Button onClick={handleSave}>
+                {taskDetails.isEditing ? "Update" : "Save"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+    </form>
   );
 }

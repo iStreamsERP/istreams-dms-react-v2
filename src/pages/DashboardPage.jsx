@@ -58,7 +58,9 @@ export default function DashboardPage() {
         <div className="flex justify-between items-center w-full gap-4">
           <h1 className="text-lg font-semibold">
             {" "}
-            {userData?.isAdmin || userRights === "Allowed" ? "Admin Dashboard" : "User Dashboard"}{" "}
+            {userData?.isAdmin || userRights === "Allowed"
+              ? "Admin Dashboard"
+              : "User Dashboard"}{" "}
           </h1>
           <TimeRangeSelector onFilterChange={setFilterDays} />
         </div>

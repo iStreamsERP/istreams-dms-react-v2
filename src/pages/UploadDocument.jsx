@@ -49,6 +49,8 @@ export const UploadDocument = () => {
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const [isLoadingTranslation, setIsLoadingTranslation] = useState(false);
   const [previewUrl, setPreviewUrl] = useState(null);
+  const [errorMessage, setErrorMessage] = useState(null);
+  const [isResponseLoading, setIsResponseLoading] = useState(false);
 
   const API_URL = "https://apps.istreams-erp.com:4491/api/OpenAI/ask-from-file";
 
@@ -82,6 +84,7 @@ export const UploadDocument = () => {
 
   const handleFileUpload = async (files) => {
     const selectedFile = files[0];
+
     setFile(selectedFile);
     setPreviewUrl(URL.createObjectURL(selectedFile));
     setIsUploading(true);
@@ -96,7 +99,7 @@ export const UploadDocument = () => {
       translateFormData.append("File", selectedFile);
       translateFormData.append(
         "Question",
-        "Translate the entire document to English."
+        "If the document is not in English, translate it. If it is already in English, just reply: 'The document is in English. No translation needed"
       );
 
       setIsLoadingTranslation(true);
@@ -112,6 +115,7 @@ export const UploadDocument = () => {
       setShowAnalysis(true);
     } catch (error) {
       console.error("Error uploading file:", error);
+      setErrorMessage(error.message);
       setIsUploading(false);
       setIsLoadingTranslation(false);
     } finally {
@@ -160,7 +164,7 @@ export const UploadDocument = () => {
     };
 
     setMessages((prev) => [...prev, userMessage]);
-
+    setIsResponseLoading(true);
     try {
       const formData = new FormData();
       formData.append("File", file);
@@ -195,6 +199,8 @@ export const UploadDocument = () => {
       };
 
       setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsResponseLoading(false);
     }
   };
 
@@ -405,7 +411,13 @@ export const UploadDocument = () => {
                             : "bg-white dark:bg-slate-800 text-gray-800 dark:text-slate-200 rounded-bl-none shadow-sm border border-gray-200 dark:border-slate-700"
                         }`}
                       >
-                        <p>{message.text}</p>
+                        {message.sender === "ai" &&
+                        isResponseLoading &&
+                        messages[messages.length - 1].id === message.id ? (
+                          <Loader2 className="w-4 h-4 text-cyan-500 dark:text-cyan-400 animate-spin" />
+                        ) : (
+                          <p>{message.text}</p>
+                        )}
                         <div
                           className={`text-xs mt-1 ${
                             message.sender === "user"
@@ -418,6 +430,29 @@ export const UploadDocument = () => {
                       </div>
                     </motion.div>
                   ))}
+
+                  {isResponseLoading && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="flex justify-start"
+                    >
+                      <div className="max-w-xs sm:max-w-md px-3 py-2 sm:px-4 sm:py-3 rounded-2xl text-xs sm:text-sm bg-white dark:bg-slate-800 text-gray-200 dark:text-slate-400 rounded-bl-none shadow-sm border border-gray-200 dark:border-slate-700 flex items-center gap-1">
+                        <span className="animate-bounce [animation-delay:0s]">
+                          .
+                        </span>
+                        <span className="animate-bounce [animation-delay:0.2s]">
+                          .
+                        </span>
+                        <span className="animate-bounce [animation-delay:0.4s]">
+                          .
+                        </span>
+                        <span className="animate-bounce [animation-delay:0.6s]">
+                          .
+                        </span>
+                      </div>
+                    </motion.div>
+                  )}
                   <div ref={chatEndRef} />
                 </div>
               )}
@@ -593,6 +628,8 @@ export const UploadDocument = () => {
             )}
           </div>
 
+          {errorMessage && <p className="text-red-500 mt-2">{errorMessage}</p>}
+
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -680,16 +717,34 @@ export const UploadDocument = () => {
 
       {/* Floating Chat Button (Mobile Only) */}
       {showAnalysis && (
-        <div className="md:hidden fixed bottom-6 right-6 z-40">
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={() => setIsChatOpen(true)}
-            className="w-14 h-14 rounded-full bg-gradient-to-r from-cyan-600 to-teal-600 shadow-lg flex items-center justify-center text-white"
-          >
-            <MessageSquare className="w-6 h-6" />
-          </motion.button>
-        </div>
+        <>
+          {/* Floating Chat Icon (Non-Mobile) */}
+          {activeRightTab !== "chat" && (
+            <div className="hidden md:block fixed bottom-6 right-6 z-40">
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={() => setActiveRightTab("chat")}
+                className="w-14 h-14 rounded-full bg-gradient-to-r from-cyan-600 to-teal-600 shadow-lg flex items-center justify-center text-white"
+              >
+                <MessageSquare className="w-6 h-6" />
+                <span className="sr-only">Open Chat</span>
+              </motion.button>
+            </div>
+          )}
+
+          {/* Existing Mobile Floating Button */}
+          <div className="md:hidden fixed bottom-6 right-9 z-40">
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={() => setIsChatOpen(true)}
+              className="w-14 h-14 rounded-full bg-gradient-to-r from-cyan-600 to-teal-600 shadow-lg flex items-center justify-center text-white"
+            >
+              <MessageSquare className="w-6 h-6" />
+            </motion.button>
+          </div>
+        </>
       )}
 
       {/* Chat Modal (Mobile Only) */}

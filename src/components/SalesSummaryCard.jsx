@@ -46,6 +46,7 @@ const SalesSummaryCard = ({ daysCount = 30 }) => {
       const payload = {
         NoOfDays: daysCount,
         ForTheUser: payloadForTheUser,
+        FilterCond: "",
       };
 
       const response = await callSoapService(
@@ -77,7 +78,7 @@ const SalesSummaryCard = ({ daysCount = 30 }) => {
     if (userRights !== "") {
       fetchData(); // This now runs *after* userRights is updated
     }
-  }, [userRights]);
+  }, [userRights, daysCount]);
 
   const safePct = (value, total) => {
     if (typeof value !== "number" || typeof total !== "number" || total <= 0)
