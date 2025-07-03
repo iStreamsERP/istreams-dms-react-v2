@@ -21,13 +21,9 @@ import {
   MessageSquare,
   ScanSearch,
   Send,
-  SquarePen
+  SquarePen,
 } from "lucide-react";
-import {
-  useEffect,
-  useRef,
-  useState
-} from "react";
+import { useEffect, useRef, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 
 export const UploadDocument = () => {
@@ -283,53 +279,6 @@ export const UploadDocument = () => {
             </Button>
           </div>
         )}
-      </div>
-    </div>
-  );
-
-  const ChatModal = () => (
-    <div className="fixed inset-0 z-50 bg-white dark:bg-slate-900 flex flex-col md:hidden">
-      <div className="p-1 bg-gradient-to-r from-cyan-600 to-teal-600 text-white flex items-center gap-1">
-        <button
-          onClick={() => setIsChatOpen(false)}
-          className="flex items-center text-white"
-        >
-          <ChevronLeft className="w-4 h-4" />
-        </button>
-        <h3 className="text-sm font-semibold">Document Assistant</h3>
-      </div>
-
-      {/* Left section - Document analysis */}
-      <div className="w-full md:w-1/2 h-full flex flex-col">
-        {/* Tab bar - only on desktop */}
-        <div className="flex border-b border-gray-200 dark:border-slate-700">
-          <button
-            className={`flex-1 px-3 py-1 sm:px-4 sm:py-2 font-medium flex items-center justify-center gap-1 sm:gap-2 text-xs sm:text-sm ${
-              activeRightTab === "summary"
-                ? "text-cyan-700 dark:text-cyan-300 border-b-2 border-cyan-500 dark:border-cyan-400 bg-white dark:bg-slate-800"
-                : "text-gray-600 dark:text-slate-400 hover:text-gray-800 dark:hover:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800"
-            }`}
-            onClick={() => setActiveRightTab("summary")}
-          >
-            <ClipboardCheck className="w-4 h-4 sm:w-5 sm:h-5" />
-            Analysis Summary
-          </button>
-          <button
-            className={`flex-1 px-3 py-1 sm:px-4 sm:py-2 font-medium flex items-center justify-center gap-1 sm:gap-2 text-xs sm:text-sm ${
-              activeRightTab === "chat"
-                ? "text-cyan-700 dark:text-cyan-300 border-b-2 border-cyan-500 dark:border-cyan-400 bg-white dark:bg-slate-800"
-                : "text-gray-600 dark:text-slate-400 hover:text-gray-800 dark:hover:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800"
-            }`}
-            onClick={() => setActiveRightTab("chat")}
-          >
-            <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5" />
-            Chat
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-auto bg-white dark:bg-gradient-to-br dark:from-slate-800 dark:to-slate-900">
-          {renderRightTabContent()}
-        </div>
       </div>
     </div>
   );
@@ -744,7 +693,14 @@ export const UploadDocument = () => {
       )}
 
       {/* Chat Modal (Mobile Only) */}
-      {isChatOpen && <ChatModal />}
+      {isChatOpen && (
+        <ChatModal
+          activeRightTab={activeRightTab}
+          setActiveRightTab={setActiveRightTab}
+          renderRightTabContent={renderRightTabContent}
+          setIsChatOpen={setIsChatOpen}
+        />
+      )}
 
       {/* Analysis Summary Modal */}
       <Dialog open={isAnalysisModalOpen} onOpenChange={setIsAnalysisModalOpen}>
@@ -794,3 +750,55 @@ export const UploadDocument = () => {
     </div>
   );
 };
+
+const ChatModal = ({
+  activeRightTab,
+  setActiveRightTab,
+  renderRightTabContent,
+  setIsChatOpen,
+}) => (
+  <div className="fixed inset-0 z-50 bg-white dark:bg-slate-900 flex flex-col md:hidden">
+    <div className="p-1 bg-gradient-to-r from-cyan-600 to-teal-600 text-white flex items-center gap-1">
+      <button
+        onClick={() => setIsChatOpen(false)}
+        className="flex items-center text-white"
+      >
+        <ChevronLeft className="w-4 h-4" />
+      </button>
+      <h3 className="text-sm font-semibold">Document Assistant</h3>
+    </div>
+
+    {/* Left section - Document analysis */}
+    <div className="w-full md:w-1/2 h-full flex flex-col">
+      {/* Tab bar - only on desktop */}
+      <div className="flex border-b border-gray-200 dark:border-slate-700">
+        <button
+          className={`flex-1 px-3 py-1 sm:px-4 sm:py-2 font-medium flex items-center justify-center gap-1 sm:gap-2 text-xs sm:text-sm ${
+            activeRightTab === "summary"
+              ? "text-cyan-700 dark:text-cyan-300 border-b-2 border-cyan-500 dark:border-cyan-400 bg-white dark:bg-slate-800"
+              : "text-gray-600 dark:text-slate-400 hover:text-gray-800 dark:hover:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800"
+          }`}
+          onClick={() => setActiveRightTab("summary")}
+        >
+          <ClipboardCheck className="w-4 h-4 sm:w-5 sm:h-5" />
+          Analysis Summary
+        </button>
+        <button
+          className={`flex-1 px-3 py-1 sm:px-4 sm:py-2 font-medium flex items-center justify-center gap-1 sm:gap-2 text-xs sm:text-sm ${
+            activeRightTab === "chat"
+              ? "text-cyan-700 dark:text-cyan-300 border-b-2 border-cyan-500 dark:border-cyan-400 bg-white dark:bg-slate-800"
+              : "text-gray-600 dark:text-slate-400 hover:text-gray-800 dark:hover:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800"
+          }`}
+          onClick={() => setActiveRightTab("chat")}
+        >
+          <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5" />
+          Chat
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-auto bg-white dark:bg-gradient-to-br dark:from-slate-800 dark:to-slate-900">
+        {renderRightTabContent()}
+      </div>
+    </div>
+  </div>
+);
