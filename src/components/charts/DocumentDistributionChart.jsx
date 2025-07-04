@@ -52,16 +52,29 @@ const DocumentDistributionChart = ({ daysCount = 30 }) => {
         ForTheUser: payloadForTheUser,
       };
 
-      const data = await callSoapService(
+      const response = await callSoapService(
         userData.clientURL,
         "DMS_GetDashboard_OverallSummary",
         payload
       );
-      // Convert each object to the expected format for the chart
-      const formattedData = data.map((item) => ({
-        name: item.CATEGORY,
-        value: Number(item.total_count) || 0,
-      }));
+
+      // Step 1: Calculate total of all counts
+      const totalCount = response.reduce(
+        (sum, item) => sum + (Number(item.total_count) || 0),
+        0
+      );
+
+      // Step 2: Map data with percentage calculation
+      const formattedData = response.map((item) => {
+        const value = Number(item.total_count) || 0;
+        const percentage = totalCount > 0 ? (value / totalCount) * 100 : 0;
+
+        return {
+          name: `${item.CATEGORY} (${percentage.toFixed(0)}%)`,
+          value,
+          percentage: Number(percentage.toFixed(0)), // Round to 2 decimals
+        };
+      });
 
       setOverallSummaryData(formattedData);
     } catch (error) {
@@ -92,66 +105,63 @@ const DocumentDistributionChart = ({ daysCount = 30 }) => {
       overallSummaryData.every((item) => item.value === 0));
 
   return (
-    <div
-      className="cust-card-group"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.3 }}
-    >
-      <div style={{ width: "100%", height: 300 }}>
-        {isLoading ? (
-          <div className="h-full flex items-center justify-center">
-            <MoonLoader color="#36d399" height={2} width="100%" />
-          </div>
-        ) : showNoDataMessage ? (
-          <div className="h-full flex flex-col items-center justify-center text-center p-4">
-            <span className="text-lg font-semibold">
-              No data available for the selected period
-            </span>
-            <span className="text-gray-400 text-xs">
-              Try selecting a different time range
-            </span>
-          </div>
-        ) : (
-          <ResponsiveContainer>
-            <PieChart>
-              <Pie
-                data={overallSummaryData}
-                cx="50%"
-                cy="50%"
-                outerRadius={80}
-                fill="#8884d8"
-                fontSize={14}
-                dataKey="value"
-                label={({ name, percent }) =>
-                  `${name} ${(percent * 100).toFixed(0)}%`
-                }
-              >
-                {overallSummaryData.map((entry, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={COLORS[index % COLORS.length]}
-                  />
-                ))}
-              </Pie>
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "rgba(31, 41, 55, 0.8)",
-                  borderColor: "#4B5563",
-                }}
-                itemStyle={{ fontSize: 14, color: "#E5E7EB" }}
-              />
-              <Legend
-                wrapperStyle={{ fontSize: 14 }}
-                iconType="circle"
-                layout="horizontal"
-                verticalAlign="bottom"
-                align="center"
-              />
-            </PieChart>
-          </ResponsiveContainer>
-        )}
-      </div>
+    <div style={{ width: "100%", height: 300 }}>
+      {isLoading ? (
+        <div className="h-full flex items-center justify-center">
+          <MoonLoader color="#36d399" height={2} width="100%" />
+        </div>
+      ) : showNoDataMessage ? (
+        <div className="h-full flex flex-col items-center justify-center text-center p-4">
+          <span className="text-lg font-semibold">
+            No data available for the selected period
+          </span>
+          <span className="text-gray-400 text-xs">
+            Try selecting a different time range
+          </span>
+        </div>
+      ) : (
+        <ResponsiveContainer>
+          <PieChart>
+            <Pie
+              data={overallSummaryData}
+              cx="50%"
+              cy="50%"
+              outerRadius={80}
+              fill="#8884d8"
+              style={{ cursor: "pointer", margin: "auto" }}
+              fontSize={14}
+              dataKey="value"
+            >
+              {overallSummaryData.map((entry, index) => (
+                <Cell
+                  key={`cell-${index}`}
+                  fill={COLORS[index % COLORS.length]}
+                />
+              ))}
+            </Pie>
+            <Tooltip
+              contentStyle={{
+                backgroundColor: "rgba(31, 41, 55, 0.8)",
+                borderColor: "#4B5563",
+                borderRadius: "8px",
+                padding: "2px 6px",
+                fontSize: "12px",
+              }}
+              itemStyle={{ fontSize: 12, color: "#E5E7EB" }}
+            />
+            <Legend
+              wrapperStyle={{ fontSize: 12 }}
+              iconType="circle"
+              layout="horizontal"
+              verticalAlign="bottom"
+              align="center"
+              label={({ name, percent }) =>
+                `${name} ${(percent * 100).toFixed(0)}%`
+              }
+            />
+          </PieChart>
+        </ResponsiveContainer>
+      )}
     </div>
   );
 };

@@ -43,61 +43,74 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
-      <div className="col-span-2">
-        <div>
-          <h1 className="font-semibold">
-            Welcome back, {toTitleCase(userData.userName)} 👋
-          </h1>
-          <p className="text-gray-400 text-sm">
-            here's what's happening with your account today
-          </p>
-        </div>
-      </div>
-      <div className="col-span-2 flex justify-end">
-        <div className="flex justify-between items-center w-full gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+      {/* Header - Full width on all screens */}
+      <div className="col-span-1 md:col-span-2 lg:col-span-3 flex justify-end">
+        <div className="flex flex-wrap justify-between items-center w-full gap-4">
           <h1 className="text-lg font-semibold">
-            {" "}
             {userData?.isAdmin || userRights === "Allowed"
               ? "Admin Dashboard"
-              : "User Dashboard"}{" "}
+              : "User Dashboard"}
           </h1>
           <TimeRangeSelector onFilterChange={setFilterDays} />
         </div>
       </div>
 
-      <div className="col-span-2">
+      {/* Sales Summary - Full width */}
+      <div className="col-span-1 md:col-span-2 lg:col-span-3">
         <SalesSummaryCard daysCount={filterDays} />
       </div>
 
-      <Card className="col-span-2 md:col-span-2 lg:col-span-1">
-        <CardHeader>
-          <CardTitle>Document Status Distribution</CardTitle>
+      {/* First row of cards - 3 columns on lg+ */}
+      <Card className="col-span-1 md:col-span-1 lg:col-span-1">
+        <CardHeader className="p-2">
+          <CardTitle className="text-lg">
+            Document Status Distribution
+          </CardTitle>
         </CardHeader>
-        <CardContent className="pl-2">
+        <CardContent className="p-2 pt-0">
           <DocumentDistributionChart daysCount={filterDays} />
         </CardContent>
       </Card>
 
-      <Card className="col-span-2 md:col-span-2 lg:col-span-1">
-        <CardHeader>
-          <CardTitle>Channel Performance</CardTitle>
+      <Card className="col-span-1 md:col-span-1 lg:col-span-1">
+        <CardHeader className="p-2">
+          <CardTitle className="text-lg">Category Wise Performance</CardTitle>
         </CardHeader>
-        <CardContent className="pl-6">
+        <CardContent className="p-2 pt-0">
+          <DocumentDistributionChart daysCount={filterDays} />
+        </CardContent>
+      </Card>
+
+      <Card className="col-span-1 md:col-span-1 lg:col-span-1">
+        <CardHeader className="p-2">
+          <CardTitle className="text-lg">Module wise Performance</CardTitle>
+        </CardHeader>
+        <CardContent className="p-2 pt-0">
+          <DocumentDistributionChart daysCount={filterDays} />
+        </CardContent>
+      </Card>
+
+      <Card className="col-span-1 md:col-span-1 lg:col-span-1">
+        <CardHeader className="p-2">
+          <CardTitle className="text-lg">Channel Performance</CardTitle>
+        </CardHeader>
+        <CardContent className="p-2 pt-0">
           <ChannelPerformanceChart daysCount={filterDays} />
         </CardContent>
       </Card>
 
-      <Card className="col-span-2 md:col-span-2 lg:col-span-1">
-        <CardHeader>
-          <CardTitle>Documents by channel</CardTitle>
+      <Card className="col-span-1 md:col-span-1 lg:col-span-1">
+        <CardHeader className="p-2">
+          <CardTitle className="text-lg">Documents by channel</CardTitle>
         </CardHeader>
-        <CardContent className="pl-6">
+        <CardContent className="p-2 pt-0">
           <DocumentChannelChart daysCount={filterDays} />
         </CardContent>
       </Card>
 
-      <Card className="col-span-2 md:col-span-2 lg:col-span-1">
+      {/* Second row of cards */}
+      <Card className="col-span-1 md:col-span-1 lg:col-span-1">
         <CardHeader>
           <CardTitle>Daily Reports</CardTitle>
         </CardHeader>
@@ -106,7 +119,8 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
 
-      <Card className="col-span-2">
+      {/* AI Insights - Full width */}
+      <Card className="col-span-1 md:col-span-2 lg:col-span-3">
         <CardHeader>
           <CardTitle>AI-Powered Insights</CardTitle>
         </CardHeader>

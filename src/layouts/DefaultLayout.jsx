@@ -34,11 +34,11 @@ export const DefaultLayout = () => {
       <div
         className={cn(
           "transition-[margin] duration-300",
-          collapsed ? "md:ml-[70px]" : "md:ml-[240px]"
+          collapsed ? "md:ml-[50px]" : "md:ml-[180px]"
         )}
       >
         <DefaultHeader collapsed={collapsed} setCollapsed={setCollapsed} />
-        <main className="h-[calc(100vh-108px)] overflow-y-auto overflow-x-hidden p-6">
+        <main className="h-[calc(100vh-52px)] overflow-y-auto overflow-x-hidden p-2">
           <Outlet />
 
           <div className="fixed bottom-8 right-8 z-50">
@@ -62,7 +62,7 @@ export const DefaultLayout = () => {
 
           <Toaster />
         </main>
-        <Footer />
+        {/* <Footer /> */}
       </div>
     </div>
   );

@@ -52,6 +52,50 @@ export const UploadDocument = () => {
   const [errorMessage, setErrorMessage] = useState(null);
   const [isResponseLoading, setIsResponseLoading] = useState(false);
 
+  // Add new state variables at the top of the component
+  const [imageZoom, setImageZoom] = useState(1);
+  const [imagePosition, setImagePosition] = useState({ x: 0, y: 0 });
+  const [isDraggingImage, setIsDraggingImage] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
+  // Add this function to handle zoom
+  const handleImageZoom = (e) => {
+    e.preventDefault();
+    const delta = e.deltaY * -0.01;
+    const newZoom = Math.min(Math.max(0.5, imageZoom + delta), 3);
+    setImageZoom(newZoom);
+  };
+
+  // Add this function to handle drag start
+  const handleDragStart = (e) => {
+    setIsDraggingImage(true);
+    setDragStart({
+      x: e.clientX - imagePosition.x,
+      y: e.clientY - imagePosition.y,
+    });
+  };
+
+  // Add this function to handle dragging
+  const handleDragging = (e) => {
+    if (!isDraggingImage) return;
+
+    setImagePosition({
+      x: e.clientX - dragStart.x,
+      y: e.clientY - dragStart.y,
+    });
+  };
+
+  // Add this function to handle drag end
+  const handleDragEnd = () => {
+    setIsDraggingImage(false);
+  };
+
+  // Add this function to reset zoom
+  const resetImageZoom = () => {
+    setImageZoom(1);
+    setImagePosition({ x: 0, y: 0 });
+  };
+
   const API_URL = "https://apps.istreams-erp.com:4491/api/OpenAI/ask-from-file";
 
   const handleDrag = (e) => {
@@ -298,11 +342,43 @@ export const UploadDocument = () => {
 
         if (mimeType.startsWith("image/")) {
           return (
-            <img
-              src={previewUrl}
-              alt="Image Preview"
-              className="w-full h-full object-contain mx-auto"
-            />
+            <div
+              className="w-full h-full overflow-hidden relative cursor-move"
+              onWheel={handleImageZoom}
+              onMouseDown={handleDragStart}
+              onMouseMove={handleDragging}
+              onMouseUp={handleDragEnd}
+              onMouseLeave={handleDragEnd}
+            >
+              <div className="absolute bottom-4 right-4 z-10 flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    resetImageZoom();
+                  }}
+                  className="bg-white/80 backdrop-blur-sm"
+                >
+                  Reset Zoom
+                </Button>
+                <div className="bg-white/80 backdrop-blur-sm px-3 py-1 rounded-md text-xs flex items-center">
+                  Zoom: {Math.round(imageZoom * 100)}%
+                </div>
+              </div>
+
+              <img
+                src={previewUrl}
+                alt="Image Preview"
+                className="w-full h-full object-contain mx-auto"
+                style={{
+                  transform: `scale(${imageZoom}) translate(${imagePosition.x}px, ${imagePosition.y}px)`,
+                  transformOrigin: "center center",
+                  transition: isDraggingImage ? "none" : "transform 0.1s ease",
+                  cursor: isDraggingImage ? "grabbing" : "grab",
+                }}
+              />
+            </div>
           );
         }
 
@@ -376,7 +452,7 @@ export const UploadDocument = () => {
 
       case "chat":
         return (
-          <div className="flex w-full h-full flex-col bg-white dark:bg-gradient-to-b  dark:from-slate-900  dark:to-slate-800">
+          <div className="flex w-full h-[95%] flex-col bg-white dark:bg-gradient-to-b  dark:from-slate-900  dark:to-slate-800">
             <div className="flex-1 h-full overflow-y-auto p-3 sm:p-4 bg-gray-50 dark:bg-gradient-to-b dark:from-slate-900 dark:to-slate-800">
               {messages.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-center p-3 sm:p-4">

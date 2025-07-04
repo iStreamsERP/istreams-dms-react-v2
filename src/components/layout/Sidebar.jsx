@@ -9,7 +9,6 @@ import React, { forwardRef } from "react";
 import { NavLink } from "react-router-dom";
 
 export const Sidebar = forwardRef(({ collapsed }, ref) => {
-  const { userData } = useAuth();
   const [expandedMenu, setExpandedMenu] = React.useState(null);
   // const navbarLinks = getNavbarLinks(userData.isAdmin);
   const navbarLinks = getNavbarLinks(true);
@@ -22,109 +21,125 @@ export const Sidebar = forwardRef(({ collapsed }, ref) => {
     <aside
       ref={ref}
       className={cn(
-        "fixed z-[100] flex h-full w-[240px] flex-col overflow-x-hidden border-r border-slate-300 dark:border-slate-700 bg-slate-100 transition-all duration-300 dark:bg-slate-950",
-        collapsed ? "md:w-[70px] md:items-center" : "md:w-[240px]",
+        "fixed z-[100] flex h-full flex-col overflow-x-hidden border-r border-slate-300 bg-slate-100 transition-all duration-300 dark:border-slate-700 dark:bg-slate-950",
+        collapsed ? "md:w-[50px] md:items-center" : "md:w-[180px]",
         collapsed ? "max-md:-left-full" : "max-md:left-0"
       )}
     >
-      <div className="flex gap-x-3 p-3 mx-auto">
+      {/* Logo - Reduced padding in collapsed mode */}
+      <div
+        className={cn(
+          "flex p-2 mx-auto",
+          collapsed ? "py-2 px-0" : "gap-x-3 p-2"
+        )}
+      >
         <img
           src={logoLight}
           alt="iStreams ERP Solutions | CRM"
-          className="dark:hidden"
+          className={cn(
+            "dark:hidden object-contain",
+            collapsed ? "h-8" : "h-10"
+          )}
         />
         <img
           src={logoDark}
           alt="iStreams ERP Solutions | CRM"
-          className="hidden dark:block"
+          className={cn(
+            "hidden dark:block object-contain",
+            collapsed ? "h-8" : "h-10"
+          )}
         />
       </div>
 
-      <div className="flex w-full flex-col gap-y-4 overflow-y-auto overflow-x-hidden p-3 scrollbar-thin">
-        {navbarLinks.map((navbarLink) => (
-          <div key={navbarLink.title}>
-            <p
-              className={cn(
-                "text-[10px] mb-2 font-semibold uppercase leading-none text-slate-400 pr-3"
+      <div className="p-2">
+        <div className="flex flex-col gap-y-1 overflow-y-auto overflow-x-hidden scrollbar-thin">
+          {navbarLinks.map((navbarLink) => (
+            <div key={navbarLink.title} className="w-full">
+              {/* Hide group titles in collapsed view */}
+              {!collapsed && (
+                <p className="text-[10px] font-semibold uppercase leading-none text-slate-400 pr-3">
+                  {navbarLink.title}
+                </p>
               )}
-            >
-              {navbarLink.title}
-            </p>
-            {navbarLink.links.map((link) => {
-              const hasChildren = link.children && link.children.length > 0;
-              return (
-                <React.Fragment key={link.label}>
-                  {hasChildren ? (
-                    <div className="w-full">
-                      <button
-                        onClick={() => toggleMenu(link.label)}
-                        className={cn(
-                          "sidebar-item",
-                          collapsed && "md:w-[45px]",
-                          "flex items-center gap-x-2 w-full px-3 py-2 rounded-md text-sm font-medium hover:bg-slate-200 dark:hover:bg-slate-900 transition-colors"
+
+              {navbarLink.links.map((link) => {
+                const hasChildren = link.children && link.children.length > 0;
+                return (
+                  <React.Fragment key={link.label}>
+                    {hasChildren ? (
+                      <div className="w-full">
+                        <button
+                          onClick={() => toggleMenu(link.label)}
+                          className={cn(
+                            "sidebar-item",
+                            collapsed ? "justify-center" : "justify-start"
+                          )}
+                        >
+                          {/* Consistent icon size */}
+                          <link.icon size={16} className="flex-shrink-0" />
+                          {!collapsed && (
+                            <>
+                              <p className="whitespace-nowrap">{link.label}</p>
+                              <ChevronDownIcon
+                                className={cn(
+                                  "ml-auto h-4 w-4 transition-transform",
+                                  expandedMenu === link.label
+                                    ? "rotate-180"
+                                    : ""
+                                )}
+                              />
+                            </>
+                          )}
+                        </button>
+                        {expandedMenu === link.label && !collapsed && (
+                          <div className="ml-4">
+                            {link.children.map((child) => (
+                              <NavLink
+                                key={child.label}
+                                to={child.path}
+                                className={cn("sidebar-item")}
+                              >
+                                {/* <child.icon size={18} className="flex-shrink-0" /> */}
+                                {!collapsed && (
+                                  <p className="break-words max-w-full w-full leading-snug">
+                                    {child.label}
+                                  </p>
+                                )}
+                              </NavLink>
+                            ))}
+                          </div>
                         )}
+                      </div>
+                    ) : (
+                      <NavLink
+                        to={link.path}
+                        className={({ isActive }) =>
+                          cn(
+                            "sidebar-item",
+                            collapsed ? "justify-center" : "justify-start",
+                            isActive && "active" // Ensure active state works
+                          )
+                        }
+                        title={link.label}
                       >
-                        <link.icon size={18} className="flex-shrink-0" />
+                        {/* Consistent icon size */}
+                        <link.icon size={16} className="flex-shrink-0" />
                         {!collapsed && (
-                          <>
-                            <p className="whitespace-nowrap">{link.label}</p>
-                            <ChevronDownIcon
-                              className={cn(
-                                "ml-auto h-4 w-4 transition-transform",
-                                expandedMenu === link.label ? "rotate-180" : ""
-                              )}
-                            />
-                          </>
+                          <p className="break-words max-w-[calc(100%-1rem)] leading-snug">
+                            {link.label}
+                          </p>
                         )}
-                      </button>
-                      {expandedMenu === link.label && !collapsed && (
-                        <div className="ml-4">
-                          {link.children.map((child) => (
-                            <NavLink
-                              key={child.label}
-                              to={child.path}
-                              className={cn(
-                                "sidebar-item flex items-center gap-x-2 my-2 py-2 rounded-md text-sm font-medium hover:bg-slate-200 dark:hover:bg-slate-900 transition-colors"
-                              )}
-                            >
-                              {/* <child.icon size={18} className="flex-shrink-0" /> */}
-                              {!collapsed && (
-                                <p className="whitespace-nowrap">
-                                  {child.label}
-                                </p>
-                              )}
-                            </NavLink>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <NavLink
-                      to={link.path}
-                      className={cn(
-                        "sidebar-item flex items-center gap-x-2 px-3 py-2 my-2 rounded-md text-sm font-medium hover:bg-slate-200 dark:hover:bg-slate-900 transition-colors",
-                        collapsed && "md:w-[45px]"
-                      )}
-                      title={link.label}
-                    >
-                      <link.icon size={18} className="flex-shrink-0" />
-                      {!collapsed && (
-                        <p className="whitespace-nowrap">{link.label}</p>
-                      )}
-                    </NavLink>
-                  )}
-                </React.Fragment>
-              );
-            })}
-          </div>
-        ))}
+                      </NavLink>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </div>
+          ))}
+        </div>
       </div>
     </aside>
   );
 });
 
 Sidebar.displayName = "Sidebar";
-
-Sidebar.propTypes = {
-  collapsed: PropTypes.bool,
-};

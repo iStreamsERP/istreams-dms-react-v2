@@ -148,30 +148,39 @@ const SalesSummaryCard = ({ daysCount = 30 }) => {
       {stats.map((stat, idx) => (
         <Card
           key={idx}
-          className="bg-gradient-to-t from-slate-900 to-blue-900 text-white"
+          className="bg-gradient-to-br from-slate-800 to-blue-900 text-white p-4"
         >
-          <CardHeader className="flex items-center justify-between pb-2">
-            <CardTitle className="flex justify-between w-full gap-1 items-center text-sm font-medium">
-              {stat.title}
-              <div className="p-2 bg-white rounded-full">
-                <stat.icon className="h-4 w-4" color={stat.color} />
+          <div className="flex flex-col gap-3">
+            {/* Top section - Heading + Icon */}
+            <div className="flex justify-between items-start">
+              <h3 className="text-sm font-medium">{stat.title}</h3>
+              <div className="p-2 bg-white/20 rounded-lg">
+                <stat.icon className="h-5 w-5" color="white" />
               </div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-4xl font-bold">{stat.count}</div>
-            {stat.percentage != null && (
-              <p className="text-xs text-muted-foreground mt-1">
-                <span style={{ color: stat.color }}>
-                  {stat.percentage.toFixed
-                    ? stat.percentage
-                    : (+stat.percentage).toFixed(1)}
-                  %
-                </span>{" "}
-                of {stat.name}
-              </p>
-            )}
-          </CardContent>
+            </div>
+
+            {/* Bottom section - Count + Percentage */}
+            <div className="flex gap-2 items-baseline">
+              <div className="text-5xl font-bold tracking-tight">
+                {stat.count}
+              </div>
+
+              {stat.percentage != null && (
+                <div
+                  className="text-xs flex items-center gap-1 leading-none"
+                  style={{ color: stat.color }}
+                >
+                  <span>
+                    {typeof stat.percentage === "number"
+                      ? stat.percentage.toFixed(1)
+                      : stat.percentage}
+                    %
+                  </span>
+                  <span>of {stat.name}</span>
+                </div>
+              )}
+            </div>
+          </div>
         </Card>
       ))}
     </div>

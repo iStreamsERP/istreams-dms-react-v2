@@ -64,14 +64,31 @@ const ChannelPerformanceChart = ({ daysCount = 30 }) => {
         payload
       );
 
-      // Map the service data to the format expected by Recharts
-      const formattedData = response.map((item) => ({
-        name:
-          item.CHANNEL_SOURCE === " "
+      console.log(response);
+
+      // Step 1: Calculate total of all counts
+      const totalCount = response.reduce(
+        (sum, item) => sum + (Number(item.total_count) || 0),
+        0
+      );
+
+      // Step 2: Map data with percentage calculation
+      const formattedData = response.map((item) => {
+        const value = Number(item.total_count) || 0;
+        const percentage = totalCount > 0 ? (value / totalCount) * 100 : 0;
+
+        const label =
+          item.CHANNEL_SOURCE === ""
             ? userData.organizationName
-            : item.CHANNEL_SOURCE,
-        value: Number(item.total_count) || 0,
-      }));
+            : item.CHANNEL_SOURCE;
+
+        return {
+          name: `${label} (${percentage.toFixed(0)}%)`,
+          value,
+          percentage: Number(percentage.toFixed(0)), // Round to 2 decimals
+        };
+      });
+
       setChannelData(formattedData);
     } catch (error) {
       console.error("Error fetching channel summary:", error);
@@ -122,11 +139,9 @@ const ChannelPerformanceChart = ({ daysCount = 30 }) => {
               cy="50%"
               outerRadius={80}
               fill="#8884d8"
+              style={{ cursor: "pointer", margin: "auto" }}
               fontSize={14}
               dataKey="value"
-              label={({ name, percent }) =>
-                `${name} ${(percent * 100).toFixed(0)}%`
-              }
             >
               {channelData.map((entry, index) => (
                 <Cell
@@ -137,20 +152,23 @@ const ChannelPerformanceChart = ({ daysCount = 30 }) => {
             </Pie>
             <Tooltip
               contentStyle={{
-                backgroundColor: "rgba(12, 14, 16, 0.8)",
+                backgroundColor: "rgba(31, 41, 55, 0.8)",
                 borderColor: "#4B5563",
                 borderRadius: "8px",
-                padding: "6px",
+                padding: "2px 6px",
                 fontSize: "12px",
               }}
               itemStyle={{ fontSize: 12, color: "#E5E7EB" }}
             />
             <Legend
-              wrapperStyle={{ fontSize: 14 }}
+              wrapperStyle={{ fontSize: 12 }}
               iconType="circle"
               layout="horizontal"
               verticalAlign="bottom"
               align="center"
+              label={({ name, percent }) =>
+                `${name} ${(percent * 100).toFixed(0)}%`
+              }
             />
           </PieChart>
         </ResponsiveContainer>
