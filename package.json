@@ -26,6 +26,7 @@
     "@radix-ui/react-toggle": "^1.1.8",
     "@radix-ui/react-toggle-group": "^1.1.9",
     "@react-pdf/renderer": "^4.3.0",
+    "@reactour/tour": "^3.8.0",
     "@tailwindcss/vite": "^4.1.5",
     "@tanstack/react-table": "^8.21.3",
     "@uidotdev/usehooks": "^2.4.1",

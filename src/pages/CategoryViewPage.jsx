@@ -220,7 +220,7 @@ const CategoryViewPage = () => {
   // };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       {/* CONTROLS ROW */}
       <div className="flex flex-col md:flex-row md:justify-between items-stretch gap-2">
         {/* Search */}
@@ -269,7 +269,7 @@ const CategoryViewPage = () => {
             : "No data found..."}
         </p>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
           {categoriesToDisplay.map((category) => (
             <Link
               to="/document-view"

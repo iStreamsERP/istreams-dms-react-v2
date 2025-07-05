@@ -29,10 +29,10 @@ function TeamProfileCard({ user }) {
   return (
     <Link to="/document-list" state={{ userName: displayTitle }}>
       <Card className="col-span-2 md:col-span-2 lg:col-span-1">
-        <CardContent className="p-4">
+        <CardContent className="p-2">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-start space-x-3 flex-shrink-0">
-              <div className="w-14 h-14 overflow-hidden rounded-full ring-2 ring-green-500 flex-shrink-0">
+              <div className="w-8 h-8 overflow-hidden rounded-full ring-2 ring-green-500 flex-shrink-0">
                 <img
                   src={image}
                   alt={displayTitle}
@@ -41,13 +41,13 @@ function TeamProfileCard({ user }) {
                     e.currentTarget.onerror = null;
                     e.currentTarget.src = "/placeholder-user.png";
                   }}
-                  className="w-14 h-14 object-cover flex-shrink-0"
+                  className="w-10 h-10 object-cover flex-shrink-0"
                 />
               </div>
               <div className="flex flex-col items-start max-w-[100px]">
                 {displayTitle && (
                   <p
-                    className="text-lg font-semibold truncate whitespace-nowrap"
+                    className="text-sm font-semibold truncate whitespace-nowrap"
                     title={displayTitle}
                   >
                     {displayTitle}
@@ -65,7 +65,7 @@ function TeamProfileCard({ user }) {
             </div>
 
             <div className="text-center ml-auto">
-              <div className="relative w-16 h-16 mx-auto rounded-full">
+              <div className="relative w-10 h-10 mx-auto rounded-full border">
                 <svg viewBox="0 0 36 36" className="w-full h-full">
                   <circle
                     cx="18"
@@ -87,11 +87,10 @@ function TeamProfileCard({ user }) {
                     transform="rotate(-90 18 18)"
                   />
                 </svg>
-                <div className="absolute inset-0 flex items-center justify-center text-xs font-medium text-gray-700">
+                <div className="absolute inset-0 flex items-center justify-center text-xs font-medium text-gray-700 ">
                   {monthProgressPercent}%
                 </div>
               </div>
-              <p className="mt-1 text-xs text-gray-400">This Month</p>
             </div>
           </div>
 

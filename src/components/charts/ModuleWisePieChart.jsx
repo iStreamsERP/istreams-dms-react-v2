@@ -1,3 +1,4 @@
+import { callSoapService } from "@/services/callSoapService";
 import { useEffect, useState } from "react";
 import {
   Cell,
@@ -8,23 +9,15 @@ import {
   Tooltip,
 } from "recharts";
 import { useAuth } from "../../contexts/AuthContext";
-import { callSoapService } from "@/services/callSoapService";
 import { MoonLoader } from "react-spinners";
 
-const COLORS = [
-  "#8884d8",
-  "#82ca9d",
-  "#ffc658",
-  "#ff8042",
-  "#0088FE",
-  "#00C49F",
-];
-
-const ChannelPerformanceChart = ({ daysCount = 30 }) => {
-  const [channelData, setChannelData] = useState([]);
+export const ModuleWisePieChart = ({ daysCount = 30 }) => {
+  const [overallSummaryData, setOverallSummaryData] = useState([]);
   const [userRights, setUserRights] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const { userData } = useAuth();
+
+  const COLORS = ["#FF6B6B", "#4ECDC4", "#45B7D1", "#FED766", "#2AB7CA"];
 
   const fetchUserRights = async () => {
     try {
@@ -47,6 +40,7 @@ const ChannelPerformanceChart = ({ daysCount = 30 }) => {
       console.error("Failed to fetch user rights:", error);
     }
   };
+
   const fetchData = async () => {
     setIsLoading(true);
     try {
@@ -60,7 +54,7 @@ const ChannelPerformanceChart = ({ daysCount = 30 }) => {
 
       const response = await callSoapService(
         userData.clientURL,
-        "DMS_GetDashboard_ChannelSummary",
+        "DMS_GetDashboard_OverallSummary",
         payload
       );
 
@@ -75,30 +69,25 @@ const ChannelPerformanceChart = ({ daysCount = 30 }) => {
         const value = Number(item.total_count) || 0;
         const percentage = totalCount > 0 ? (value / totalCount) * 100 : 0;
 
-        const label =
-          item.CHANNEL_SOURCE === ""
-            ? userData.organizationName
-            : item.CHANNEL_SOURCE;
-
         return {
-          name: `${label} (${percentage.toFixed(0)}%)`,
+          name: `${item.CATEGORY} (${percentage.toFixed(0)}%)`,
           value,
           percentage: Number(percentage.toFixed(0)), // Round to 2 decimals
         };
       });
 
-      setChannelData(formattedData);
+      setOverallSummaryData(formattedData);
     } catch (error) {
-      console.error("Error fetching channel summary:", error);
+      console.error("Error fetching dashboard summary:", error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Fetch dashboard summary data
+  // Fetch user rights
   useEffect(() => {
     const initialize = async () => {
-      await fetchUserRights(); // Only sets userRights, not summary
+      await fetchUserRights();
     };
     initialize();
   }, [userData]);
@@ -109,9 +98,11 @@ const ChannelPerformanceChart = ({ daysCount = 30 }) => {
     }
   }, [userRights, daysCount]);
 
+  // Check if we should show "no data" message
   const showNoDataMessage =
     !isLoading &&
-    (channelData.length === 0 || channelData.every((item) => item.value === 0));
+    (overallSummaryData.length === 0 ||
+      overallSummaryData.every((item) => item.value === 0));
 
   return (
     <div style={{ width: "100%", height: 300 }}>
@@ -132,7 +123,7 @@ const ChannelPerformanceChart = ({ daysCount = 30 }) => {
         <ResponsiveContainer>
           <PieChart>
             <Pie
-              data={channelData}
+              data={overallSummaryData}
               cx="50%"
               cy="50%"
               outerRadius={80}
@@ -141,7 +132,7 @@ const ChannelPerformanceChart = ({ daysCount = 30 }) => {
               fontSize={14}
               dataKey="value"
             >
-              {channelData.map((entry, index) => (
+              {overallSummaryData.map((entry, index) => (
                 <Cell
                   key={`cell-${index}`}
                   fill={COLORS[index % COLORS.length]}
@@ -174,5 +165,3 @@ const ChannelPerformanceChart = ({ daysCount = 30 }) => {
     </div>
   );
 };
-
-export default ChannelPerformanceChart;

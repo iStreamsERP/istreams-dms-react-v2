@@ -240,8 +240,8 @@ const LoginFormPage = () => {
                 companyCurrIsIndianStandard:
                   userData.currency.info?.IS_INDIANCURRENCY_FORMAT,
                 isAdmin: userData.user.isAdmin,
-                userRoles: ["admin", "manager"], // Replace with actual roles from API
-                permissions: ["view_dashboard", "edit_documents"], // Replace with actual permissions
+                userRoles: [], // Replace with actual roles from API
+                permissions: [], // Replace with actual permissions
               };
 
               login(payload, rememberMe);

@@ -1,17 +1,17 @@
+import { PERMISSION_KEYS, PERMISSION_MAP } from "@/permissions";
+import { callSoapService } from "@/services/callSoapService";
 import {
   createContext,
   useCallback,
   useContext,
   useEffect,
   useState,
+  useMemo,
 } from "react";
 
-// Create the context
 const AuthContext = createContext(null);
-
 const PUBLIC_SERVICE_URL = import.meta.env.VITE_SOAP_ENDPOINT;
 
-// Default userData object with standardized keys
 const defaultUserData = {
   serviceUrl: PUBLIC_SERVICE_URL,
   clientURL: "",
@@ -27,55 +27,195 @@ const defaultUserData = {
   companyCurrSymbol: null,
   companyCurrIsIndianStandard: false,
   isAdmin: false,
-  userRoles: [],
-  permissions: [],
+  permissions: {},
+  docCategories: [],
 };
 
 export const AuthProvider = ({ children }) => {
-  const [theme, setTheme] = useState(localStorage.getItem("theme") || "light");
-  const [userData, setUserData] = useState(defaultUserData);
+  const [userData, setUserData] = useState(() => {
+    const storedData = JSON.parse(
+      sessionStorage.getItem("userData") ||
+        localStorage.getItem("userData") ||
+        "null"
+    );
+    return storedData || defaultUserData;
+  });
+
   const [loading, setLoading] = useState(true);
+  const [permissionLoading, setPermissionLoading] = useState(false);
 
-  useEffect(() => {
-    const storedUserData =
-      JSON.parse(sessionStorage.getItem("userData")) ||
-      JSON.parse(localStorage.getItem("userData"));
+  // Fetch all permissions in a single batch
+  const fetchAllPermissions = useCallback(async (user) => {
+    try {
+      const { userName, clientURL } = user;
 
-    if (storedUserData?.userEmail) {
-      setUserData({ ...defaultUserData, ...storedUserData });
-    } else {
-      setUserData(defaultUserData);
+      // 1. First get admin status - this is critical for permission requests
+      const adminResponse = await callSoapService(
+        clientURL,
+        "DMS_Is_Admin_User",
+        { UserName: userName }
+      );
+      const isAdmin = adminResponse === "Yes";
+
+      // 2. Now fetch other data in parallel using actual admin status
+      const [categoriesResponse, ...permissionResponses] = await Promise.all([
+        // Document categories
+        callSoapService(clientURL, "DMS_Get_Allowed_DocCategories", {
+          UserName: userName,
+        }),
+
+        // All permissions - using actual admin status
+        ...PERMISSION_KEYS.map((key) => {
+          const { service, params } = PERMISSION_MAP[key];
+          const payload = params(userName, isAdmin); // Use actual admin status here
+          return callSoapService(clientURL, service, payload);
+        }),
+      ]);
+
+      // Build permissions object
+      const permissions = PERMISSION_KEYS.reduce((acc, key, index) => {
+        acc[key] = permissionResponses[index];
+        return acc;
+      }, {});
+
+      return {
+        isAdmin,
+        permissions,
+        docCategories: Array.isArray(categoriesResponse)
+          ? categoriesResponse
+          : [],
+      };
+    } catch (error) {
+      console.error("Permission fetch error:", error);
+      return {
+        isAdmin: user.isAdmin,
+        permissions: user.permissions,
+        docCategories: user.docCategories || [],
+      };
     }
-
-    setLoading(false);
   }, []);
 
+  // Refresh permissions
+  const refreshPermissions = useCallback(async () => {
+    if (!userData.userName) return;
+
+    setPermissionLoading(true);
+    try {
+      const newPermissions = await fetchAllPermissions(userData);
+      setUserData((prev) => ({
+        ...prev,
+        ...newPermissions,
+      }));
+
+      // Update storage
+      const storage = localStorage.getItem("userData")
+        ? localStorage
+        : sessionStorage;
+      storage.setItem(
+        "userData",
+        JSON.stringify({
+          ...userData,
+          ...newPermissions,
+        })
+      );
+    } catch (error) {
+      console.error("Failed to refresh permissions:", error);
+    } finally {
+      setPermissionLoading(false);
+    }
+  }, [userData, fetchAllPermissions]);
+
+  // Initial data loading
   useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem("theme", theme);
-  }, [theme]);
+    const initAuth = async () => {
+      if (userData.userName) {
+        try {
+          const lastUpdated = localStorage.getItem("permissionsLastUpdated");
+          const needsRefresh =
+            !lastUpdated || Date.now() - parseInt(lastUpdated) > 300000;
 
-  const login = useCallback((data, rememberMe = false) => {
-    const newUserData = { ...defaultUserData, ...data };
-    setUserData(newUserData);
+          if (needsRefresh) {
+            const newPermissions = await fetchAllPermissions(userData);
+            setUserData((prev) => ({
+              ...prev,
+              ...newPermissions,
+            }));
 
-    const storage = rememberMe ? localStorage : sessionStorage;
-    storage.setItem("userData", JSON.stringify(newUserData));
-  }, []);
+            localStorage.setItem(
+              "permissionsLastUpdated",
+              Date.now().toString()
+            );
+          }
+        } catch (error) {
+          console.error("Initial permission refresh failed:", error);
+        }
+      }
+      setLoading(false);
+    };
+
+    initAuth();
+  }, [userData, fetchAllPermissions]);
+
+  // Login function
+  const login = useCallback(
+    async (data, rememberMe) => {
+      setLoading(true);
+      try {
+        // Fetch permissions during login
+        const permissionsData = await fetchAllPermissions(data);
+
+        const completeUserData = {
+          ...defaultUserData,
+          ...data,
+          ...permissionsData,
+        };
+
+        // Store data
+        const storage = rememberMe ? localStorage : sessionStorage;
+        storage.setItem("userData", JSON.stringify(completeUserData));
+        if (rememberMe) {
+          localStorage.setItem("permissionsLastUpdated", Date.now().toString());
+        }
+
+        setUserData(completeUserData);
+      } catch (error) {
+        console.error("Login permission error:", error);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [fetchAllPermissions]
+  );
 
   const logout = useCallback(() => {
     setUserData(defaultUserData);
     localStorage.removeItem("userData");
     sessionStorage.removeItem("userData");
+    localStorage.removeItem("permissionsLastUpdated");
   }, []);
 
-  if (loading) return null; // Don't render app until ready
+  // Memoized context value
+  const contextValue = useMemo(
+    () => ({
+      userData,
+      loading: loading || permissionLoading,
+      login,
+      logout,
+      refreshPermissions,
+      isAuthenticated: !!userData.userEmail,
+    }),
+    [userData, loading, permissionLoading, login, logout, refreshPermissions]
+  );
 
   return (
-    <AuthContext.Provider value={{ login, logout, userData, loading }}>
-      {!loading && children}
-    </AuthContext.Provider>
+    <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>
   );
 };
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
+};

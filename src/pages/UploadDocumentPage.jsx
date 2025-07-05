@@ -26,7 +26,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 
-export const UploadDocument = () => {
+export const UploadDocumentPage = () => {
   const { uploadRef } = useOutletContext();
   const { theme } = useTheme();
   const [isDragActive, setIsDragActive] = useState(false);

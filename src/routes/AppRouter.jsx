@@ -15,7 +15,7 @@ import TaskPage from "@/pages/TaskPage";
 import TaskViewPage from "@/pages/TaskView";
 import TeamsPage from "@/pages/TeamsPage";
 import TimeSheetPage from "@/pages/TimeSheetPage";
-import { UploadDocument } from "@/pages/UploadDocument";
+import { UploadDocumentPage } from "@/pages/UploadDocumentPage";
 import UserAccessRightsPage from "@/pages/UserAccessRightsPage";
 import UserListPage from "@/pages/UserListPage";
 import UserRolePage from "@/pages/UserRolePage ";
@@ -41,7 +41,7 @@ const router = createBrowserRouter([
     children: [
       {
         element: <UploadLayout />,
-        children: [{ index: true, element: <UploadDocument /> }],
+        children: [{ index: true, element: <UploadDocumentPage /> }],
       },
     ],
   },

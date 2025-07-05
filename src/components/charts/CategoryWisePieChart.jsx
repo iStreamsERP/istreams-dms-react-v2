@@ -1,30 +1,25 @@
+import { callSoapService } from "@/services/callSoapService";
 import { useEffect, useState } from "react";
 import {
+  Bar,
+  BarChart,
+  CartesianGrid,
   Cell,
-  Legend,
-  Pie,
-  PieChart,
   ResponsiveContainer,
   Tooltip,
+  XAxis,
+  YAxis,
 } from "recharts";
 import { useAuth } from "../../contexts/AuthContext";
-import { callSoapService } from "@/services/callSoapService";
 import { MoonLoader } from "react-spinners";
 
-const COLORS = [
-  "#8884d8",
-  "#82ca9d",
-  "#ffc658",
-  "#ff8042",
-  "#0088FE",
-  "#00C49F",
-];
-
-const ChannelPerformanceChart = ({ daysCount = 30 }) => {
+export const CategoryWisePieChart = ({ daysCount = 30 }) => {
   const [channelData, setChannelData] = useState([]);
   const [userRights, setUserRights] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const { userData } = useAuth();
+
+  const COLORS = ["#6366F1", "#8B5CF6", "#EC4899", "#10B981", "#F59E0B"];
 
   const fetchUserRights = async () => {
     try {
@@ -47,6 +42,7 @@ const ChannelPerformanceChart = ({ daysCount = 30 }) => {
       console.error("Failed to fetch user rights:", error);
     }
   };
+
   const fetchData = async () => {
     setIsLoading(true);
     try {
@@ -58,35 +54,19 @@ const ChannelPerformanceChart = ({ daysCount = 30 }) => {
         ForTheUser: payloadForTheUser,
       };
 
-      const response = await callSoapService(
+      const data = await callSoapService(
         userData.clientURL,
-        "DMS_GetDashboard_ChannelSummary",
+        "DMS_GetDashboard_CategoriesSummary",
         payload
       );
 
-      // Step 1: Calculate total of all counts
-      const totalCount = response.reduce(
-        (sum, item) => sum + (Number(item.total_count) || 0),
-        0
-      );
-
-      // Step 2: Map data with percentage calculation
-      const formattedData = response.map((item) => {
-        const value = Number(item.total_count) || 0;
-        const percentage = totalCount > 0 ? (value / totalCount) * 100 : 0;
-
-        const label =
-          item.CHANNEL_SOURCE === ""
+      const formattedData = data.map((item) => ({
+        Name:
+          item.DOC_RELATED_CATEGORY === " "
             ? userData.organizationName
-            : item.CHANNEL_SOURCE;
-
-        return {
-          name: `${label} (${percentage.toFixed(0)}%)`,
-          value,
-          percentage: Number(percentage.toFixed(0)), // Round to 2 decimals
-        };
-      });
-
+            : item.DOC_RELATED_CATEGORY,
+        Counts: Number(item.total_count) || 0,
+      }));
       setChannelData(formattedData);
     } catch (error) {
       console.error("Error fetching channel summary:", error);
@@ -105,10 +85,11 @@ const ChannelPerformanceChart = ({ daysCount = 30 }) => {
 
   useEffect(() => {
     if (userRights !== "") {
-      fetchData();
+      fetchData(); // This now runs *after* userRights is updated
     }
   }, [userRights, daysCount]);
 
+  // Check if we should show "no data" message
   const showNoDataMessage =
     !isLoading &&
     (channelData.length === 0 || channelData.every((item) => item.value === 0));
@@ -130,49 +111,31 @@ const ChannelPerformanceChart = ({ daysCount = 30 }) => {
         </div>
       ) : (
         <ResponsiveContainer>
-          <PieChart>
-            <Pie
-              data={channelData}
-              cx="50%"
-              cy="50%"
-              outerRadius={80}
-              fill="#8884d8"
-              style={{ cursor: "pointer", margin: "auto" }}
-              fontSize={14}
-              dataKey="value"
-            >
+          <BarChart data={channelData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#4B5563" />
+            <XAxis dataKey="Name" stroke="#9CA3AF" fontSize={14} />
+            <YAxis stroke="#9CA3AF" fontSize={14} />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: "rgba(12, 14, 16, 0.8)",
+                borderColor: "#4B5563",
+                borderRadius: "8px",
+                padding: "6px",
+                fontSize: "12px",
+              }}
+              itemStyle={{ fontSize: 12, color: "#E5E7EB" }}
+            />
+            <Bar dataKey={"Counts"} fill="#8884d8">
               {channelData.map((entry, index) => (
                 <Cell
                   key={`cell-${index}`}
                   fill={COLORS[index % COLORS.length]}
                 />
               ))}
-            </Pie>
-            <Tooltip
-              contentStyle={{
-                backgroundColor: "rgba(31, 41, 55, 0.8)",
-                borderColor: "#4B5563",
-                borderRadius: "8px",
-                padding: "2px 6px",
-                fontSize: "12px",
-              }}
-              itemStyle={{ fontSize: 12, color: "#E5E7EB" }}
-            />
-            <Legend
-              wrapperStyle={{ fontSize: 12 }}
-              iconType="circle"
-              layout="horizontal"
-              verticalAlign="bottom"
-              align="center"
-              label={({ name, percent }) =>
-                `${name} ${(percent * 100).toFixed(0)}%`
-              }
-            />
-          </PieChart>
+            </Bar>
+          </BarChart>
         </ResponsiveContainer>
       )}
     </div>
   );
 };
-
-export default ChannelPerformanceChart;

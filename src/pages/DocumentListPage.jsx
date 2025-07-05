@@ -12,7 +12,6 @@ import { BarLoader } from "react-spinners";
 
 const DocumentListPage = () => {
   const { userData } = useAuth();
-
   const formModalRef = useRef(null);
   const fetchDataRef = useRef(null);
   const location = useLocation();

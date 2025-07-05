@@ -6,10 +6,12 @@ import { useEffect, useState } from "react";
 import { BarLoader } from "react-spinners";
 import TeamProfileCard from "../components/TeamProfileCard";
 import { useAuth } from "../contexts/AuthContext";
+import { usePermissions } from "@/hooks/usePermissions";
 
 const TeamsPage = () => {
   const { userData } = useAuth();
   const { toast } = useToast();
+  const { hasPermission } = usePermissions();
 
   const [assignmentFilter, setAssignmentFilter] = useState("All");
   const [usersData, setUsersData] = useState([]);
@@ -18,41 +20,14 @@ const TeamsPage = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      const rights = await fetchUserRights();
-      await fetchUsersAndImages(rights);
+      const canViewTeam = await hasPermission("VIEW_TEAMS_FULL");
+      await fetchUsersAndImages(canViewTeam ? "Allowed" : "Denied");
     };
 
     if (userData?.userEmail) {
       fetchData();
     }
   }, [userData.userEmail]);
-
-  const fetchUserRights = async () => {
-    try {
-      const userType = userData.isAdmin ? "ADMINISTRATOR" : "USER";
-      const payload = {
-        UserName: userData.userName,
-        FormName: "DMS-TEAMSFULLVIEW",
-        FormDescription: "View Rights For Entire Team",
-        UserType: userType,
-      };
-
-      const response = await callSoapService(
-        userData.clientURL,
-        "DMS_CheckRights_ForTheUser",
-        payload
-      );
-
-      return response;
-    } catch (error) {
-      console.error("Failed to fetch user rights:", error);
-      toast({
-        variant: "destructive",
-        title: error,
-      });
-      return "";
-    }
-  };
 
   const fetchUsersAndImages = async (rights) => {
     try {
@@ -143,7 +118,7 @@ const TeamsPage = () => {
   const hasUsersData = usersData.length > 0;
 
   return (
-    <div className="grid grid-cols-1 gap-4">
+    <div className="grid grid-cols-1 gap-2">
       <div className="flex flex-col md:flex-row md:justify-between items-stretch gap-2">
         <div className="w-full lg:w-1/2">
           <GlobalSearchInput value={globalFilter} onChange={setGlobalFilter} />
@@ -171,7 +146,7 @@ const TeamsPage = () => {
           <BarLoader color="#36d399" height={2} width="100%" />
         </div>
       ) : hasFilteredResults ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
           {filteredUsersData.map((user) => (
             <TeamProfileCard
               key={`${user.emp_no}-${user.user_name}`}

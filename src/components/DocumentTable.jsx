@@ -36,13 +36,14 @@ import DocumentFormModal from "./dialog/DocumentFormModal";
 import DocumentUploadModal from "./dialog/DocumentUploadModal";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
+import { usePermissions } from "@/hooks/usePermissions";
 
 const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
   const { userData } = useAuth();
   const { toast } = useToast();
+  const { hasPermission, isAdmin, docCategories } = usePermissions();
 
   const [userEditRights, setUserEditRights] = useState("");
-  const [userViewRights, setUserViewRights] = useState("");
 
   const formModalRef = useRef(null);
   const uploadModalRef = useRef(null);
@@ -80,9 +81,7 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
     setLoading(true);
     try {
       const whereCondition =
-        userData.isAdmin ||
-        userViewRights === "Allowed" ||
-        categoryList.length > 0
+        isAdmin || hasPermission("VIEW_ALL_DOCS") || docCategories.length > 0
           ? ""
           : ` AND (USER_NAME = '${userData.userName}' OR ASSIGNED_USER = '${userData.userName}')`;
 
@@ -114,33 +113,7 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
     } finally {
       setLoading(false);
     }
-  }, [userData.userEmail, userData.clientURL, userViewRights]);
-
-  const fetchUserViewRights = async () => {
-    try {
-      const userType = userData.isAdmin ? "ADMINISTRATOR" : "USER";
-      const payload = {
-        UserName: userData.userName,
-        FormName: "DMS-DOCUMENTLISTVIEWALL",
-        FormDescription: "View Rights For All Documents",
-        UserType: userType,
-      };
-
-      const response = await callSoapService(
-        userData.clientURL,
-        "DMS_CheckRights_ForTheUser",
-        payload
-      );
-
-      setUserViewRights(response);
-    } catch (error) {
-      console.error("Failed to fetch user rights:", error);
-      toast({
-        variant: "destructive",
-        title: error,
-      });
-    }
-  };
+  }, [userData.userEmail, userData.clientURL]);
 
   const fetchUserEditRights = async () => {
     try {
@@ -173,15 +146,10 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
     fetchCategoryList();
     fetchDocsMasterList();
 
-    const getViewRights = async () => {
-      await fetchUserViewRights();
-    };
-
     const getEditRights = async () => {
       await fetchUserEditRights();
     };
 
-    getViewRights();
     getEditRights();
   }, [fetchDocsMasterList]);
 
