@@ -199,23 +199,10 @@ export default function DashboardPage() {
       {/* Tour Trigger Button */}
       <button
         onClick={startTour}
-        className="fixed bottom-4 right-4 z-[9999] p-3 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition-all"
+        className="fixed bottom-8 right-24 z-[9999] p-3 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition-all"
         data-tour="restart-tour"
       >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          className="h-6 w-6"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M13 10V3L4 14h7v7l9-11h-7z"
-          />
-        </svg>
+        <p className="text-sm">Start Tour</p>
       </button>
     </div>
   );

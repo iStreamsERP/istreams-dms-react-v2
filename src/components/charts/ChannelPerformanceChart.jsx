@@ -149,14 +149,28 @@ const ChannelPerformanceChart = ({ daysCount = 30 }) => {
               ))}
             </Pie>
             <Tooltip
+              wrapperStyle={{ outline: "none" }}
               contentStyle={{
-                backgroundColor: "rgba(31, 41, 55, 0.8)",
-                borderColor: "#4B5563",
-                borderRadius: "8px",
-                padding: "2px 6px",
-                fontSize: "12px",
+                backgroundColor: "#1F2937", // slate-800
+                border: "1px solid #374151", // slate-700
+                borderRadius: "0.5rem",
+                padding: "0.5rem 0.75rem",
+                color: "#F9FAFB", // text-white
+                fontSize: "0.875rem", // text-sm
+                boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
               }}
-              itemStyle={{ fontSize: 12, color: "#E5E7EB" }}
+              itemStyle={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.5rem",
+                fontSize: "0.875rem",
+                color: "#E5E7EB", // slate-200
+              }}
+              labelStyle={{
+                fontWeight: 600,
+                fontSize: "0.875rem",
+                color: "#93C5FD", // blue-300
+              }}
             />
             <Legend
               wrapperStyle={{ fontSize: 12 }}
