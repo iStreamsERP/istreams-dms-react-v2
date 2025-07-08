@@ -1,5 +1,5 @@
 import { PERMISSION_KEYS, PERMISSION_MAP } from "@/permissions";
-import { callSoapService } from "@/services/callSoapService";
+import { callSoapService } from "@/api/callSoapService";
 import {
   createContext,
   useCallback,

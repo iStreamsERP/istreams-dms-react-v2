@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { callSoapService } from "@/services/callSoapService";
+import { callSoapService } from "@/api/callSoapService";
 import { ArrowDownLeft, ArrowUpRight, IterationCwIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { BarLoader } from "react-spinners";

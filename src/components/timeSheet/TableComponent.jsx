@@ -1,4 +1,4 @@
-import { callSoapService } from "@/services/callSoapService";
+import { callSoapService } from "@/api/callSoapService";
 import { Trash2Icon } from "lucide-react";
 
 export default function TableComponent({

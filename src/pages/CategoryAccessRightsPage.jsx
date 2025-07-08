@@ -23,7 +23,6 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { callSoapService } from "@/services/callSoapService";
 import { convertDataModelToStringData } from "@/utils/dataModelConverter";
 import {
   Popover,
@@ -38,6 +37,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { callSoapService } from "../api/callSoapService";
 
 const CategoryAccessRightsPage = () => {
   const [roleDetails, setRoleDetails] = useState({

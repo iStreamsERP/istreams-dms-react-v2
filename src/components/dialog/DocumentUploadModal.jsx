@@ -1,5 +1,5 @@
 import { toast } from "@/hooks/use-toast";
-import { callSoapService } from "@/services/callSoapService";
+import { callSoapService } from "@/api/callSoapService";
 import axios from "axios";
 import { Eye, X, XIcon } from "lucide-react";
 import { useEffect, useState } from "react";

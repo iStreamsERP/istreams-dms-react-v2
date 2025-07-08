@@ -1,6 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
-import { callSoapService } from "@/services/callSoapService";
 import {
   CheckCircle,
   ClipboardCheck,
@@ -9,6 +8,7 @@ import {
   Loader,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { callSoapService } from "../api/callSoapService";
 
 const SalesSummaryCard = ({ daysCount = 30 }) => {
   const [summaryData, setSummaryData] = useState(null);

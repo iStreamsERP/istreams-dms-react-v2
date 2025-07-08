@@ -1,7 +1,7 @@
 import GlobalSearchInput from "@/components/GlobalSearchInput";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { callSoapService } from "@/services/callSoapService";
+import { callSoapService } from "@/api/callSoapService";
 import { useEffect, useState } from "react";
 import { BarLoader } from "react-spinners";
 import TeamProfileCard from "../components/TeamProfileCard";

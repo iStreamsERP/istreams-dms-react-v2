@@ -9,7 +9,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { callSoapService } from "@/services/callSoapService";
 import {
   flexRender,
   getCoreRowModel,
@@ -37,6 +36,7 @@ import DocumentUploadModal from "./dialog/DocumentUploadModal";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { usePermissions } from "@/hooks/usePermissions";
+import { callSoapService } from "../api/callSoapService";
 
 const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
   const { userData } = useAuth();

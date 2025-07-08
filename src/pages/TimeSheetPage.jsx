@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { callSoapService } from "@/services/callSoapService";
+import { callSoapService } from "@/api/callSoapService";
 import { convertDataModelToStringData } from "@/utils/dataModelConverter";
 import { AlertTriangleIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";

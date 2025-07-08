@@ -12,7 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { callSoapService } from "@/services/callSoapService";
+import { callSoapService } from "@/api/callSoapService";
 import { getDomainFromEmail } from "@/utils/emailHelpers";
 import axios from "axios";
 import { Check, UserPlus } from "lucide-react";

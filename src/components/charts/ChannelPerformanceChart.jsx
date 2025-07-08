@@ -8,7 +8,7 @@ import {
   Tooltip,
 } from "recharts";
 import { useAuth } from "../../contexts/AuthContext";
-import { callSoapService } from "@/services/callSoapService";
+import { callSoapService } from "@/api/callSoapService";
 import { MoonLoader } from "react-spinners";
 
 const COLORS = [

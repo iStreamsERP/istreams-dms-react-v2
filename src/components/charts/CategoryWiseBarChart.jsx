@@ -1,4 +1,4 @@
-import { callSoapService } from "@/services/callSoapService";
+import { callSoapService } from "@/api/callSoapService";
 import { useEffect, useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { MoonLoader } from "react-spinners";

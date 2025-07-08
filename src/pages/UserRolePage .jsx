@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { callSoapService } from "@/services/callSoapService";
+import { callSoapService } from "@/api/callSoapService";
 import { convertDataModelToStringData } from "@/utils/dataModelConverter";
 import { Popover, PopoverContent, PopoverTrigger } from "@radix-ui/react-popover";
 import { AlertTriangle, Check, ChevronsUpDown, Edit, Search, Trash2 } from "lucide-react";

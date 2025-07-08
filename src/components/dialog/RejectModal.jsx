@@ -1,5 +1,5 @@
 import { useToast } from "@/hooks/use-toast";
-import { callSoapService } from "@/services/callSoapService";
+import { callSoapService } from "@/api/callSoapService";
 import { useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 
