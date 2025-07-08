@@ -1,372 +1,318 @@
 import logoDark from "@/assets/logo-dark.png";
 import logoLight from "@/assets/logo-light.png";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SignUpStep1 } from "@/components/auth/SignUpSteps/SignUpStep1";
+import { SignUpStep2 } from "@/components/auth/SignUpSteps/SignUpStep2";
+import { SignUpStep3 } from "@/components/auth/SignUpSteps/SignUpStep3";
+import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
+import { AuthLayout } from "@/layouts/AuthLayout";
 import animationData from "@/lotties/crm-animation-lotties.json";
-import { callSoapService } from "@/services/callSoapService";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
-import { useCallback, useState } from "react";
-import Lottie from "react-lottie";
-import { Link, useNavigate } from "react-router-dom";
-import { getNameFromEmail } from "../utils/emailHelpers";
+import { sendEmail } from "@/services/emailService";
+import { generateOTP } from "@/utils/generateOTP";
+import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { auth } from "../../firebase.config";
+import { callSoapService } from "@/api/callSoapService";
 
-// Use the proxy path for the public service.
 const PUBLIC_SERVICE_URL = import.meta.env.VITE_SOAP_ENDPOINT;
-const DEFAULT_AVATAR_URL =
-  "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTbBa24AAg4zVSuUsL4hJnMC9s3DguLgeQmZA&s";
 
 const SignUpPage = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [userType, setUserType] = useState("");
-  const [gstNo, setGstNo] = useState("");
-  const [acknowledged, setAcknowledged] = useState("");
+  const [formValues, setFormValues] = useState({
+    FULL_NAME: "",
+    LOGIN_EMAIL_ADDRESS: "",
+    LOGIN_MOBILE_NO: "",
+    LOGIN_PASSWORD: "",
+    COMPANY_NAME: "",
+    GST_VAT_NO: "",
+    FULL_ADDRESS: "",
+    CITY: "",
+    STATE_NAME: "",
+    COUNTRY: "",
+    PIN_CODE: "",
+    GPS_LOCATION: "",
+    GPS_LATITUDE: "",
+    GPS_LONGITUDE: "",
+    userType: "",
+    confirmPassword: "",
+    acknowledged: false,
+  });
+
+  const [step, setStep] = useState(1);
+  const [contactInfo, setContactInfo] = useState("");
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [phoneVerified, setPhoneVerified] = useState(false);
+  const [isEmail, setIsEmail] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
+  const [otpTimer, setOtpTimer] = useState(0);
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpForEmail, setOtpForEmail] = useState("");
+  const [confirmationResult, setConfirmationResult] = useState(null);
   const navigate = useNavigate();
-  const { login, setUserData } = useAuth();
+  const { login } = useAuth();
+  const recaptchaRef = useRef(null);
 
-  const defaultOptions = {
-    loop: true,
-    autoplay: true,
-    animationData: animationData,
-    rendererSettings: {
-      preserveAspectRatio: "xMidYMid slice",
-    },
+  const setupRecaptcha = () => {
+    if (!auth) throw new Error("🔥 auth is undefined!");
+    if (!recaptchaRef.current) {
+      recaptchaRef.current = new RecaptchaVerifier(auth, "recaptcha-container", {
+        size: "invisible",
+        siteKey: "6LcUGW4rAAAAAB35Or18Oizvq3zL48MrZtoUgtpE",
+        callback: () => {
+          console.log("✅ Captcha solved!");
+        },
+      });
+      recaptchaRef.current.render().catch(console.error);
+    }
+    return recaptchaRef.current;
   };
 
-  // Memoized login handler to prevent re-creation on each render.
-  const handleSignup = useCallback(
-    async (e) => {
-      e.preventDefault();
-      setLoading(true);
-      setError("");
+  useEffect(() => {
+    let timer;
+    if (otpTimer > 0) {
+      timer = setTimeout(() => setOtpTimer(otpTimer - 1), 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [otpTimer]);
 
-      if (!email) {
-        setError("Username is required!");
-        setLoading(false);
-        return;
-      } else if (!password) {
-        setError("Password is required!");
-        setLoading(false);
+  const handleSendOtp = async () => {
+    setError("");
+    if (isEmail) {
+      if (!contactInfo.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+        setError("Please enter a valid email address");
         return;
       }
 
-      let userName = "";
-      let clientURL = "";
-
-      const doConnectionPayload = {
-        LoginUserName: email,
-      };
-
-      localStorage.setItem(
-        "doConnectionPayload",
-        JSON.stringify(doConnectionPayload)
-      );
       try {
-        // Step 1: Connect to public service.
-        const publicDoConnectionResponse = await callSoapService(
-          PUBLIC_SERVICE_URL,
-          "doConnection",
-          doConnectionPayload
-        );
+        setLoading(true);
+        const generatedOtp = generateOTP(6);
+        setOtpForEmail(generatedOtp);
 
-        if (publicDoConnectionResponse === "SUCCESS") {
-          // Step 2: Get client URL.
-          clientURL = await callSoapService(
-            PUBLIC_SERVICE_URL,
-            "GetServiceURL",
-            doConnectionPayload
-          );
+        const emailData = {
+          toEmail: contactInfo,
+          subject: "Your iStreams ERP Verification Code",
+          body: `Your verification code is: ${generatedOtp}`,
+          displayName: "iStreams ERP",
+        };
 
-          const clientDoConnectionResponse = await callSoapService(
-            clientURL,
-            "doConnection",
-            doConnectionPayload
-          );
-
-          if (clientDoConnectionResponse === "SUCCESS") {
-            // Step 1.1: Verify authentication.
-            userName = getNameFromEmail(email);
-
-            const authenticationPayload = {
-              username: userName,
-              password: password,
-            };
-
-            const authenticationResponse = await callSoapService(
-              clientURL,
-              "verifyauthentication",
-              authenticationPayload
-            );
-
-            if (authenticationResponse === "Authetication passed") {
-              // Step 1.2: Authentication passed, proceed to get employee details.
-              let employeeNo = "";
-              let employeeImage = null;
-
-              const clientEmpDetailsPayload = {
-                userfirstname: userName,
-              };
-
-              const getClientEmpDetails = await callSoapService(
-                clientURL,
-                "getemployeename_and_id",
-                clientEmpDetailsPayload
-              );
-
-              employeeNo = getClientEmpDetails[0]?.EMP_NO;
-
-              if (employeeNo) {
-                const getEmployeeImagePayload = {
-                  EmpNo: employeeNo,
-                };
-
-                const employeeImageResponse = await callSoapService(
-                  clientURL,
-                  "getpic_bytearray",
-                  getEmployeeImagePayload
-                );
-
-                employeeImage = employeeImageResponse
-                  ? `data:image/jpeg;base64,${employeeImageResponse}`
-                  : DEFAULT_AVATAR_URL;
-              }
-
-              const organizationPayload = {
-                CompanyCode: 1,
-                BranchCode: 1,
-              };
-
-              const getOrganization = await callSoapService(
-                clientURL,
-                "General_Get_DefaultCompanyName",
-                organizationPayload
-              );
-
-              const isAdminPayload = {
-                UserName: getClientEmpDetails[0]?.USER_NAME,
-              };
-
-              const isAdminResponse = await callSoapService(
-                clientURL,
-                "DMS_Is_Admin_User",
-                isAdminPayload
-              );
-
-              let isAdmin = isAdminResponse === "Yes";
-
-              const payload = {
-                organizationName: getOrganization,
-                userEmail: email,
-                userName: getClientEmpDetails[0]?.USER_NAME,
-                userEmployeeNo: getClientEmpDetails[0]?.EMP_NO,
-                userAvatar: employeeImage,
-                clientURL: clientURL,
-                isAdmin,
-              };
-
-              login(payload, rememberMe);
-
-              navigate("/");
-            } else {
-              setError(authenticationResponse);
-            }
-          } else {
-            setError(clientDoConnectionResponse);
-          }
-        } else {
-          setError(publicDoConnectionResponse);
-        }
+        await sendEmail(emailData);
+        setOtpSent(true);
+        setOtpTimer(120);
+        setStep(2);
       } catch (err) {
-        console.error("Login error:", err);
-        setError("Login failed. Please try again.");
+        console.error("Email OTP error:", err);
+        setError("Failed to send OTP. Please try again.");
       } finally {
         setLoading(false);
       }
-    },
-    [email, password, login, setUserData, navigate]
-  );
+    } else {
+      if (recaptchaRef.current) {
+        recaptchaRef.current.clear();
+        recaptchaRef.current = null;
+      }
+
+      const appVerifier = setupRecaptcha();
+      try {
+        const confirmation = await signInWithPhoneNumber(auth, contactInfo, appVerifier);
+        setConfirmationResult(confirmation);
+        setOtpSent(true);
+        setOtpTimer(120);
+        setStep(2);
+        alert("✅ OTP sent!");
+      } catch (err) {
+        console.error("Error sending OTP:", err);
+        if (err.code === "auth/too-many-requests") {
+          setError("Too many SMS requests. Please wait a while before retrying.");
+        } else {
+          setError("Could not send OTP. Please try again.");
+        }
+      }
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    setError("");
+    if (isEmail) {
+      if (!otp) {
+        setError("Please enter the OTP");
+        return;
+      }
+      if (otp === otpForEmail) {
+        setFormValues((prev) => ({
+          ...prev,
+          LOGIN_EMAIL_ADDRESS: contactInfo,
+        }));
+        setEmailVerified(true);
+        setStep(3);
+      } else {
+        setError("Invalid OTP. Please check and try again.");
+      }
+    } else {
+      if (!confirmationResult) {
+        setError("Please request an OTP first.");
+        return;
+      }
+      if (otp.length === 0) {
+        alert("Enter the OTP you received.");
+        return;
+      }
+
+      try {
+        const result = await confirmationResult.confirm(otp);
+        setFormValues((prev) => ({
+          ...prev,
+          LOGIN_MOBILE_NO: contactInfo,
+        }));
+        setPhoneVerified(true);
+        setStep(3);
+        console.log("User signed in:", result.user);
+      } catch (err) {
+        console.error("Invalid OTP:", err);
+        setError("Invalid OTP, please try again.");
+      }
+    }
+  };
+
+  const handleBack = () => {
+    setStep(step - 1);
+    setError("");
+    setOtp("");
+    setOtpForEmail("");
+  };
+
+  const handleOptionalVerify = async (contact, isEmail) => {
+    try {
+      if (isEmail) {
+        setEmailVerified(true);
+        setFormValues(prev => ({ ...prev, LOGIN_EMAIL_ADDRESS: contact }));
+      } else {
+        setPhoneVerified(true);
+        setFormValues(prev => ({ ...prev, LOGIN_MOBILE_NO: contact }));
+      }
+      return true; // Indicate success
+    } catch (error) {
+      console.error("Optional verify failed:", error);
+      return false;
+    }
+  };
+
+  const handleSignup = useCallback(async (values) => {
+    setLoading(true);
+    setError("");
+
+    try {
+      if (!values || Object.values(values).some(v => v === undefined)) {
+        throw new Error("Form data is incomplete");
+      }
+
+      const dbResponse = await callSoapService(
+        PUBLIC_SERVICE_URL,
+        "ConnectToPublicDB",
+        ""
+      );
+      console.log("DB Connection:", dbResponse);
+
+      const payload = {
+        ...values
+      };
+
+      console.log("Final Payload:", payload);
+
+      const response = await callSoapService(
+        PUBLIC_SERVICE_URL,
+        "Public_User_CreateProfile",
+        payload
+      );
+
+      if (typeof response === "string" && response.includes("SUCCESS")) {
+        const loginCredential = isEmail
+          ? values.LOGIN_EMAIL_ADDRESS
+          : values.LOGIN_MOBILE_NO;
+
+        await login(loginCredential, values.LOGIN_PASSWORD);
+        navigate("/login");
+      } else {
+        throw new Error(response || "Profile creation failed");
+      }
+    } catch (err) {
+      console.error("Signup Error:", err);
+      setError(err.message || "Signup failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }, [isEmail, login, navigate]);
+
+  const stepTitles = {
+    1: "Create Your Account",
+    2: "Verify Your Identity",
+    3: "Complete Your Profile",
+  };
+
+  const stepSubtitles = {
+    1: "Join our platform in just a few steps",
+    2: "Enter the code we sent to your contact",
+    3: "Finalize your account details",
+  };
+
   return (
-    <div className="grid h-screen grid-cols-1 lg:grid-cols-2">
-      <div className="hidden flex-col justify-between bg-slate-200 p-10 dark:bg-slate-900 lg:flex">
-        <div className="flex gap-x-3 h-20">
-          <img
-            src={logoLight}
-            alt="iStreams ERP Solutions | CRM"
-            className="dark:hidden object-fill"
-          />
-          <img
-            src={logoDark}
-            alt="iStreams ERP Solutions | CRM"
-            className="hidden dark:block object-fill"
-          />
-        </div>
-
-        <div>
-          <Lottie options={defaultOptions} />
-        </div>
-
-        <div>
-          <blockquote className="space-y-2">
-            <p className="text-lg">
-              &ldquo;Manage your customers efficiently and streamline your
-              business operations with our powerful CRM system.&rdquo;
-            </p>
-
-            <footer className="text-sm text-gray-400">
-              - iStreams ERP Solutions
-            </footer>
-          </blockquote>
-        </div>
-      </div>
-      <div className="flex flex-col justify-center overflow-y-auto bg-slate-100 px-6 dark:bg-slate-950 lg:p-8">
-        <div className="mx-auto flex w-full flex-col justify-center gap-y-6 sm:w-[350px]">
-          <div className="flex flex-col space-y-2 text-center">
-            <h1 className="text-2xl font-semibold tracking-tight">
-              Create an account
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Enter your details below to create your account
-            </p>
-          </div>
-          <form onSubmit={handleSignup} className="space-y-4">
-            <div className="grid w-full items-center gap-4">
-              {/* Name Field */}
-              <div className="flex flex-col space-y-1.5">
-                <Label htmlFor="name">Name</Label>
-                <Input
-                  name="name"
-                  id="name"
-                  placeholder="Your name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                />
-              </div>
-
-              {/* Email Field */}
-              <div className="flex flex-col space-y-1.5">
-                <Label htmlFor="email">Email ID</Label>
-                <Input
-                  name="email"
-                  id="email"
-                  placeholder="username@domain.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-
-              {/* Type Selection */}
-              <div className="flex flex-col space-y-1.5">
-                <Label htmlFor="type">Type</Label>
-                <Select onValueChange={(value) => setUserType(value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectItem value="individual">Individual</SelectItem>
-                      <SelectItem value="business">Business</SelectItem>
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* GST NO Field */}
-              <div className="flex flex-col space-y-1.5">
-                <Label htmlFor="gstNo">GST NO</Label>
-                <Input
-                  name="gstNo"
-                  id="gstNo"
-                  placeholder="Your GST Number"
-                  value={gstNo}
-                  onChange={(e) => setGstNo(e.target.value)}
-                  required
-                />
-              </div>
-
-              {/* Password Field */}
-              <div className="flex flex-col space-y-1.5">
-                <Label htmlFor="password">Password</Label>
-                <div className="relative flex gap-2">
-                  <Input
-                    name="password"
-                    id="password"
-                    placeholder="*******"
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                  <span
-                    className="absolute right-3 top-1/2 -translate-y-1/2 transform cursor-pointer"
-                    onClick={() => setShowPassword((prev) => !prev)}
-                  >
-                    {showPassword ? <EyeOff /> : <Eye />}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Terms and Conditions */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="terms"
-                  checked={acknowledged}
-                  onChange={(e) => setAcknowledged(e.target.checked)}
-                />
-                <label
-                  htmlFor="terms"
-                  className="text-sm font-medium leading-none"
-                >
-                  I acknowledge and agree to collaborate in iStreams
-                </label>
-              </div>
-            </div>
-
-            {/* Error Message */}
-            {error && (
-              <div className="mb-4 rounded bg-red-500 p-2 text-white">
-                {error}
-              </div>
+    <>
+      <div id="recaptcha-container" /> {/* Firebase needs this div */}
+      <AuthLayout
+        animationData={animationData}
+        logoLight={logoLight}
+        logoDark={logoDark}
+        title={stepTitles[step]}
+        subtitle={stepSubtitles[step]}
+      >
+        <Card className="border-0 shadow-none">
+          <CardContent>
+            {step === 1 && (
+              <SignUpStep1
+                isEmail={isEmail}
+                setIsEmail={setIsEmail}
+                contactInfo={contactInfo}
+                setContactInfo={setContactInfo}
+                loading={loading}
+                error={error}
+                setError={setError}
+                handleSendOtp={handleSendOtp}
+              />
             )}
 
-            {/* Submit Button */}
-            <Button type="submit" disabled={loading} className="w-full">
-              {loading ? (
-                <>
-                  <Loader2 className="animate-spin" />
-                  Please wait
-                </>
-              ) : (
-                "Sign Up"
-              )}
-            </Button>
-            <p className="text-center text-xs text-gray-400">
-              Already have an account?{" "}
-              <Link to="/login" className="text-blue-500">
-                Log in
-              </Link>
-            </p>
-          </form>
-        </div>
-      </div>
-    </div>
+            {step === 2 && (
+              <SignUpStep2
+                contactInfo={contactInfo}
+                otp={otp}
+                setOtp={setOtp}
+                otpTimer={otpTimer}
+                otpSent={otpSent}
+                loading={loading}
+                error={error}
+                handleVerifyOtp={handleVerifyOtp}
+                handleSendOtp={handleSendOtp}
+                handleBack={handleBack}
+              />
+            )}
+
+            {step === 3 && (
+              <SignUpStep3
+                initialValues={formValues}
+                setFormValues={setFormValues}
+                handleSignup={handleSignup}
+                loading={loading}
+                isEmailPrimary={isEmail}
+                emailVerified={emailVerified}
+                phoneVerified={phoneVerified}
+                onOptionalVerify={handleOptionalVerify}
+              />
+            )}
+          </CardContent>
+        </Card>
+      </AuthLayout>
+    </>
   );
 };
 

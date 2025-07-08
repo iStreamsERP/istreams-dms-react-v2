@@ -1,4 +1,6 @@
-import { CategoryWisePieChart } from "@/components/charts/CategoryWisePieChart";
+import {
+  CategoryWiseBarChart
+} from "@/components/charts/CategoryWiseBarChart";
 import ChannelPerformanceChart from "@/components/charts/ChannelPerformanceChart";
 import DocumentChannelChart from "@/components/charts/DocumentChannelChart";
 import DocumentDistributionChart from "@/components/charts/DocumentDistributionChart";
@@ -7,11 +9,10 @@ import SalesSummaryCard from "@/components/SalesSummaryCard";
 import TimeRangeSelector from "@/components/TimeRangeSelector";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
-import { callSoapService } from "@/services/callSoapService";
+import { usePermissions } from "@/hooks/usePermissions";
+import { useTour } from "@reactour/tour";
 import { useEffect, useState } from "react";
 import AIPoweredInsights from "../components/AIPoweredInsights";
-import { useTour } from "@reactour/tour";
-import { usePermissions } from "@/hooks/usePermissions";
 
 export default function DashboardPage() {
   const { setIsOpen, setSteps, setCurrentStep } = useTour();
@@ -137,43 +138,6 @@ export default function DashboardPage() {
 
       <Card
         className="col-span-1 md:col-span-1 lg:col-span-1"
-        data-tour="category-performance"
-      >
-        <CardHeader className="p-2">
-          <CardTitle className="text-lg">Category Wise Performance</CardTitle>
-        </CardHeader>
-        <CardContent className="p-2 pt-0">
-          <CategoryWisePieChart daysCount={filterDays} />
-        </CardContent>
-      </Card>
-
-      <Card
-        className="col-span-1 md:col-span-1 lg:col-span-1"
-        data-tour="module-performance"
-      >
-        <CardHeader className="p-2">
-          <CardTitle className="text-lg">Module wise Performance</CardTitle>
-        </CardHeader>
-        <CardContent className="p-2 pt-0">
-          <ModuleWisePieChart daysCount={filterDays} />
-        </CardContent>
-      </Card>
-
-      {/* AI Insights */}
-      <Card
-        className="col-span-1 md:col-span-1 lg:col-span-1"
-        data-tour="ai-insights"
-      >
-        <CardHeader>
-          <CardTitle>AI-Powered Insights</CardTitle>
-        </CardHeader>
-        <CardContent className="pl-6">
-          <AIPoweredInsights />
-        </CardContent>
-      </Card>
-
-      <Card
-        className="col-span-1 md:col-span-1 lg:col-span-1"
         data-tour="channel-performance"
       >
         <CardHeader className="p-2">
@@ -193,6 +157,43 @@ export default function DashboardPage() {
         </CardHeader>
         <CardContent className="p-2 pt-0">
           <DocumentChannelChart daysCount={filterDays} />
+        </CardContent>
+      </Card>
+
+      <Card
+        className="col-span-1 md:col-span-1 lg:col-span-3"
+        data-tour="category-performance"
+      >
+        <CardHeader className="p-2">
+          <CardTitle className="text-lg">Category Wise Performance</CardTitle>
+        </CardHeader>
+        <CardContent className="p-2 pt-0">
+          <CategoryWiseBarChart daysCount={filterDays} />
+        </CardContent>
+      </Card>
+
+      <Card
+        className="col-span-1 md:col-span-1 lg:col-span-3"
+        data-tour="module-performance"
+      >
+        <CardHeader className="p-2">
+          <CardTitle className="text-lg">Module wise Performance</CardTitle>
+        </CardHeader>
+        <CardContent className="p-2 pt-0">
+          <ModuleWisePieChart daysCount={filterDays} />
+        </CardContent>
+      </Card>
+
+      {/* AI Insights */}
+      <Card
+        className="col-span-1 md:col-span-1 lg:col-span-3"
+        data-tour="ai-insights"
+      >
+        <CardHeader className="p-2">
+          <CardTitle className="text-lg">AI-Powered Insights</CardTitle>
+        </CardHeader>
+        <CardContent className="p-2 pt-0">
+          <AIPoweredInsights />
         </CardContent>
       </Card>
 

@@ -21,6 +21,7 @@ import UserListPage from "@/pages/UserListPage";
 import UserRolePage from "@/pages/UserRolePage ";
 import { createBrowserRouter } from "react-router-dom";
 import ProtectedRoute from "./ProtectedRoute";
+import UserPreferences from "@/pages/UserPreferences";
 
 const router = createBrowserRouter([
   {
@@ -59,6 +60,7 @@ const router = createBrowserRouter([
           { path: "document-view", element: <DocumentViewPage /> },
           { path: "task-view", element: <TaskViewPage /> },
           { path: "time-sheet", element: <TimeSheetPage /> },
+          { path: "account-settings", element: <UserPreferences /> },
           { path: "task", element: <TaskPage /> },
           { path: "users", element: <UserListPage /> },
           { path: "user-role", element: <UserRolePage /> },

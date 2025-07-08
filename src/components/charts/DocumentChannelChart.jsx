@@ -67,6 +67,7 @@ const DocumentChannelChart = ({ daysCount = 30 }) => {
             : item.CHANNEL_SOURCE,
         Counts: Number(item.total_count) || 0,
       }));
+      
       setChannelData(formattedData);
     } catch (error) {
       console.error("Error fetching channel summary:", error);

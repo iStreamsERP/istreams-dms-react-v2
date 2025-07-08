@@ -74,10 +74,9 @@ const ChannelPerformanceChart = ({ daysCount = 30 }) => {
       const formattedData = response.map((item) => {
         const value = Number(item.total_count) || 0;
         const percentage = totalCount > 0 ? (value / totalCount) * 100 : 0;
-
         const label =
-          item.CHANNEL_SOURCE === ""
-            ? userData.organizationName
+          item.CHANNEL_SOURCE === " "
+            ? userData.companyName
             : item.CHANNEL_SOURCE;
 
         return {

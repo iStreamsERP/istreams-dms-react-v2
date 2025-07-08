@@ -167,6 +167,10 @@ export const UploadDocumentPage = () => {
     }
   };
 
+  const handleCreateDocument = async () => {
+    if (!file) return;
+  };
+
   const generateAnalysisSummary = async () => {
     if (!file || !analysisQuestion.trim()) return;
 
@@ -268,6 +272,7 @@ export const UploadDocumentPage = () => {
   }, [messages]);
 
   const handleReset = () => {
+    setErrorMessage(null);
     setShowAnalysis(false);
     setIsUploadComplete(false);
     setMessages([]);
@@ -296,6 +301,10 @@ export const UploadDocumentPage = () => {
           className="text-cyan-600 dark:text-cyan-300"
         >
           <SquarePen />
+        </Button>
+
+        <Button onClick={() => handleCreateDocument(true)}>
+          Create as a document
         </Button>
       </h3>
       <div className="space-y-3 sm:space-y-4">

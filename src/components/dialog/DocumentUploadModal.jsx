@@ -6,7 +6,6 @@ import { useEffect, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { useAuth } from "../../contexts/AuthContext";
 import { getFileIcon } from "../../utils/getFileIcon";
-import { readFileAsBase64 } from "../../utils/soapUtils";
 import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
 
@@ -298,7 +297,7 @@ const DocumentUploadModal = ({
     if (totalPrimaryCount > 1) {
       toast({
         title: "Only one primary document allowed.",
-        description: "You can’t upload more than one primary document.",
+        description: "You can't upload more than one primary document.",
       });
       return;
     }
@@ -323,6 +322,8 @@ const DocumentUploadModal = ({
         const formData = new FormData();
         formData.append("file", file.file);
 
+        console.log("uploadResult");
+
         const uploadUrl = `https://apps.istreams-erp.com:4440/api/megacloud/upload?email=${encodeURIComponent(
           email
         )}&refNo=${encodeURIComponent(refNo)}`;
@@ -334,6 +335,8 @@ const DocumentUploadModal = ({
           },
         });
 
+        console.log("uploadResponse", uploadResponse);
+
         if (uploadResponse.status !== 200) {
           throw new Error(
             `File upload failed with status ${uploadResponse.status}`
@@ -341,35 +344,6 @@ const DocumentUploadModal = ({
         }
 
         const uploadResult = uploadResponse.data.message;
-
-        const base64Data = await readFileAsBase64(file.file);
-
-        const payload = {
-          REF_SEQ_NO: selectedDocument.REF_SEQ_NO,
-          SERIAL_NO: currentSerial,
-          DOCUMENT_NO: selectedDocument.DOCUMENT_NO || "",
-          DOCUMENT_DESCRIPTION: selectedDocument.DOCUMENT_DESCRIPTION || "",
-          DOC_SOURCE_FROM: selectedDocument.DOC_SOURCE_FROM || "",
-          DOC_RELATED_TO: selectedDocument.DOC_RELATED_TO || "",
-          DOC_RELATED_CATEGORY: file.DOC_RELATED_CATEGORY || "",
-          DOC_REF_VALUE: selectedDocument.DOC_REF_VALUE || "",
-          USER_NAME: userData.userName,
-          COMMENTS: selectedDocument.COMMENTS || "",
-          DOC_TAGS: selectedDocument.DOC_TAGS || "",
-          FOR_THE_USERS: selectedDocument.FOR_THE_USERS || "",
-          EXPIRY_DATE: file.EXPIRY_DATE || "",
-          DOC_DATA: base64Data,
-          DOC_NAME: file.name,
-          DOC_EXT: file.name.split(".").pop(),
-          FILE_PATH: "",
-          IsPrimaryDocument: file.isPrimaryDocument,
-        };
-
-        const response = await callSoapService(
-          userData.clientURL,
-          "DMS_CreateAndSave_DMS_Details",
-          payload
-        );
       }
 
       await refreshDocuments();
@@ -589,9 +563,7 @@ const DocumentUploadModal = ({
             </Button>
             <Button onClick={handleUpload}>
               {isSubmitting ? (
-                <>
-                  Uploading...
-                </>
+                <>Uploading...</>
               ) : (
                 `Upload ${files.length} File${files.length !== 1 ? "s" : ""}`
               )}
