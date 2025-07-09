@@ -1,136 +1,245 @@
 import { callSoapService } from "@/api/callSoapService";
-import { useEffect, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useEffect, useState, useCallback } from "react";
 import {
   Bar,
   BarChart,
-  CartesianGrid,
   Cell,
+  LabelList,
   ResponsiveContainer,
-  Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
-import { useAuth } from "../../contexts/AuthContext";
-import { MoonLoader } from "react-spinners";
-import { usePermissions } from "@/hooks/usePermissions";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "../ui/chart";
+import { Skeleton } from "../ui/skeleton";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "../ui/tooltip";
 
-export const ModuleWisePieChart = ({ daysCount = 30 }) => {
-  const [channelData, setChannelData] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+// Updated chart configuration
+const chartConfig = {
+  documents: {
+    label: "Document Count",
+  },
+};
+
+// Fixed XAxis tick component with proper rotation and positioning
+const CustomizedXAxisTick = (props) => {
+  const { x, y, payload, truncateLength = 12 } = props;
+  const value = payload.value;
+  const truncatedValue =
+    value.length > truncateLength
+      ? `${value.substring(0, truncateLength)}...`
+      : value;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <g transform={`translate(${x},${y})`}>
+          <text
+            x={0}
+            y={0}
+            textAnchor="end"
+            fill="#666"
+            fontSize={12}
+            transform="rotate(-90)"
+          >
+            {truncatedValue}
+          </text>
+        </g>
+      </TooltipTrigger>
+      {value.length > truncateLength && (
+        <TooltipContent className="z-50 max-w-xs break-words">
+          <p>{value}</p>
+        </TooltipContent>
+      )}
+    </Tooltip>
+  );
+};
+
+// Custom label component for top values
+const CustomTopLabel = (props) => {
+  const { x, y, value, width } = props;
+  return (
+    <text
+      x={Number(x) + Number(width) / 2}
+      y={Number(y) - 5} // Position above the bar
+      textAnchor="middle"
+      fill="#000"
+      fontSize={12}
+      fontWeight={500}
+    >
+      {value}
+    </text>
+  );
+};
+
+export function ModuleWisePieChart({ daysCount = 30 }) {
   const { userData } = useAuth();
-  const { hasPermission } = usePermissions();
+  const [channelData, setChannelData] = useState([]);
+  const [userRights, setUserRights] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const [canViewFullDashboard, setCanViewFullDashboard] = useState(false);
-
-  useEffect(() => {
-    const checkPermission = async () => {
-      const result = await hasPermission("DASHBOARD_FULL_VIEW");
-      setCanViewFullDashboard(result);
-    };
-
-    if (userData?.userEmail) {
-      checkPermission();
-    }
-  }, [userData.userEmail]);
-
-  const COLORS = ["#6366F1", "#8B5CF6", "#EC4899", "#10B981", "#F59E0B"];
-
-  const fetchData = async () => {
-    setIsLoading(true);
+  const fetchUserRights = useCallback(async () => {
     try {
-      const hasAccess = userData?.isAdmin || canViewFullDashboard === "Allowed";
-      const payloadForTheUser = hasAccess ? "" : userData.userName;
-
+      const userType = userData.isAdmin ? "ADMINISTRATOR" : "USER";
       const payload = {
-        NoOfDays: daysCount,
-        ForTheUser: payloadForTheUser,
+        UserName: userData.userName,
+        FormName: "DMS-DASHBOARDADMIN",
+        FormDescription: "Dashboard Full View",
+        UserType: userType,
       };
 
-      const data = await callSoapService(
+      const response = await callSoapService(
+        userData.clientURL,
+        "DMS_CheckRights_ForTheUser",
+        payload
+      );
+
+      setUserRights(response);
+    } catch (error) {
+      console.error("Failed to fetch user rights:", error);
+      setError("Failed to load user permissions");
+    }
+  }, [userData]);
+
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const hasAccess = userData?.isAdmin || userRights === "Allowed";
+      const payload = {
+        NoOfDays: daysCount,
+        ForTheUser: hasAccess ? "" : userData.userName,
+      };
+
+      const response = await callSoapService(
         userData.clientURL,
         "DMS_GetDashboard_ModulesSummary",
         payload
       );
 
-      const formattedData = data.map((item) => ({
-        Name: item.DOC_RELATED_TO,
-        Counts: Number(item.total_count) || 0,
-      }));
+      // Handle empty response
+      if (!response || !Array.isArray(response)) {
+        setChannelData([]);
+        return;
+      }
+
+      const totalCount = response.reduce(
+        (sum, item) => sum + (Number(item.total_count) || 0),
+        0
+      );
+
+      const formattedData = response.map((item) => {
+        const value = Number(item.total_count) || 0;
+        const percentage = totalCount > 0 ? (value / totalCount) * 100 : 0;
+
+        return {
+          category: item.DOC_RELATED_TO,
+          value,
+          percentage: Number(percentage.toFixed(0)),
+        };
+      });
+
       setChannelData(formattedData);
     } catch (error) {
-      console.error("Error fetching module summary:", error);
+      console.error("Error fetching channel summary:", error);
+      setError("Failed to load document data");
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [userData, userRights, daysCount]);
 
   useEffect(() => {
-    if (canViewFullDashboard !== "") {
+    if (userData) {
+      fetchUserRights();
+    }
+  }, [userData, fetchUserRights]);
+
+  useEffect(() => {
+    if (userRights !== "" && userData) {
       fetchData();
     }
-  }, [canViewFullDashboard, daysCount]);
+  }, [userRights, userData, daysCount, fetchData]);
 
-  // Check if we should show "no data" message
-  const showNoDataMessage =
-    !isLoading &&
-    (channelData.length === 0 || channelData.every((item) => item.value === 0));
+  // Handle loading state
+  if (isLoading) {
+    return (
+      <div className="h-[300px] flex items-center justify-center">
+        <Skeleton className="w-full h-full" />
+      </div>
+    );
+  }
+
+  // Handle errors
+  if (error) {
+    return (
+      <div className="h-[300px] flex items-center justify-center">
+        <p className="text-red-500">{error}</p>
+      </div>
+    );
+  }
+
+  // Handle empty data
+  if (!channelData || channelData.length === 0) {
+    return (
+      <div className="h-[300px] flex items-center justify-center">
+        <p>No document data available</p>
+      </div>
+    );
+  }
 
   return (
-    <div style={{ width: "100%", height: 300 }}>
-      {isLoading ? (
-        <div className="h-full flex items-center justify-center">
-          <MoonLoader color="#36d399" height={2} width="100%" />
-        </div>
-      ) : showNoDataMessage ? (
-        <div className="h-full flex flex-col items-center justify-center text-center p-4">
-          <span className="text-lg font-semibold">
-            No data available for the selected period
-          </span>
-          <span className="text-gray-400 text-xs">
-            Try selecting a different time range
-          </span>
-        </div>
-      ) : (
-        <ResponsiveContainer>
-          <BarChart data={channelData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#4B5563" />
-            {/* <XAxis dataKey="Name" stroke="#9CA3AF" fontSize={14} /> */}
-            <YAxis stroke="#9CA3AF" fontSize={14} />
-            <Tooltip
-              wrapperStyle={{ outline: "none" }}
-              contentStyle={{
-                backgroundColor: "#1F2937", // slate-800
-                border: "1px solid #374151", // slate-700
-                borderRadius: "0.5rem",
-                padding: "0.5rem 0.75rem",
-                color: "#F9FAFB", // text-white
-                fontSize: "0.875rem", // text-sm
-                boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
-              }}
-              itemStyle={{
-                display: "flex",
-                alignItems: "center",
-                gap: "0.5rem",
-                fontSize: "0.875rem",
-                color: "#E5E7EB", // slate-200
-              }}
-              labelStyle={{
-                fontWeight: 600,
-                fontSize: "0.875rem",
-                color: "#93C5FD", // blue-300
-              }}
+    <TooltipProvider>
+      <ResponsiveContainer width="400px" height={300} style={{marginLeft: "auto", marginRight: "auto"}}>
+        <ChartContainer config={chartConfig}>
+          <BarChart
+            accessibilityLayer
+            data={channelData}
+            margin={{ top: 80, bottom: 70 }}
+          >
+            <XAxis
+              dataKey="category"
+              tickLine={false}
+              axisLine={false}
+              interval={0}
+              tick={<CustomizedXAxisTick />}
             />
-            <Bar dataKey={"Counts"} fill="#8884d8">
+            <YAxis
+              stroke="#888888"
+              fontSize={12}
+              tickLine={false}
+              axisLine={false}
+              tickFormatter={(value) => value.toLocaleString()}
+            />
+            <ChartTooltip
+              cursor={false}
+              content={<ChartTooltipContent hideLabel />}
+            />
+            <Bar dataKey="value" name="Documents" radius={[4, 4, 0, 0]}>
               {channelData.map((entry, index) => (
-                <Cell
-                  key={`cell-${index}`}
-                  fill={COLORS[index % COLORS.length]}
-                />
+                <Cell key={`cell-${index}`} fill="#3b82f6" />
               ))}
+              {/* Add count labels on top */}
+              {/* <LabelList
+                dataKey="value"
+                content={<CustomTopLabel />}
+                position="top"
+              /> */}
+              <LabelList
+                dataKey="value"
+                position="top"
+                className="font-bold text-xs"
+              />
             </Bar>
           </BarChart>
-        </ResponsiveContainer>
-      )}
-    </div>
+        </ChartContainer>
+      </ResponsiveContainer>
+    </TooltipProvider>
   );
-};
+}

@@ -182,7 +182,6 @@ const DocumentUploadModal = ({
     return "";
   };
 
-  // Download & view documents
   const handleViewDocs = async (selectedDocs) => {
     const hasAccess = String(userViewRights)?.toLowerCase() === "allowed";
 
@@ -322,11 +321,13 @@ const DocumentUploadModal = ({
         const formData = new FormData();
         formData.append("file", file.file);
 
-        console.log("uploadResult");
+        console.log(file.file);
 
         const uploadUrl = `https://apps.istreams-erp.com:4440/api/megacloud/upload?email=${encodeURIComponent(
           email
         )}&refNo=${encodeURIComponent(refNo)}`;
+
+        console.log(uploadUrl, formData);
 
         const uploadResponse = await axios.post(uploadUrl, formData, {
           headers: {

@@ -1,26 +1,90 @@
 import { callSoapService } from "@/api/callSoapService";
-import { useEffect, useState } from "react";
-import { useAuth } from "../../contexts/AuthContext";
-import { MoonLoader } from "react-spinners";
+import { useAuth } from "@/contexts/AuthContext";
+import { useEffect, useState, useCallback } from "react";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+  Bar,
+  BarChart,
+  Cell,
+  LabelList,
+  ResponsiveContainer,
+  XAxis,
+  YAxis,
+} from "recharts";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "../ui/chart";
+import { Skeleton } from "../ui/skeleton";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "../ui/tooltip";
 
-export const CategoryWiseBarChart = ({ daysCount = 30 }) => {
+// Updated chart configuration
+const chartConfig = {
+  documents: {
+    label: "Document Count",
+  },
+};
+
+// Fixed XAxis tick component with proper rotation and positioning
+const CustomizedXAxisTick = (props) => {
+  const { x, y, payload, truncateLength = 12 } = props;
+  const value = payload.value;
+  const truncatedValue =
+    value.length > truncateLength
+      ? `${value.substring(0, truncateLength)}...`
+      : value;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <g transform={`translate(${x},${y})`}>
+          <text
+            x={0}
+            y={0}
+            textAnchor="end"
+            fill="#666"
+            fontSize={12}
+            transform="rotate(-90)"
+          >
+            {truncatedValue}
+          </text>
+        </g>
+      </TooltipTrigger>
+      {value.length > truncateLength && (
+        <TooltipContent className="z-50 max-w-xs break-words">
+          <p>{value}</p>
+        </TooltipContent>
+      )}
+    </Tooltip>
+  );
+};
+
+// Custom label component for top values
+const CustomTopLabel = (props) => {
+  const { x, y, value, width } = props;
+  return (
+    <text
+      x={Number(x) + Number(width) / 2}
+      y={Number(y) - 5} // Position above the bar
+      textAnchor="middle"
+      fill="#000"
+      fontSize={12}
+      fontWeight={500}
+    >
+      {value}
+    </text>
+  );
+};
+
+export function CategoryWiseBarChart({ daysCount = 30 }) {
+  const { userData } = useAuth();
   const [channelData, setChannelData] = useState([]);
   const [userRights, setUserRights] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  const { userData } = useAuth();
+  const [error, setError] = useState(null);
 
-  const COLORS = ["#6366F1", "#8B5CF6", "#EC4899", "#10B981", "#F59E0B"];
-
-  const fetchUserRights = async () => {
+  const fetchUserRights = useCallback(async () => {
     try {
       const userType = userData.isAdmin ? "ADMINISTRATOR" : "USER";
       const payload = {
@@ -39,11 +103,14 @@ export const CategoryWiseBarChart = ({ daysCount = 30 }) => {
       setUserRights(response);
     } catch (error) {
       console.error("Failed to fetch user rights:", error);
+      setError("Failed to load user permissions");
     }
-  };
+  }, [userData]);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setIsLoading(true);
+    setError(null);
+
     try {
       const hasAccess = userData?.isAdmin || userRights === "Allowed";
       const payload = {
@@ -56,6 +123,12 @@ export const CategoryWiseBarChart = ({ daysCount = 30 }) => {
         "DMS_GetDashboard_CategoriesSummary",
         payload
       );
+
+      // Handle empty response
+      if (!response || !Array.isArray(response)) {
+        setChannelData([]);
+        return;
+      }
 
       const totalCount = response.reduce(
         (sum, item) => sum + (Number(item.total_count) || 0),
@@ -76,87 +149,97 @@ export const CategoryWiseBarChart = ({ daysCount = 30 }) => {
       setChannelData(formattedData);
     } catch (error) {
       console.error("Error fetching channel summary:", error);
+      setError("Failed to load document data");
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [userData, userRights, daysCount]);
 
   useEffect(() => {
-    const initialize = async () => {
-      await fetchUserRights();
-    };
-    initialize();
-  }, [userData]);
+    if (userData) {
+      fetchUserRights();
+    }
+  }, [userData, fetchUserRights]);
 
   useEffect(() => {
-    if (userRights !== "") {
+    if (userRights !== "" && userData) {
       fetchData();
     }
-  }, [userRights, daysCount]);
+  }, [userRights, userData, daysCount, fetchData]);
 
-  const showNoDataMessage =
-    !isLoading &&
-    (channelData.length === 0 || channelData.every((item) => item.value === 0));
+  // Handle loading state
+  if (isLoading) {
+    return (
+      <div className="h-[300px] flex items-center justify-center">
+        <Skeleton className="w-full h-full" />
+      </div>
+    );
+  }
 
-  // Calculate total documents for footer
-  const totalDocuments = channelData.reduce(
-    (total, item) => total + item.value,
-    0
-  );
+  // Handle errors
+  if (error) {
+    return (
+      <div className="h-[300px] flex items-center justify-center">
+        <p className="text-red-500">{error}</p>
+      </div>
+    );
+  }
 
-  // Find max value for scaling
-  const maxValue = Math.max(...channelData.map((item) => item.value), 0);
+  // Handle empty data
+  if (!channelData || channelData.length === 0) {
+    return (
+      <div className="h-[300px] flex items-center justify-center">
+        <p>No document data available</p>
+      </div>
+    );
+  }
 
   return (
-    <>
-      {isLoading ? (
-        <div className="flex h-[300px] items-end justify-between gap-4">
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="flex flex-col items-center gap-2">
-              <Skeleton className="h-4 w-16" />
-              <Skeleton
-                className="w-12 rounded-t-md"
-                style={{ height: `${Math.random() * 80 + 20}%` }}
+    <TooltipProvider>
+      <ResponsiveContainer width="100%" height={300}>
+        <ChartContainer config={chartConfig}>
+          <BarChart
+            data={channelData}
+            margin={{ top: 20, bottom: 70 }}
+            barCategoryGap="20%"
+          >
+            <XAxis
+              dataKey="category"
+              tickLine={false}
+              axisLine={false}
+              interval={0}
+              tick={<CustomizedXAxisTick />}
+            />
+            <YAxis
+              stroke="#888888"
+              fontSize={12}
+              tickLine={false}
+              axisLine={false}
+              tickFormatter={(value) => value.toLocaleString()}
+            />
+            <ChartTooltip
+              cursor={false}
+              content={<ChartTooltipContent hideLabel />}
+            />
+            <Bar dataKey="value" name="Documents" radius={[4, 4, 0, 0]}>
+              {channelData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill="#3b82f6" />
+              ))}
+              {/* Add count labels on top */}
+              {/* <LabelList
+                dataKey="value"
+                content={<CustomTopLabel />}
+                position="top"
+              /> */}
+              <LabelList
+                dataKey="value"
+                position="top"
+                className="font-bold text-xs"
               />
-              <Skeleton className="h-4 w-12" />
-            </div>
-          ))}
-        </div>
-      ) : showNoDataMessage ? (
-        <div className="flex h-[300px] flex-col items-center justify-center text-center p-4">
-          <span className="text-lg font-semibold">
-            No data available for the selected period
-          </span>
-          <span className="text-gray-400 text-xs">
-            Try selecting a different time range
-          </span>
-        </div>
-      ) : (
-        <div className="flex h-[300px] items-end justify-between gap-4">
-          {channelData.map((item, index) => (
-            <div
-              key={index}
-              className="flex flex-col items-center gap-2 flex-1 h-full"
-            >
-              <div className="text-sm font-medium text-gray-500">
-                {item.value}
-              </div>
-              <div className="flex flex-col items-center justify-end w-full h-full">
-                <div
-                  className="w-full rounded-t-md transition-all duration-300 ease-in-out"
-                  style={{
-                    height: `${(item.value / maxValue) * 100}%`,
-                    backgroundColor: COLORS[index % COLORS.length],
-                  }}
-                />
-              </div>
-              <div className="text-xs text-gray-500 text-center h-10 flex items-center justify-center">
-                {item.category}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </>
+            </Bar>
+          </BarChart>
+        </ChartContainer>
+      </ResponsiveContainer>
+    </TooltipProvider>
   );
-};
+}

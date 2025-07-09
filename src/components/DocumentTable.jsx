@@ -221,6 +221,9 @@ const DocumentTable = ({ fetchDataRef, globalFilter, setGlobalFilter }) => {
         return;
       }
 
+      console.log(doc);
+      
+
       setSelectedDocument(doc);
       if (formModalRef?.current) {
         formModalRef.current.showModal();

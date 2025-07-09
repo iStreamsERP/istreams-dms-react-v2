@@ -150,7 +150,7 @@ const SalesSummaryCard = ({ daysCount = 30 }) => {
           key={idx}
           className="bg-gradient-to-br from-slate-800 to-blue-900 text-white p-4"
         >
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-0">
             {/* Top section - Heading + Icon */}
             <div className="flex justify-between items-start">
               <h3 className="text-sm font-medium">{stat.title}</h3>

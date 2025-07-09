@@ -7,7 +7,6 @@ import DashboardPage from "@/pages/DashboardPage";
 import DocumentListPage from "@/pages/DocumentListPage";
 import DocumentViewPage from "@/pages/DocumentViewPage";
 import ForgetPasswordPage from "@/pages/ForgetPasswordPage";
-import LoginFormPage from "@/pages/LoginFormPage";
 import NotFoundPage from "@/pages/NotFoundPage";
 import RoleAccessRightsPage from "@/pages/RoleAccessRightsPage";
 import SignUpPage from "@/pages/SignUpPage";
@@ -22,6 +21,7 @@ import UserRolePage from "@/pages/UserRolePage ";
 import { createBrowserRouter } from "react-router-dom";
 import ProtectedRoute from "./ProtectedRoute";
 import UserPreferences from "@/pages/UserPreferences";
+import { LoginFormPage } from "@/pages/LoginFormPage";
 
 const router = createBrowserRouter([
   {

@@ -327,7 +327,7 @@ const CategoryMasterPage = () => {
   });
 
   return (
-    <div className="flex flex-col gap-y-4">
+    <div className="flex flex-col">
       {!rightsChecked ? (
         <div className="flex justify-center items-start">
           <BarLoader color="#36d399" height={2} width="100%" />
