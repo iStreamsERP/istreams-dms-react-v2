@@ -47,7 +47,7 @@ export const DefaultHeader = ({ collapsed, setCollapsed }) => {
   };
 
   return (
-    <header className="relative z-10 flex items-center justify-between px-3 py-2 bg-slate-100 shadow-sm dark:bg-slate-950">
+    <header className="relative z-10 flex items-center justify-between px-3 py-2 bg-slate-100 shadow-sm dark:bg-slate-900">
       {/* Left: Logo and Collapse */}
       <div className="flex items-center gap-3">
         <Button

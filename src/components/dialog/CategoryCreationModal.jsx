@@ -248,6 +248,8 @@ export function CategoryCreationModal({ mode, selectedItem, onSuccess }) {
         payload
       );
 
+      console.log(response);
+
       // Save AI questions
       await saveAiQuestions();
 
@@ -277,179 +279,178 @@ export function CategoryCreationModal({ mode, selectedItem, onSuccess }) {
           <Loader2 className="h-8 w-8 animate-spin" />
         </div>
       ) : (
-        <form onSubmit={handleSubmit}>
-          <div className="flex flex-col justify-between h-full">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Left Column - Category Form */}
-              <div className="space-y-4 col-span-1">
-                <div>
-                  <h1 className="text-lg font-medium">
-                    {mode === "edit" ? "Edit" : "Create"} Category
-                    {isLoading && (
-                      <Loader2 className="ml-2 h-4 w-4 animate-spin inline-block" />
-                    )}
-                  </h1>
-                  <h6 className="text-sm text-muted-foreground mb-4">
-                    Configure category settings
-                  </h6>
-                </div>
-
-                <div className="space-y-3">
-                  <Label htmlFor="CATEGORY_NAME">Category Name *</Label>
-                  <Input
-                    id="CATEGORY_NAME"
-                    name="CATEGORY_NAME"
-                    value={formData.CATEGORY_NAME}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full"
-                  />
-                </div>
-
-                <div className="space-y-3">
-                  <Label htmlFor="DISPLAY_NAME">Display Name *</Label>
-                  <Input
-                    id="DISPLAY_NAME"
-                    name="DISPLAY_NAME"
-                    value={formData.DISPLAY_NAME}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full"
-                  />
-                </div>
-
-                <div className="space-y-3">
-                  <Label htmlFor="MODULE_NAME">Module Name *</Label>
-                  <Select
-                    value={formData.MODULE_NAME}
-                    onValueChange={(value) =>
-                      handleSelectChange("MODULE_NAME", value)
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a module" />
-                    </SelectTrigger>
-                    <SelectContent className="z-[9999]">
-                      <SelectGroup>
-                        <SelectLabel>Modules</SelectLabel>
-                        {modules.map((module) => (
-                          <SelectItem
-                            key={module.MODULE_NAME}
-                            value={module.MODULE_NAME}
-                          >
-                            {module.MODULE_NAME}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                </div>
+        <form
+          onSubmit={handleSubmit}
+          className="flex flex-col md:justify-between max-h-[80vh] md:max-h-full overflow-y-auto md:overflow-hidden"
+        >
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Left Column - Category Form */}
+            <div className="space-y-4 col-span-1">
+              <div>
+                <h1 className="text-lg font-medium">
+                  {mode === "edit" ? "Edit" : "Create"} Category
+                  {isLoading && (
+                    <Loader2 className="ml-2 h-4 w-4 animate-spin inline-block" />
+                  )}
+                </h1>
+                <h6 className="text-sm text-muted-foreground mb-4">
+                  Configure category settings
+                </h6>
               </div>
 
-              {/* Right Column - AI Questions (Scrollable) */}
-              <div className="space-y-4 col-span-2">
-                <div className="flex items-center gap-4">
-                  <h2 className="text-lg font-medium">User input Prompts</h2>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={addAiQuestion}
-                  >
-                    <Plus className="mr-1 h-4 w-4" />
-                    Add Question
-                  </Button>
-                </div>
+              <div className="space-y-3">
+                <Label htmlFor="CATEGORY_NAME">Category Name *</Label>
+                <Input
+                  id="CATEGORY_NAME"
+                  name="CATEGORY_NAME"
+                  value={formData.CATEGORY_NAME}
+                  onChange={handleInputChange}
+                  required
+                  className="w-full"
+                />
+              </div>
 
-                <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
-                  {aiFormDataList.map((aiItem, index) => (
-                    <div
-                      key={aiItem.REF_SERIAL_NO}
-                      className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-800"
-                    >
-                      <div className="flex justify-between items-start mb-3">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-medium">Input #{index + 1}</h3>
-                        </div>
-                        {aiFormDataList.length > 1 && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 text-red-500"
-                            onClick={() => removeAiQuestion(index)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
+              <div className="space-y-3">
+                <Label htmlFor="DISPLAY_NAME">Display Name *</Label>
+                <Input
+                  id="DISPLAY_NAME"
+                  name="DISPLAY_NAME"
+                  value={formData.DISPLAY_NAME}
+                  onChange={handleInputChange}
+                  required
+                  className="w-full"
+                />
+              </div>
 
-                      <div className="space-y-3">
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <Label htmlFor={`refkey-${index}`}>
-                              Reference Key
-                            </Label>
-                            <div className="flex items-center space-x-2 pt-1">
-                              <Checkbox
-                                id={`mandatory-${index}`}
-                                checked={aiItem.IS_MANDATORY === "T"}
-                                onCheckedChange={() =>
-                                  handleAiMandatoryChange(index)
-                                }
-                              />
-                              <Label
-                                htmlFor={`mandatory-${index}`}
-                                className="!m-1"
-                              >
-                                Mandatory
-                              </Label>
-                            </div>
-                          </div>
-                          <Input
-                            id={`refkey-${index}`}
-                            name="REF_KEY"
-                            value={aiItem.REF_KEY}
-                            onChange={(e) => handleAiInputChange(index, e)}
-                            placeholder="e.g. Invoice Number"
-                            className="w-full"
-                          />
-                        </div>
-
-                        <div>
-                          <Label htmlFor={`question-${index}`}>
-                            Question *
-                          </Label>
-                          <Input
-                            id={`question-${index}`}
-                            name="QUESTION_FOR_AI"
-                            value={aiItem.QUESTION_FOR_AI}
-                            onChange={(e) => handleAiInputChange(index, e)}
-                            placeholder="e.g. What is the invoice number?"
-                            required
-                            className="w-full"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+              <div className="space-y-3">
+                <Label htmlFor="MODULE_NAME">Module Name *</Label>
+                <Select
+                  value={formData.MODULE_NAME}
+                  onValueChange={(value) =>
+                    handleSelectChange("MODULE_NAME", value)
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a module" />
+                  </SelectTrigger>
+                  <SelectContent className="z-[9999]">
+                    <SelectGroup>
+                      <SelectLabel>Modules</SelectLabel>
+                      {modules.map((module) => (
+                        <SelectItem
+                          key={module.MODULE_NAME}
+                          value={module.MODULE_NAME}
+                        >
+                          {module.MODULE_NAME}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
-            <DialogFooter className="mt-6">
-              <Button
-                type="submit"
-                className="w-full md:w-auto"
-                disabled={isSaving || isLoading}
-              >
-                {isSaving ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : null}
-                {mode === "edit" ? "Update Category" : "Create Category"}
-              </Button>
-            </DialogFooter>
+            {/* Right Column - AI Questions (Scrollable) */}
+            <div className="space-y-4 col-span-2">
+              <div className="flex items-center gap-4">
+                <h2 className="text-lg font-medium">User input Prompts</h2>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={addAiQuestion}
+                >
+                  <Plus className="mr-1 h-4 w-4" />
+                  Add Question
+                </Button>
+              </div>
+
+              <div className="space-y-4 h-full md:max-h-[400px] overflow-y-auto pr-2">
+                {aiFormDataList.map((aiItem, index) => (
+                  <div
+                    key={aiItem.REF_SERIAL_NO}
+                    className="border rounded-lg p-4 "
+                  >
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-medium">Input #{index + 1}</h3>
+                      </div>
+                      {aiFormDataList.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => removeAiQuestion(index)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+
+                    <div className="space-y-3">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <Label htmlFor={`refkey-${index}`}>
+                            Reference Key
+                          </Label>
+                          <div className="flex items-center space-x-2 pt-1">
+                            <Checkbox
+                              id={`mandatory-${index}`}
+                              checked={aiItem.IS_MANDATORY === "T"}
+                              onCheckedChange={() =>
+                                handleAiMandatoryChange(index)
+                              }
+                            />
+                            <Label
+                              htmlFor={`mandatory-${index}`}
+                              className="!m-1"
+                            >
+                              Mandatory
+                            </Label>
+                          </div>
+                        </div>
+                        <Input
+                          id={`refkey-${index}`}
+                          name="REF_KEY"
+                          value={aiItem.REF_KEY}
+                          onChange={(e) => handleAiInputChange(index, e)}
+                          placeholder="e.g. Invoice Number"
+                          className="w-full"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor={`question-${index}`}>Question *</Label>
+                        <Input
+                          id={`question-${index}`}
+                          name="QUESTION_FOR_AI"
+                          value={aiItem.QUESTION_FOR_AI}
+                          onChange={(e) => handleAiInputChange(index, e)}
+                          placeholder="e.g. What is the invoice number?"
+                          required
+                          className="w-full"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
+
+          <DialogFooter className="mt-6">
+            <Button
+              type="submit"
+              className="w-full md:w-auto"
+              disabled={isSaving || isLoading}
+            >
+              {isSaving ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
+              {mode === "edit" ? "Update Category" : "Create Category"}
+            </Button>
+          </DialogFooter>
         </form>
       )}
     </>

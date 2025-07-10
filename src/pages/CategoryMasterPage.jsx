@@ -322,7 +322,7 @@ const CategoryMasterPage = () => {
               </Button>
 
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent className="sm:max-w-[90%] min-h-[90vh] z-[999]">
+                <DialogContent className="max-w-[95vw] lg:max-w-6xl w-full h-[95vh] max-h-[95vh] z-[999]">
                   <CategoryCreationModal
                     mode={mode}
                     selectedItem={selectedItem}
