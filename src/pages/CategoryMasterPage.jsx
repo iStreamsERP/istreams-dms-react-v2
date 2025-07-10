@@ -41,13 +41,14 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { BarLoader, PacmanLoader } from "react-spinners";
+import { usePermissions } from "@/hooks/usePermissions";
 
 const CategoryMasterPage = () => {
   const { userData } = useAuth();
   const { toast } = useToast();
+  const { hasPermission } = usePermissions();
 
-  const [userRights, setUserRights] = useState("");
-  const [rightsChecked, setRightsChecked] = useState(false);
+  const canView = hasPermission("CATEGORY_MASTER_VIEW");
 
   const [tableList, setTableList] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -63,37 +64,8 @@ const CategoryMasterPage = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   useEffect(() => {
-    fetchUserRights();
     fetchAllProductsData();
   }, []);
-
-  const fetchUserRights = async () => {
-    try {
-      const userType = userData.isAdmin ? "ADMINISTRATOR" : "USER";
-      const payload = {
-        UserName: userData.userName,
-        FormName: "DMS-CATEGORYMASTER",
-        FormDescription: "Category Master",
-        UserType: userType,
-      };
-
-      const response = await callSoapService(
-        userData.clientURL,
-        "DMS_CheckRights_ForTheUser",
-        payload
-      );
-
-      setUserRights(response);
-    } catch (error) {
-      console.error("Failed to fetch user rights:", error);
-      toast({
-        variant: "destructive",
-        title: error,
-      });
-    } finally {
-      setRightsChecked(true);
-    }
-  };
 
   const fetchAllProductsData = async () => {
     setLoading(true);
@@ -240,28 +212,6 @@ const CategoryMasterPage = () => {
       ),
     },
     {
-      accessorKey: "INCLUDE_CUSTOM_COLUMNS",
-      header: () => (
-        <p className="truncate" style={{ width: 120 }}>
-          Custom Columns
-        </p>
-      ),
-      cell: ({ row }) => (
-        <div
-          className="capitalize"
-          style={{
-            width: 120,
-            overflow: "hidden",
-            whiteSpace: "nowrap",
-            textOverflow: "ellipsis",
-          }}
-          title={row.getValue("INCLUDE_CUSTOM_COLUMNS") || "-"}
-        >
-          {row.getValue("INCLUDE_CUSTOM_COLUMNS") || "-"}
-        </div>
-      ),
-    },
-    {
       accessorKey: "action",
       header: () => <div style={{ width: 40 }}>Action</div>,
       id: "actions",
@@ -328,11 +278,7 @@ const CategoryMasterPage = () => {
 
   return (
     <div className="flex flex-col">
-      {!rightsChecked ? (
-        <div className="flex justify-center items-start">
-          <BarLoader color="#36d399" height={2} width="100%" />
-        </div>
-      ) : userRights !== "Allowed" ? (
+      {canView ? (
         <AccessDenied />
       ) : (
         <>
@@ -376,7 +322,7 @@ const CategoryMasterPage = () => {
               </Button>
 
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent className="sm:max-w-[425px]">
+                <DialogContent className="sm:max-w-[90%] min-h-[90vh] z-[999]">
                   <CategoryCreationModal
                     mode={mode}
                     selectedItem={selectedItem}

@@ -14,7 +14,6 @@ import TaskPage from "@/pages/TaskPage";
 import TaskViewPage from "@/pages/TaskView";
 import TeamsPage from "@/pages/TeamsPage";
 import TimeSheetPage from "@/pages/TimeSheetPage";
-import { UploadDocumentPage } from "@/pages/UploadDocumentPage";
 import UserAccessRightsPage from "@/pages/UserAccessRightsPage";
 import UserListPage from "@/pages/UserListPage";
 import UserRolePage from "@/pages/UserRolePage ";
@@ -22,6 +21,7 @@ import { createBrowserRouter } from "react-router-dom";
 import ProtectedRoute from "./ProtectedRoute";
 import UserPreferences from "@/pages/UserPreferences";
 import { LoginFormPage } from "@/pages/LoginFormPage";
+import { UploadDocumentPage } from "@/pages/UploadDocumentPage";
 
 const router = createBrowserRouter([
   {

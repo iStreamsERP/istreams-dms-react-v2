@@ -1,18 +1,5 @@
 import { Button } from "@/components/ui/button";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -26,28 +13,23 @@ import {
 } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
 import { callSoapService } from "@/api/callSoapService";
 import { convertDataModelToStringData } from "@/utils/dataModelConverter";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@radix-ui/react-popover";
-import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
+import { Loader2, Plus, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export function CategoryCreationModal({ mode, selectedItem, onSuccess }) {
   const { userData } = useAuth();
   const { toast } = useToast();
 
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const initialFormData = {
     CATEGORY_NAME: "",
     DISPLAY_NAME: "",
     MODULE_NAME: "",
-    INCLUDE_CUSTOM_COLUMNS: [],
     IS_DEFAULT_COLUMN: "",
     ATTACHMENT_LIMIT_IN_KB: "",
     PATH_FOR_LAN: "",
@@ -56,36 +38,30 @@ export function CategoryCreationModal({ mode, selectedItem, onSuccess }) {
   };
 
   const [formData, setFormData] = useState(initialFormData);
+  const [aiFormDataList, setAiFormDataList] = useState([]);
   const [modules, setModules] = useState([]);
-  const [customColumnOptions, setCustomColumnOptions] = useState([
-    { INCLUDE_CUSTOM_COLUMNS: "X_VENDOR_ID" },
-    { INCLUDE_CUSTOM_COLUMNS: "X_VENDOR_NAME" },
-    { INCLUDE_CUSTOM_COLUMNS: "X_VENDOR_INVOICE_SNO" },
-    { INCLUDE_CUSTOM_COLUMNS: "X_VENDOR_INVOICE_NO" },
-    { INCLUDE_CUSTOM_COLUMNS: "X_VENDOR_INVOICE_DATE" },
-    { INCLUDE_CUSTOM_COLUMNS: "X_DELIVERY_NOTE_NO" },
-    { INCLUDE_CUSTOM_COLUMNS: "X_DELIVERY_DATE" },
-    { INCLUDE_CUSTOM_COLUMNS: "X_PURCHASE_ORDER_REFNO" },
-    { INCLUDE_CUSTOM_COLUMNS: "X_PURCHASE_ORDER_NO" },
-    { INCLUDE_CUSTOM_COLUMNS: "X_PURCHASE_ORDER_DATE" },
-    { INCLUDE_CUSTOM_COLUMNS: "X_GRN_NO" },
-    { INCLUDE_CUSTOM_COLUMNS: "X_GRN_DOCUMENT_NO" },
-    { INCLUDE_CUSTOM_COLUMNS: "X_GRN_DOCUMENT_DATE" },
-    { INCLUDE_CUSTOM_COLUMNS: "X_CLIENT_ID" },
-    { INCLUDE_CUSTOM_COLUMNS: "X_CLIENT_NAME" },
-    { INCLUDE_CUSTOM_COLUMNS: "X_CLIENT_INVOICE_SNO" },
-    { INCLUDE_CUSTOM_COLUMNS: "X_CLIENT_PO_NO" },
-    { INCLUDE_CUSTOM_COLUMNS: "X_CLIENT_PO_DATE" },
-    { INCLUDE_CUSTOM_COLUMNS: "X_CLIENT_TENDER_REF" },
-  ]);
+  const [nextTempId, setNextTempId] = useState(-1);
 
-  const [openCustomColumnOptions, setOpenCustomColumnOptions] = useState(false);
+  // Initialize AI form data properly
+  const getInitialAiFormData = () => ({
+    REF_SERIAL_NO: nextTempId,
+    CATEGORY_NAME: formData.CATEGORY_NAME,
+    QUESTION_FOR_AI: "",
+    REF_KEY: "",
+    IS_MANDATORY: "T",
+    QUERY_FOR_VALIDATION: "",
+  });
+
+  useEffect(() => {
+    if (aiFormDataList.length === 0) {
+      setAiFormDataList([getInitialAiFormData()]);
+      setNextTempId((prev) => prev - 1);
+    }
+  }, []);
 
   const handleInputChange = (event) => {
     const { name, value } = event.target;
-
     const sanitizedValue = value.replace(/[^a-zA-Z0-9\s_]/g, "");
-
     setFormData((prev) => ({ ...prev, [name]: sanitizedValue }));
   };
 
@@ -124,7 +100,6 @@ export function CategoryCreationModal({ mode, selectedItem, onSuccess }) {
 
   const fetchCategory = async () => {
     setIsLoading(true);
-
     try {
       const payload = {
         DataModelName: "SYNM_DMS_DOC_CATEGORIES",
@@ -139,25 +114,124 @@ export function CategoryCreationModal({ mode, selectedItem, onSuccess }) {
       );
 
       const data = response?.[0] || {};
-
-      setFormData((prev) => ({
-        ...prev,
+      setFormData({
         ...data,
         CATEGORY_NAME:
           data.CATEGORY_NAME?.replace(/[^a-zA-Z0-9\s_]/g, "") || "",
         DISPLAY_NAME: data.DISPLAY_NAME?.replace(/[^a-zA-Z0-9\s_]/g, "") || "",
-        INCLUDE_CUSTOM_COLUMNS: data.INCLUDE_CUSTOM_COLUMNS
-          ? data.INCLUDE_CUSTOM_COLUMNS.split(",").map((item) => item.trim())
-          : [],
-      }));
+      });
+
+      // Fetch AI questions
+      const aiPayload = {
+        DataModelName: "SYNM_DMS_DOC_CATG_QA",
+        WhereCondition: `CATEGORY_NAME = '${selectedItem.CATEGORY_NAME}'`,
+        Orderby: "",
+      };
+
+      const aiResponse = await callSoapService(
+        userData.clientURL,
+        "DataModel_GetData",
+        aiPayload
+      );
+
+      setAiFormDataList(
+        aiResponse?.length > 0
+          ? aiResponse.map((item) => ({
+              ...item,
+              IS_MANDATORY: item.IS_MANDATORY || "T",
+            }))
+          : [getInitialAiFormData()]
+      );
+
+      // Find the minimum temp ID from existing questions
+      if (aiResponse?.length > 0) {
+        const minId = Math.min(...aiResponse.map((item) => item.REF_SERIAL_NO));
+        setNextTempId(minId > 0 ? -1 : minId - 1);
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleAiInputChange = (index, e) => {
+    const { name, value } = e.target;
+    const updatedList = [...aiFormDataList];
+    updatedList[index] = { ...updatedList[index], [name]: value };
+    setAiFormDataList(updatedList);
+  };
+
+  const handleAiMandatoryChange = (index) => {
+    const updatedList = [...aiFormDataList];
+    updatedList[index] = {
+      ...updatedList[index],
+      IS_MANDATORY: updatedList[index].IS_MANDATORY === "T" ? "F" : "T",
+    };
+    setAiFormDataList(updatedList);
+  };
+
+  const addAiQuestion = () => {
+    setAiFormDataList([
+      ...aiFormDataList,
+      { ...getInitialAiFormData(), REF_SERIAL_NO: nextTempId },
+    ]);
+    setNextTempId((prev) => prev - 1);
+  };
+
+  const removeAiQuestion = (index) => {
+    if (aiFormDataList.length <= 1) return;
+    const updatedList = [...aiFormDataList];
+    updatedList.splice(index, 1);
+    setAiFormDataList(updatedList);
+  };
+
+  const saveAiQuestions = async () => {
+    for (const aiItem of aiFormDataList) {
+      // Skip if both fields are empty
+      if (!aiItem.QUESTION_FOR_AI && !aiItem.REF_KEY) continue;
+
+      const aiData = {
+        ...aiItem,
+        CATEGORY_NAME: formData.CATEGORY_NAME,
+      };
+
+      const convertedAiData = convertDataModelToStringData(
+        "SYNM_DMS_DOC_CATG_QA",
+        aiData
+      );
+
+      console.log(convertedAiData);
+
+      const payload = {
+        UserName: userData.userEmail,
+        DModelData: convertedAiData,
+      };
+
+      const response = await callSoapService(
+        userData.clientURL,
+        "DataModel_SaveData",
+        payload
+      );
+
+      console.log(response);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Validate category name
+    if (!formData.CATEGORY_NAME.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Category Name is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSaving(true);
     try {
+      // Save main category
       const convertedDataModel = convertDataModelToStringData(
         "SYNM_DMS_DOC_CATEGORIES",
         formData
@@ -174,197 +248,208 @@ export function CategoryCreationModal({ mode, selectedItem, onSuccess }) {
         payload
       );
 
+      // Save AI questions
+      await saveAiQuestions();
+
       toast({
         title: "Success",
-        description: response,
+        description: "Category and AI questions saved successfully",
       });
       onSuccess();
       setFormData(initialFormData);
+      setAiFormDataList([getInitialAiFormData()]);
+      setNextTempId(-1);
     } catch (error) {
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "Failed to save category",
         variant: "destructive",
       });
+    } finally {
+      setIsSaving(false);
     }
   };
 
   return (
     <>
-      <DialogHeader>
-        <DialogTitle>
-          {mode === "edit" ? "Edit" : "Create"} Category
-          {isLoading && (
-            <Loader2 className="ml-2 h-4 w-4 animate-spin inline-block" />
-          )}
-        </DialogTitle>
-        <DialogDescription>
-          {isLoading
-            ? "Loading category details..."
-            : "Configure category settings. Click save when you're done."}
-        </DialogDescription>
-      </DialogHeader>
-
       {isLoading ? (
-        <div className="flex justify-center items-center h-64">
+        <div className="flex justify-center items-center py-10">
           <Loader2 className="h-8 w-8 animate-spin" />
         </div>
       ) : (
         <form onSubmit={handleSubmit}>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="CATEGORY_NAME">Category Name</Label>
-              <Input
-                id="CATEGORY_NAME"
-                name="CATEGORY_NAME"
-                value={formData.CATEGORY_NAME}
-                onChange={handleInputChange}
-              />
-            </div>
+          <div className="flex flex-col justify-between h-full">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Left Column - Category Form */}
+              <div className="space-y-4 col-span-1">
+                <div>
+                  <h1 className="text-lg font-medium">
+                    {mode === "edit" ? "Edit" : "Create"} Category
+                    {isLoading && (
+                      <Loader2 className="ml-2 h-4 w-4 animate-spin inline-block" />
+                    )}
+                  </h1>
+                  <h6 className="text-sm text-muted-foreground mb-4">
+                    Configure category settings
+                  </h6>
+                </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="DISPLAY_NAME">Display Name</Label>
-              <Input
-                id="DISPLAY_NAME"
-                name="DISPLAY_NAME"
-                value={formData.DISPLAY_NAME}
-                onChange={handleInputChange}
-              />
-            </div>
+                <div className="space-y-3">
+                  <Label htmlFor="CATEGORY_NAME">Category Name *</Label>
+                  <Input
+                    id="CATEGORY_NAME"
+                    name="CATEGORY_NAME"
+                    value={formData.CATEGORY_NAME}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full"
+                  />
+                </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="INCLUDE_CUSTOM_COLUMNS">
-                Include Custom Column
-              </Label>
+                <div className="space-y-3">
+                  <Label htmlFor="DISPLAY_NAME">Display Name *</Label>
+                  <Input
+                    id="DISPLAY_NAME"
+                    name="DISPLAY_NAME"
+                    value={formData.DISPLAY_NAME}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full"
+                  />
+                </div>
 
-              <Popover
-                open={openCustomColumnOptions}
-                onOpenChange={setOpenCustomColumnOptions}
-              >
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={openCustomColumnOptions}
-                    className="w-full justify-between text-left gap-2 min-h-10 font-normal flex items-center h-auto py-2"
+                <div className="space-y-3">
+                  <Label htmlFor="MODULE_NAME">Module Name *</Label>
+                  <Select
+                    value={formData.MODULE_NAME}
+                    onValueChange={(value) =>
+                      handleSelectChange("MODULE_NAME", value)
+                    }
                   >
-                    {/* Display summary of selected values */}
-                    <div className="flex flex-wrap gap-1 flex-1 overflow-hidden">
-                      {formData.INCLUDE_CUSTOM_COLUMNS.length > 0 ? (
-                        formData.INCLUDE_CUSTOM_COLUMNS.map((value) => (
-                          <span
-                            key={value}
-                            className="bg-accent text-accent-foreground px-2 py-1 rounded-md text-sm truncate"
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a module" />
+                    </SelectTrigger>
+                    <SelectContent className="z-[9999]">
+                      <SelectGroup>
+                        <SelectLabel>Modules</SelectLabel>
+                        {modules.map((module) => (
+                          <SelectItem
+                            key={module.MODULE_NAME}
+                            value={module.MODULE_NAME}
                           >
-                            {value}
-                          </span>
-                        ))
-                      ) : (
-                        <span className="text-muted-foreground">
-                          Select custom columns
-                        </span>
-                      )}
-                    </div>
-                    <ChevronsUpDown className="opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                  <Command className="w-full justify-start">
-                    <CommandInput
-                      placeholder="Search custom columns..."
-                      className="h-9"
-                    />
-                    <CommandList>
-                      <CommandEmpty>No custom columns found.</CommandEmpty>
-                      <CommandGroup>
-                        {customColumnOptions.map((item, index) => (
-                          <CommandItem
-                            key={index}
-                            value={item.INCLUDE_CUSTOM_COLUMNS}
-                            onSelect={(currentValue) => {
-                              // Update the state array: add if not present, remove if already present
-                              setFormData((prev) => {
-                                const currentSelections =
-                                  prev.INCLUDE_CUSTOM_COLUMNS || [];
-                                if (currentSelections.includes(currentValue)) {
-                                  // Remove the item if it's already selected
-                                  return {
-                                    ...prev,
-                                    INCLUDE_CUSTOM_COLUMNS:
-                                      currentSelections.filter(
-                                        (val) => val !== currentValue
-                                      ),
-                                  };
-                                } else {
-                                  // Otherwise add the new selection
-                                  return {
-                                    ...prev,
-                                    INCLUDE_CUSTOM_COLUMNS: [
-                                      ...currentSelections,
-                                      currentValue,
-                                    ],
-                                  };
-                                }
-                              });
-                              setOpenCustomColumnOptions(false);
-                            }}
-                          >
-                            {item.INCLUDE_CUSTOM_COLUMNS}
-                            <Check
-                              className={cn(
-                                "ml-auto",
-                                // Use a condition to check if the current item is included in the array
-                                formData.INCLUDE_CUSTOM_COLUMNS.includes(
-                                  item.INCLUDE_CUSTOM_COLUMNS
-                                )
-                                  ? "opacity-100"
-                                  : "opacity-0"
-                              )}
-                            />
-                          </CommandItem>
+                            {module.MODULE_NAME}
+                          </SelectItem>
                         ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Right Column - AI Questions (Scrollable) */}
+              <div className="space-y-4 col-span-2">
+                <div className="flex items-center gap-4">
+                  <h2 className="text-lg font-medium">User input Prompts</h2>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={addAiQuestion}
+                  >
+                    <Plus className="mr-1 h-4 w-4" />
+                    Add Question
+                  </Button>
+                </div>
+
+                <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+                  {aiFormDataList.map((aiItem, index) => (
+                    <div
+                      key={aiItem.REF_SERIAL_NO}
+                      className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-800"
+                    >
+                      <div className="flex justify-between items-start mb-3">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-medium">Input #{index + 1}</h3>
+                        </div>
+                        {aiFormDataList.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 text-red-500"
+                            onClick={() => removeAiQuestion(index)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+
+                      <div className="space-y-3">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <Label htmlFor={`refkey-${index}`}>
+                              Reference Key
+                            </Label>
+                            <div className="flex items-center space-x-2 pt-1">
+                              <Checkbox
+                                id={`mandatory-${index}`}
+                                checked={aiItem.IS_MANDATORY === "T"}
+                                onCheckedChange={() =>
+                                  handleAiMandatoryChange(index)
+                                }
+                              />
+                              <Label
+                                htmlFor={`mandatory-${index}`}
+                                className="!m-1"
+                              >
+                                Mandatory
+                              </Label>
+                            </div>
+                          </div>
+                          <Input
+                            id={`refkey-${index}`}
+                            name="REF_KEY"
+                            value={aiItem.REF_KEY}
+                            onChange={(e) => handleAiInputChange(index, e)}
+                            placeholder="e.g. Invoice Number"
+                            className="w-full"
+                          />
+                        </div>
+
+                        <div>
+                          <Label htmlFor={`question-${index}`}>
+                            Question *
+                          </Label>
+                          <Input
+                            id={`question-${index}`}
+                            name="QUESTION_FOR_AI"
+                            value={aiItem.QUESTION_FOR_AI}
+                            onChange={(e) => handleAiInputChange(index, e)}
+                            placeholder="e.g. What is the invoice number?"
+                            required
+                            className="w-full"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="MODULE_NAME">Module Name</Label>
-              <Select
-                value={formData.MODULE_NAME}
-                onValueChange={(value) =>
-                  handleSelectChange("MODULE_NAME", value)
-                }
+            <DialogFooter className="mt-6">
+              <Button
+                type="submit"
+                className="w-full md:w-auto"
+                disabled={isSaving || isLoading}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a module" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    <SelectLabel>Modules</SelectLabel>
-                    {modules.map((module) => (
-                      <SelectItem
-                        key={module.MODULE_NAME}
-                        value={module.MODULE_NAME}
-                      >
-                        {module.MODULE_NAME}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </div>
+                {isSaving ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : null}
+                {mode === "edit" ? "Update Category" : "Create Category"}
+              </Button>
+            </DialogFooter>
           </div>
-          <DialogFooter>
-            <Button type="submit" className="w-full mt-4" disabled={isLoading}>
-              {isLoading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : null}
-              {mode === "edit" ? "Update" : "Create"}
-            </Button>
-          </DialogFooter>
         </form>
       )}
     </>
