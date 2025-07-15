@@ -163,8 +163,3 @@ export const DefaultHeader = ({ collapsed, setCollapsed }) => {
     </header>
   );
 };
-
-DefaultHeader.propTypes = {
-  collapsed: PropTypes.bool.isRequired,
-  setCollapsed: PropTypes.func.isRequired,
-};

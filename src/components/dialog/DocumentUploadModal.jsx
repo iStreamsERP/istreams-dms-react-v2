@@ -327,8 +327,6 @@ const DocumentUploadModal = ({
           email
         )}&refNo=${encodeURIComponent(refNo)}`;
 
-        console.log(uploadUrl, formData);
-
         const uploadResponse = await axios.post(uploadUrl, formData, {
           headers: {
             // Let Axios set the correct Content-Type including boundaries

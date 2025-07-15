@@ -7,7 +7,7 @@ export default function DocumentPreview({
   file,
   previewUrl,
   activeTab,
-  translatedContent,
+  documentAnalysis,
   isLoadingTranslation,
 }) {
   if (!file) return null;
@@ -54,9 +54,9 @@ export default function DocumentPreview({
             <Loader2 className="w-8 h-8 text-cyan-500 dark:text-cyan-400 animate-spin" />
             <span className="ml-2">Translating document...</span>
           </div>
-        ) : translatedContent ? (
+        ) : documentAnalysis?.translatedResponse ? (
           <pre className="whitespace-pre-wrap font-sans">
-            {translatedContent}
+            {documentAnalysis?.translatedResponse}
           </pre>
         ) : (
           <div className="text-gray-500 dark:text-slate-400 italic text-center py-8">
@@ -73,7 +73,7 @@ export default function DocumentPreview({
 const ImagePreview = ({ previewUrl }) => {
   const [zoom, setZoom] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
-  
+
   const handleZoom = (e) => {
     e.preventDefault();
     const delta = e.deltaY * -0.01;
@@ -86,7 +86,7 @@ const ImagePreview = ({ previewUrl }) => {
   };
 
   return (
-    <div 
+    <div
       className="w-full h-full overflow-hidden relative"
       onWheel={handleZoom}
     >

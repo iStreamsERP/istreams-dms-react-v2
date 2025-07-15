@@ -12,6 +12,7 @@ import AnalysisView from "@/components/AnalysisView";
 import ChatModal from "@/components/ChatModal";
 import PageHeader from "@/components/PageHeader";
 import UploadArea from "@/components/UploadArea";
+import { stripMarkdownCodeBlock } from "@/utils/stripMarkdownCodeBlock";
 
 export const UploadDocumentPage = () => {
   const { uploadRef } = useOutletContext();
@@ -22,12 +23,9 @@ export const UploadDocumentPage = () => {
   const [file, setFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [errorMessage, setErrorMessage] = useState(null);
-  const [translatedContent, setTranslatedContent] = useState("");
+  const [documentAnalysis, setDocumentAnalysis] = useState(null);
   const [isLoadingTranslation, setIsLoadingTranslation] = useState(false);
-  const [isAnalysisModalOpen, setIsAnalysisModalOpen] = useState(false);
-  const [analysisSummary, setAnalysisSummary] = useState([]);
-  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
-  const [analysisQuestion, setAnalysisQuestion] = useState("");
+
   const [messages, setMessages] = useState([]);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isResponseLoading, setIsResponseLoading] = useState(false);
@@ -43,8 +41,7 @@ export const UploadDocumentPage = () => {
     setIsUploading(true);
     setIsUploadComplete(false);
     setShowAnalysis(false);
-    setAnalysisSummary([]);
-    setTranslatedContent("");
+    setDocumentAnalysis(null);
     setMessages([]);
 
     try {
@@ -52,17 +49,22 @@ export const UploadDocumentPage = () => {
       formData.append("File", selectedFile);
       formData.append(
         "Question",
-        "If the document is not in English, translate it. If it is already in English, just reply: 'The document is in English. No translation needed"
+        `Analyze the uploaded document and return the result in JSON format with the following structure:
+        {
+        "documentType": "[Choose standard document type]",
+        "translatedResponse": "[Translate the document into english]",
+        }
+        Do not add any other text or explanation — only return the JSON object.`
       );
 
       setIsLoadingTranslation(true);
-      const translateRes = await axios.post(API_URL, formData, {
+      const response = await axios.post(API_URL, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      console.log(translateRes);
+      const cleanJson = stripMarkdownCodeBlock(response.data);
 
-      setTranslatedContent(translateRes.data);
+      setDocumentAnalysis(cleanJson);
       setIsUploadComplete(true);
       setShowAnalysis(true);
     } catch (error) {
@@ -71,33 +73,6 @@ export const UploadDocumentPage = () => {
     } finally {
       setIsUploading(false);
       setIsLoadingTranslation(false);
-    }
-  };
-
-  const generateAnalysisSummary = async () => {
-    if (!file || !analysisQuestion.trim()) return;
-
-    setIsGeneratingSummary(true);
-    try {
-      const formData = new FormData();
-      formData.append("File", file);
-      formData.append("Question", analysisQuestion);
-
-      const res = await axios.post(API_URL, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-
-      const summaryPoints = res.data
-        .split("\n")
-        .filter((line) => line.trim() !== "")
-        .map((line) => line.replace(/^- /, "").trim());
-
-      setAnalysisSummary(summaryPoints);
-      setIsAnalysisModalOpen(false);
-    } catch (error) {
-      console.error("Error generating summary:", error);
-    } finally {
-      setIsGeneratingSummary(false);
     }
   };
 
@@ -115,6 +90,8 @@ export const UploadDocumentPage = () => {
     };
 
     setMessages((prev) => [...prev, userMessage]);
+    console.log(question);
+    
     setIsResponseLoading(true);
 
     try {
@@ -161,8 +138,7 @@ export const UploadDocumentPage = () => {
     setMessages([]);
     setIsChatOpen(false);
     setFile(null);
-    setAnalysisSummary([]);
-    setTranslatedContent("");
+    setDocumentAnalysis(null);
   };
 
   useEffect(() => {
@@ -200,25 +176,14 @@ export const UploadDocumentPage = () => {
         <AnalysisView
           file={file}
           previewUrl={previewUrl}
-          translatedContent={translatedContent}
+          documentAnalysis={documentAnalysis}
           isLoadingTranslation={isLoadingTranslation}
-          analysisSummary={analysisSummary}
-          setIsAnalysisModalOpen={setIsAnalysisModalOpen}
           messages={messages}
           isResponseLoading={isResponseLoading}
           askQuestion={askQuestion}
           setIsChatOpen={setIsChatOpen}
         />
       )}
-
-      <AnalysisModal
-        isOpen={isAnalysisModalOpen}
-        setIsOpen={setIsAnalysisModalOpen}
-        analysisQuestion={analysisQuestion}
-        setAnalysisQuestion={setAnalysisQuestion}
-        generateAnalysisSummary={generateAnalysisSummary}
-        isGeneratingSummary={isGeneratingSummary}
-      />
 
       <ChatModal
         isOpen={isChatOpen}

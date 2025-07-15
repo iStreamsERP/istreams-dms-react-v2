@@ -91,6 +91,25 @@ const CategoryMasterPage = () => {
     }
   };
 
+  const deleteCategoryData = async (modelName, categoryName) => {
+    const payload = {
+      UserName: userData.userEmail,
+      DataModelName: modelName,
+      WhereCondition: `CATEGORY_NAME = '${categoryName}'`,
+    };
+
+    const response = await callSoapService(
+      userData.clientURL,
+      "DataModel_DeleteData",
+      payload
+    );
+
+    toast({
+      variant: "destructive",
+      title: response,
+    });
+  };
+
   const handleDelete = async (item) => {
     const result = window.confirm(
       "Are you sure you want to delete? This action cannot be undone."
@@ -101,22 +120,10 @@ const CategoryMasterPage = () => {
     }
 
     try {
-      const payload = {
-        UserName: userData.userEmail,
-        DataModelName: "SYNM_DMS_DOC_CATEGORIES",
-        WhereCondition: `CATEGORY_NAME = '${item.CATEGORY_NAME}'`,
-      };
-
-      const response = await callSoapService(
-        userData.clientURL,
-        "DataModel_DeleteData",
-        payload
-      );
-
-      toast({
-        variant: "destructive",
-        title: response,
-      });
+      await Promise.all([
+        deleteCategoryData("SYNM_DMS_DOC_CATEGORIES", item.CATEGORY_NAME),
+        deleteCategoryData("SYNM_DMS_DOC_CATG_QA", item.CATEGORY_NAME),
+      ]);
 
       fetchAllProductsData();
     } catch (error) {
@@ -156,7 +163,7 @@ const CategoryMasterPage = () => {
         <div
           className="capitalize"
           style={{
-            width: 350,
+            width: 250,
             overflow: "hidden",
             whiteSpace: "nowrap",
             textOverflow: "ellipsis",
@@ -170,7 +177,7 @@ const CategoryMasterPage = () => {
     {
       accessorKey: "DISPLAY_NAME",
       header: () => (
-        <p className="truncate" style={{ width: 350 }}>
+        <p className="truncate" style={{ width: 250 }}>
           Display Name
         </p>
       ),
@@ -178,7 +185,7 @@ const CategoryMasterPage = () => {
         <div
           className="capitalize"
           style={{
-            width: 350,
+            width: 250,
             overflow: "hidden",
             whiteSpace: "nowrap",
             textOverflow: "ellipsis",
@@ -208,6 +215,33 @@ const CategoryMasterPage = () => {
           title={row.getValue("MODULE_NAME") || "-"}
         >
           {row.getValue("MODULE_NAME") || "-"}
+        </div>
+      ),
+    },
+    {
+      accessorKey: "SEARCH_TAGS",
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="p-0 truncate"
+        >
+          Search Tags
+          <ArrowUpDown />
+        </Button>
+      ),
+      cell: ({ row }) => (
+        <div
+          className="capitalize"
+          style={{
+            width: 250,
+            overflow: "hidden",
+            whiteSpace: "nowrap",
+            textOverflow: "ellipsis",
+          }}
+          title={row.getValue("SEARCH_TAGS") || "-"}
+        >
+          {row.getValue("SEARCH_TAGS") || "-"}
         </div>
       ),
     },
@@ -322,7 +356,7 @@ const CategoryMasterPage = () => {
               </Button>
 
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent className="max-w-[95vw] lg:max-w-6xl w-full h-[95vh] max-h-[95vh] z-[999]">
+                <DialogContent className="max-w-[95vw] lg:max-w-6xl w-full h-[95vh] max-h-[100vh]">
                   <CategoryCreationModal
                     mode={mode}
                     selectedItem={selectedItem}

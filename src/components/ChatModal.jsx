@@ -1,4 +1,3 @@
-// components/ChatModal.jsx
 import { Button } from "@/components/ui/button";
 import { ChevronLeft } from "lucide-react";
 import ChatInterface from "./ChatInterface";
