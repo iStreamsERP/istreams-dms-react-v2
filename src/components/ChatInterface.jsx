@@ -6,14 +6,22 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "./ui/scroll-area";
 import { useWindowSize } from "@uidotdev/usehooks";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useDispatch, useSelector } from "react-redux";
+import { askQuestion, addLocalQuestion } from "@/app/actions";
 
-export default function ChatInterface({
-  messages,
-  isResponseLoading,
-  askQuestion,
-  saveToDB,
-}) {
+export default function ChatInterface() {
+  const dispatch = useDispatch();
+
+  // Corrected useSelector to access top-level state properties
+  const { file, isLoading, messages } = useSelector((state) => state);
+
   const [inputValue, setInputValue] = useState("");
   const [selectedText, setSelectedText] = useState({
     text: "",
@@ -29,13 +37,12 @@ export default function ChatInterface({
   const chatContainerRef = useRef(null);
   const popupRef = useRef(null);
   const refKeyInputRef = useRef(null);
-
   const windowSize = useWindowSize();
   const [popupPosition, setPopupPosition] = useState({ x: 0, y: 0 });
 
   const handleSend = () => {
     if (!inputValue.trim()) return;
-    askQuestion(inputValue);
+    dispatch(askQuestion(file, inputValue));
     setInputValue("");
   };
 
@@ -57,7 +64,6 @@ export default function ChatInterface({
     if (selectedText.length > 0 && messageId) {
       const message = messages.find((msg) => msg.id.toString() === messageId);
       if (!message) {
-        console.log("Message not found");
         setSelectedText({
           text: "",
           position: { x: 0, y: 0 },
@@ -102,7 +108,7 @@ export default function ChatInterface({
     }
   };
 
-  const handleAddToDB = () => {
+  const handleAddLocalQuestion = () => {
     if (!selectedText.text || addedQuestions.has(selectedText.text)) {
       setError("This text has already been added.");
       return;
@@ -116,7 +122,7 @@ export default function ChatInterface({
     const selectedMessageIndex = messages.findIndex(
       (msg) => msg.id.toString() === selectedText.messageId
     );
-    let questionText, answerText, fullAnswerText;
+    let questionText, answerText;
 
     if (selectedText.isUserMessage) {
       questionText = selectedText.text;
@@ -126,10 +132,8 @@ export default function ChatInterface({
         messages[selectedMessageIndex + 1].sender !== "user"
           ? messages[selectedMessageIndex + 1].text
           : "No answer available";
-      fullAnswerText = answerText;
     } else {
       answerText = selectedText.text;
-      fullAnswerText = messages[selectedMessageIndex].text;
       questionText =
         selectedMessageIndex > 0 &&
         messages[selectedMessageIndex - 1].sender === "user"
@@ -137,18 +141,15 @@ export default function ChatInterface({
           : "No question available";
     }
 
-    const data = {
-      REF_SERIAL_NO: -1,
-      SERIAL_NO: -1,
-      QUESTION_FOR_AI: questionText,
-      REF_KEY: refKey.trim(),
-      IS_MANDATORY: isMandatory,
-      REF_VALUE: answerText,
-      AI_ANSWER: fullAnswerText,
+    const questionData = {
+      question: questionText,
+      refKey: refKey.trim(),
+      isMandatory: isMandatory,
+      text: answerText,
+      label: refKey.trim(),
     };
 
-    saveToDB(data);
-
+    dispatch(addLocalQuestion(questionData));
     setAddedQuestions((prev) => new Set(prev).add(selectedText.text));
     setSelectedText({
       text: "",
@@ -159,13 +160,6 @@ export default function ChatInterface({
     setRefKey("");
     setIsMandatory("F");
     setError("");
-  };
-
-  const handlePopupKeyDown = (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleAddToDB();
-    }
   };
 
   useEffect(() => {
@@ -189,14 +183,13 @@ export default function ChatInterface({
 
   useEffect(() => {
     if (chatContainerRef.current) {
-      const container = chatContainerRef.current;
-      container.scrollTop = container.scrollHeight;
+      chatContainerRef.current.scrollTop =
+        chatContainerRef.current.scrollHeight;
     }
-
     if (chatEndRef.current) {
       chatEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messages, isResponseLoading]);
+  }, [messages, isLoading]);
 
   return (
     <div className="flex flex-col h-full">
@@ -214,7 +207,9 @@ export default function ChatInterface({
             minWidth: 300,
           }}
           className="bg-white dark:bg-slate-800 shadow-lg rounded-md p-4 border border-gray-200 dark:border-slate-700"
-          onKeyDown={handlePopupKeyDown}
+          onKeyDown={(e) =>
+            e.key === "Enter" && !e.shiftKey && handleAddLocalQuestion()
+          }
           role="dialog"
           aria-labelledby="popup-title"
         >
@@ -223,7 +218,7 @@ export default function ChatInterface({
               id="popup-title"
               className="text-sm font-medium text-gray-700 dark:text-slate-300"
             >
-              Add to Database
+              Add to Local Questions
             </span>
             <div className="text-sm text-gray-600 dark:text-slate-400">
               Selected: <span className="italic">"{selectedText.text}"</span>
@@ -275,12 +270,12 @@ export default function ChatInterface({
             <Button
               variant="outline"
               size="sm"
-              onClick={handleAddToDB}
+              onClick={handleAddLocalQuestion}
               disabled={!refKey.trim()}
               className="mt-2"
             >
               <PlusCircle className="w-4 h-4 mr-1" />
-              Add to Database
+              Add to Local Questions
             </Button>
           </div>
         </motion.div>
@@ -312,7 +307,7 @@ export default function ChatInterface({
                   isAdded={addedQuestions.has(msg.text)}
                 />
               ))}
-              {isResponseLoading && (
+              {isLoading && (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -346,7 +341,7 @@ export default function ChatInterface({
           />
           <Button
             onClick={handleSend}
-            disabled={!inputValue.trim() || isResponseLoading}
+            disabled={!inputValue.trim() || isLoading}
             className="p-3 h-auto self-end"
           >
             <Send className="w-5 h-5" />
@@ -364,7 +359,9 @@ const Message = ({ message, isAdded }) => {
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`flex ${isUser ? "justify-end" : "justify-start"} message-container`}
+      className={`flex ${
+        isUser ? "justify-end" : "justify-start"
+      } message-container`}
       data-id={message.id}
     >
       <div

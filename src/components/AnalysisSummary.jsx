@@ -1,384 +1,187 @@
-import { useRef, useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { SquarePen, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
-import { callSoapService } from "@/api/callSoapService";
+import { useDispatch, useSelector } from "react-redux";
 import { useAuth } from "@/contexts/AuthContext";
-import AnalysisModal from "./AnalysisModal";
-import axios from "axios";
 import { useToast } from "@/hooks/use-toast";
-
-const API_URL = "https://apps.istreams-erp.com:4493/api/SmartAsk/ask-from-file";
-
-export default function AnalysisSummary({
-  file,
-  documentAnalysis,
-  analysisSummary,
-  setAnalysisSummary,
-  isAnalysisModalOpen,
-  setIsAnalysisModalOpen,
-  isGeneratingSummary,
-  setIsGeneratingSummary,
-  showDropdown,
-  setShowDropdown,
-  confirmationFailed,
-  setConfirmationFailed,
-  selectedType,
+import AnalysisModal from "./AnalysisModal";
+import {
+  fetchQuestionsAndGenerateSummary,
+  createDocument,
   setSelectedType,
-  isSubmitting,
-  setIsSubmitting,
-  activeRightTab,
-}) {
+  appendAnalysisSummary,
+  setError,
+} from "@/app/actions";
+import { callSoapService } from "@/api/callSoapService";
+
+export default function AnalysisSummary() {
   const { userData } = useAuth();
   const { toast } = useToast();
-  const refKeysRef = useRef([]);
-  const [documentTypeOptions, setDocumentTypeOptions] = useState([]);
-  const [questionsCache, setQuestionsCache] = useState({});
-  const [isFetchingQuestions, setIsFetchingQuestions] = useState(false);
-  const [isCreatingDocument, setIsCreatingDocument] = useState(false);
-  const [error, setError] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
+  const dispatch = useDispatch();
 
-  // Fetch category names on mount
+  const documentAnalysis = useSelector((state) => state.documentAnalysis);
+  const isLoading = useSelector((state) => state.isLoading);
+  const analysisSummary = useSelector((state) => state.analysisSummary);
+  const localQuestions = useSelector((state) => state.localQuestions);
+  const selectedType = useSelector((state) => state.selectedType);
+  const successMessage = useSelector((state) => state.successMessage);
+  const file = useSelector((state) => state.file);
+  const error = useSelector((state) => state.error);
+
+  const [documentTypeOptions, setDocumentTypeOptions] = useState([]);
+  const [showDropdown, setShowDropdown] = useState(
+    !documentAnalysis?.documentType
+  );
+  const [confirmationFailed, setConfirmationFailed] = useState(false);
+  const [isAnalysisModalOpen, setIsAnalysisModalOpen] = useState(false);
+  const hasFetchedRef = useRef(false);
+
+  // Fetch document type options on mount
   useEffect(() => {
     fetchCategoryName();
   }, []);
 
-  // Refetch questions when switching to Analysis Summary tab and selectedType exists
+  // Handle initial fetch for selectedType
   useEffect(() => {
-    if (activeRightTab === "summary" && selectedType && !isSubmitting) {
-      fetchQuestionsAndGenerateSummary(selectedType);
+    if (selectedType && file && !hasFetchedRef.current) {
+      dispatch(
+        fetchQuestionsAndGenerateSummary(selectedType, file, userData.clientURL)
+      );
+      hasFetchedRef.current = true;
     }
-  }, [activeRightTab, selectedType]);
+  }, [selectedType, file, dispatch, userData.clientURL]);
+
+  // Append localQuestions to analysisSummary, ensuring they appear at the end
+  useEffect(() => {
+    if (localQuestions.length > 0) {
+      // Filter out localQuestions already in analysisSummary to avoid duplicates
+      const existingQuestions = new Set(
+        analysisSummary.map((item) => item.question)
+      );
+      const newLocalQuestions = localQuestions.filter(
+        (item) => !existingQuestions.has(item.question)
+      );
+      if (newLocalQuestions.length > 0) {
+        dispatch(appendAnalysisSummary(newLocalQuestions));
+      }
+    }
+  }, [localQuestions, analysisSummary, dispatch]);
 
   const fetchCategoryName = async () => {
     try {
-      const payload = {
-        DataModelName: "SYNM_DMS_DOC_CATEGORIES",
-        WhereCondition: "",
-        Orderby: "",
-      };
-
       const response = await callSoapService(
         userData.clientURL,
         "DataModel_GetData",
-        payload
+        {
+          DataModelName: "SYNM_DMS_DOC_CATEGORIES",
+          WhereCondition: "",
+          Orderby: "",
+        }
       );
-
-      if (!response || !Array.isArray(response)) {
-        throw new Error("Invalid response for document categories");
-      }
 
       const categoryNames = response
         .map((item) => item.CATEGORY_NAME)
         .filter(Boolean);
       setDocumentTypeOptions(categoryNames);
     } catch (error) {
-      console.error("Error fetching category names:", error);
-      setError("Failed to load document types. Please try again.");
+      dispatch(setError("Failed to load document types"));
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to load document types. Please try again.",
-      });
-    }
-  };
-
-  const fetchQuestionsForCategory = async (category) => {
-    if (!category) return [];
-
-    setIsFetchingQuestions(true);
-    try {
-      const qaResponse = await callSoapService(
-        userData.clientURL,
-        "DataModel_GetData",
-        {
-          DataModelName: "SYNM_DMS_DOC_CATG_QA",
-          WhereCondition: `CATEGORY_NAME = '${category}'`,
-          Orderby: "",
-        }
-      );
-
-      if (!qaResponse || qaResponse.length === 0) {
-        console.warn("No questions found for category:", category);
-        return [];
-      }
-
-      const refKeys = qaResponse.map((item) => item.REF_KEY || "");
-      refKeysRef.current = refKeys;
-
-      const questions = qaResponse
-        .map((item) => item.QUESTION_FOR_AI?.trim())
-        .filter(Boolean);
-
-      const questionsMap = {};
-      qaResponse.forEach((item) => {
-        if (item.REF_KEY && item.QUESTION_FOR_AI) {
-          questionsMap[item.QUESTION_FOR_AI] = item.REF_KEY;
-        }
-      });
-
-      setQuestionsCache(questionsMap);
-
-      return questions;
-    } catch (error) {
-      console.error("Error fetching questions:", error);
-      throw error;
-    } finally {
-      setIsFetchingQuestions(false);
-    }
-  };
-
-  const fetchQuestionsAndGenerateSummary = async (type) => {
-    try {
-      setError("");
-      setSuccessMessage("");
-      const questions = await fetchQuestionsForCategory(type);
-      if (questions.length === 0) {
-        setConfirmationFailed(true);
-        setAnalysisSummary([]);
-        setError(`No questions found for document type "${type}".`);
-        toast({
-          variant: "destructive",
-          title: "No Questions Found",
-          description: `No questions available for "${type}". Add questions in the Chat tab.`,
-        });
-        return;
-      }
-      await generateAnalysisSummary(questions, "replace");
-      setSuccessMessage("Analysis summary updated successfully.");
-      toast({
-        title: "Success",
-        description: "Analysis summary updated successfully.",
-      });
-    } catch (error) {
-      setError("Failed to fetch questions or generate summary.");
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to fetch questions or generate summary.",
+        description: "Failed to load document types",
       });
     }
   };
 
   const handleConfirmDocumentType = async (type) => {
-    if (!type || !userData?.clientURL) return;
-
     try {
-      setIsSubmitting(true);
-      setConfirmationFailed(false);
-      setError("");
-      setSuccessMessage("");
-
-      const keyword = type.toLowerCase().trim();
-
-      // Try exact match
-      let matchResponse = await callSoapService(
+      const matchResponse = await callSoapService(
         userData.clientURL,
         "DataModel_GetData",
         {
           DataModelName: "SYNM_DMS_DOC_CATEGORIES",
-          WhereCondition: `LOWER(CATEGORY_NAME) = '${keyword}'`,
+          WhereCondition: `LOWER(CATEGORY_NAME) = '${type
+            .toLowerCase()
+            .trim()}'`,
           Orderby: "",
         }
       );
 
-      // Try search tags if no exact match
-      if (!matchResponse || matchResponse.length === 0) {
-        matchResponse = await callSoapService(
+      let matchedType = matchResponse?.[0]?.CATEGORY_NAME;
+      if (!matchedType) {
+        const tagResponse = await callSoapService(
           userData.clientURL,
           "DataModel_GetData",
           {
             DataModelName: "SYNM_DMS_DOC_CATEGORIES",
-            WhereCondition: `LOWER(SEARCH_TAGS) LIKE '%${keyword}%'`,
+            WhereCondition: `LOWER(SEARCH_TAGS) LIKE '%${type
+              .toLowerCase()
+              .trim()}%'`,
             Orderby: "",
           }
         );
-      }
-
-      let matchedType = null;
-      if (matchResponse?.length > 0) {
-        const exactTagMatch = matchResponse.find((item) =>
-          item.SEARCH_TAGS?.toLowerCase().split(",").includes(keyword)
-        );
-        matchedType =
-          exactTagMatch?.CATEGORY_NAME || matchResponse[0].CATEGORY_NAME;
+        matchedType = tagResponse?.[0]?.CATEGORY_NAME;
       }
 
       if (!matchedType) {
         setConfirmationFailed(true);
         setShowDropdown(true);
-        setError(`Document type "${type}" not found. Please select a type.`);
+        dispatch(setError(`Document type "${type}" not found`));
         toast({
           variant: "destructive",
-          title: "Invalid Document Type",
-          description: `Document type "${type}" not found. Please select a type.`,
+          title: "Error",
+          description: `Document type "${type}" not found`,
         });
         return;
       }
 
-      setSelectedType(matchedType);
+      dispatch(setSelectedType(matchedType));
       setShowDropdown(false);
-
-      await fetchQuestionsAndGenerateSummary(matchedType);
-    } catch (error) {
-      console.error("Error confirming document type:", error);
-      setConfirmationFailed(true);
-      setError("Failed to confirm document type. Please try again.");
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to confirm document type. Please try again.",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const generateAnalysisSummary = async (questions, mode = "replace") => {
-    if (!file || !questions) {
-      setError("No file or questions provided.");
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "No file or questions provided.",
-      });
-      return;
-    }
-
-    const questionArray = Array.isArray(questions)
-      ? questions
-      : [questions].filter(Boolean);
-
-    if (questionArray.length === 0) {
-      setError("No valid questions provided.");
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "No valid questions provided.",
-      });
-      return;
-    }
-
-    setIsGeneratingSummary(true);
-    try {
-      const formData = new FormData();
-      formData.append("File", file);
-      formData.append("Question", `${questionArray.join(", ")}`);
-
-      const res = await axios.post(API_URL, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-
-      if (!res.data || typeof res.data !== "string") {
-        throw new Error("Invalid response from analysis API");
-      }
-
-      const answerLines = res.data
-        .split("\n")
-        .filter((line) => line.trim() !== "")
-        .map((line) => line.replace(/^- /, "").trim());
-
-      const newSummaryPoints = answerLines.map((line, index) => {
-        const question = questionArray[index];
-        const label = questionsCache[question] || question;
-
-        return {
-          text: line,
-          label,
-          question,
-        };
-      });
-
-      if (mode === "replace") {
-        setAnalysisSummary(newSummaryPoints);
-      } else {
-        setAnalysisSummary((prev) => [...prev, ...newSummaryPoints]);
-      }
-    } catch (error) {
-      console.error("Error generating summary:", error);
-      setError("Failed to generate analysis summary.");
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to generate analysis summary.",
-      });
-    } finally {
-      setIsGeneratingSummary(false);
-    }
-  };
-
-  const handleCreateDocument = async () => {
-    if (!selectedType || analysisSummary.length === 0) {
-      setError(
-        "Please select a document type and generate a summary before creating a document."
+      hasFetchedRef.current = false;
+      dispatch(
+        fetchQuestionsAndGenerateSummary(matchedType, file, userData.clientURL)
       );
+      hasFetchedRef.current = true;
+    } catch (error) {
+      setConfirmationFailed(true);
+      dispatch(setError("Failed to confirm document type"));
       toast({
         variant: "destructive",
         title: "Error",
-        description:
-          "Please select a document type and generate a summary before creating a document.",
+        description: "Failed to confirm document type",
+      });
+    }
+  };
+
+  const handleCreateDocument = () => {
+    if (!file) {
+      dispatch(setError("No file available to create document"));
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "No file available to create document",
       });
       return;
     }
-
-    setIsCreatingDocument(true);
-    setError("");
-    setSuccessMessage("");
-
-    try {
-      const documentData = {
-        CATEGORY_NAME: selectedType,
-        QUESTIONS: analysisSummary.map((item) => ({
-          QUESTION_FOR_AI: item.question,
-          REF_KEY: questionsCache[item.question] || item.question,
-          ANSWER: item.text,
-        })),
-      };
-
-      const payload = {
-        UserName: userData.userEmail,
-        DModelData: convertDataModelToStringData(
-          "SYNM_DMS_DOCUMENT",
-          documentData
-        ),
-      };
-
-      await callSoapService(
+    dispatch(
+      createDocument(
+        file,
+        selectedType,
+        analysisSummary,
+        localQuestions,
         userData.clientURL,
-        "DataModel_CreateDocument",
-        payload
+        userData.userEmail
       )
-        .then((response) => {
-          setSuccessMessage("Document created successfully!");
-          toast({
-            title: "Success",
-            description: "Document created successfully!",
-          });
-        })
-        .catch((error) => {
-          console.error("Error creating document:", error);
-          throw error;
-        });
-    } catch (error) {
-      console.error("Error in handleCreateDocument:", error);
-      setError("Failed to create document. Please try again.");
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to create document. Please try again.",
-      });
-    } finally {
-      setIsCreatingDocument(false);
-    }
+    );
   };
 
   const handleDropdownChange = (e) => {
-    setSelectedType(e.target.value);
+    dispatch(setSelectedType(e.target.value));
     setConfirmationFailed(false);
-    setError("");
-    setSuccessMessage("");
+    dispatch(setError(""));
+    hasFetchedRef.current = false;
   };
 
   return (
@@ -392,17 +195,19 @@ export default function AnalysisSummary({
             variant="ghost"
             onClick={() => setIsAnalysisModalOpen(true)}
             className="text-cyan-600 dark:text-cyan-300 hover:bg-cyan-100 dark:hover:bg-cyan-900/30"
-            disabled={isSubmitting || isGeneratingSummary || isCreatingDocument}
+            disabled={isLoading}
           >
             <SquarePen className="mr-2 h-5 w-5" />
             Edit Analysis
           </Button>
           <Button
             onClick={handleCreateDocument}
-            disabled={isSubmitting || isGeneratingSummary || isCreatingDocument}
+            disabled={
+              isLoading || !selectedType || analysisSummary.length === 0
+            }
             className="bg-cyan-600 hover:bg-cyan-700 text-white"
           >
-            {isCreatingDocument ? (
+            {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Creating...
@@ -414,33 +219,9 @@ export default function AnalysisSummary({
         </div>
       </div>
 
-      {(error || successMessage) && (
-        <Alert
-          variant={error ? "destructive" : "default"}
-          className={`mb-6 ${error ? "" : "border-green-500"}`}
-        >
-          {error ? (
-            <AlertCircle className="h-4 w-4" />
-          ) : (
-            <CheckCircle2 className="h-4 w-4 text-green-500" />
-          )}
-          <AlertTitle>{error ? "Error" : "Success"}</AlertTitle>
-          <AlertDescription>{error || successMessage}</AlertDescription>
-        </Alert>
-      )}
-
-      {isFetchingQuestions && (
-        <div className="text-center py-8">
-          <Loader2 className="mx-auto h-8 w-8 animate-spin text-cyan-600 dark:text-cyan-400" />
-          <p className="text-gray-600 dark:text-slate-400 mt-2">
-            Loading questions for {selectedType}...
-          </p>
-        </div>
-      )}
-
       {analysisSummary.length === 0 &&
         (documentAnalysis?.documentType || showDropdown) &&
-        !isFetchingQuestions && (
+        !isLoading && (
           <Alert
             variant="default"
             className="border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700"
@@ -465,10 +246,10 @@ export default function AnalysisSummary({
                             documentAnalysis.documentType
                           )
                         }
-                        disabled={isSubmitting || isGeneratingSummary}
+                        disabled={isLoading}
                         className="bg-cyan-600 hover:bg-cyan-700 text-white"
                       >
-                        {isSubmitting ? (
+                        {isLoading ? (
                           <>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                             Confirming...
@@ -481,7 +262,7 @@ export default function AnalysisSummary({
                         variant="outline"
                         size="lg"
                         onClick={() => setShowDropdown(true)}
-                        disabled={isSubmitting}
+                        disabled={isLoading}
                         className="border-gray-300 dark:border-slate-600 hover:bg-gray-100 dark:hover:bg-slate-600"
                       >
                         No, select another type
@@ -516,7 +297,7 @@ export default function AnalysisSummary({
                   className="w-full p-3 rounded-lg border border-gray-300 dark:border-slate-600 dark:bg-slate-800 text-gray-800 dark:text-slate-200 focus:ring-2 focus:ring-cyan-500"
                   value={selectedType}
                   onChange={handleDropdownChange}
-                  disabled={isSubmitting || isGeneratingSummary}
+                  disabled={isLoading}
                 >
                   <option value="">-- Select Document Type --</option>
                   {documentTypeOptions.map((type) => (
@@ -528,12 +309,10 @@ export default function AnalysisSummary({
                 <Button
                   size="lg"
                   className="w-full bg-cyan-600 hover:bg-cyan-700 text-white"
-                  disabled={
-                    !selectedType || isSubmitting || isGeneratingSummary
-                  }
+                  disabled={!selectedType || isLoading}
                   onClick={() => handleConfirmDocumentType(selectedType)}
                 >
-                  {isSubmitting ? (
+                  {isLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Submitting...
@@ -547,7 +326,7 @@ export default function AnalysisSummary({
           </Alert>
         )}
 
-      {analysisSummary.length > 0 && !isFetchingQuestions && (
+      {analysisSummary.length > 0 && !isLoading && (
         <div className="space-y-4 mt-6">
           {analysisSummary.map((item, index) => (
             <motion.div
@@ -567,7 +346,7 @@ export default function AnalysisSummary({
       )}
 
       {analysisSummary.length === 0 &&
-        !isFetchingQuestions &&
+        !isLoading &&
         !showDropdown &&
         !documentAnalysis?.documentType && (
           <div className="text-center py-12">
@@ -580,7 +359,7 @@ export default function AnalysisSummary({
             </p>
             <Button
               onClick={() => setShowDropdown(true)}
-              disabled={isGeneratingSummary || isSubmitting}
+              disabled={isLoading}
               className="bg-cyan-600 hover:bg-cyan-700 text-white"
             >
               Select Document Type
@@ -592,9 +371,16 @@ export default function AnalysisSummary({
         isOpen={isAnalysisModalOpen}
         setIsOpen={setIsAnalysisModalOpen}
         generateAnalysisSummary={(questions) =>
-          generateAnalysisSummary(questions, "append")
+          dispatch(
+            generateAnalysisSummary(
+              questions,
+              "append",
+              file,
+              userData.clientURL
+            )
+          )
         }
-        isGeneratingSummary={isGeneratingSummary}
+        isGeneratingSummary={isLoading}
       />
     </div>
   );
