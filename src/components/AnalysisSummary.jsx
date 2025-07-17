@@ -1,3 +1,4 @@
+// components/AnalysisSummary.jsx
 import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -15,11 +16,13 @@ import {
   setError,
 } from "@/app/actions";
 import { callSoapService } from "@/api/callSoapService";
+import DocumentFormModal from "./dialog/DocumentFormModal";
 
 export default function AnalysisSummary() {
   const { userData } = useAuth();
   const { toast } = useToast();
   const dispatch = useDispatch();
+  const formModalRef = useRef(null);
 
   const documentAnalysis = useSelector((state) => state.documentAnalysis);
   const isLoading = useSelector((state) => state.isLoading);
@@ -29,6 +32,7 @@ export default function AnalysisSummary() {
   const successMessage = useSelector((state) => state.successMessage);
   const file = useSelector((state) => state.file);
   const error = useSelector((state) => state.error);
+  const fetchedDocument = useSelector((state) => state.fetchedDocument); // Add fetchedDocument
 
   const [documentTypeOptions, setDocumentTypeOptions] = useState([]);
   const [showDropdown, setShowDropdown] = useState(
@@ -53,10 +57,20 @@ export default function AnalysisSummary() {
     }
   }, [selectedType, file, dispatch, userData.clientURL]);
 
-  // Append localQuestions to analysisSummary, ensuring they appear at the end
+  // Show toast for success message
+  useEffect(() => {
+    if (successMessage) {
+      toast({
+        title: "Success",
+        description: successMessage,
+        variant: "default",
+      });
+    }
+  }, [successMessage, toast]);
+
+  // Append localQuestions to analysisSummary
   useEffect(() => {
     if (localQuestions.length > 0) {
-      // Filter out localQuestions already in analysisSummary to avoid duplicates
       const existingQuestions = new Set(
         analysisSummary.map((item) => item.question)
       );
@@ -155,7 +169,7 @@ export default function AnalysisSummary() {
     }
   };
 
-  const handleCreateDocument = () => {
+  const handleCreateDocument = async () => {
     if (!file) {
       dispatch(setError("No file available to create document"));
       toast({
@@ -165,16 +179,38 @@ export default function AnalysisSummary() {
       });
       return;
     }
-    dispatch(
-      createDocument(
-        file,
-        selectedType,
-        analysisSummary,
-        localQuestions,
-        userData.clientURL,
-        userData.userEmail
-      )
-    );
+
+    try {
+      const { refSeqNo, fetchedDocument } = await dispatch(
+        createDocument(
+          file,
+          selectedType,
+          analysisSummary,
+          localQuestions,
+          userData.clientURL,
+          userData.userEmail
+        )
+      );
+
+      if (fetchedDocument) {
+        // Open the modal with the fetched document
+        formModalRef.current.showModal();
+      } else {
+        dispatch(setError("Failed to fetch document after creation"));
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to fetch document after creation",
+        });
+      }
+    } catch (error) {
+      // Error is already dispatched in createDocument
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to create document",
+      });
+    }
   };
 
   const handleDropdownChange = (e) => {
@@ -381,6 +417,11 @@ export default function AnalysisSummary() {
           )
         }
         isGeneratingSummary={isLoading}
+      />
+
+      <DocumentFormModal
+        formModalRef={formModalRef}
+        selectedDocument={fetchedDocument} // Use fetchedDocument, fallback to hardcoded
       />
     </div>
   );

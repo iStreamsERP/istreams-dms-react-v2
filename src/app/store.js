@@ -12,6 +12,7 @@ const initialState = {
   error: "",
   file: null,
   successMessage: "",
+  fetchedDocument: null,
 };
 
 const reducer = (state = initialState, action) => {
@@ -53,6 +54,8 @@ const reducer = (state = initialState, action) => {
       return { ...state, localQuestions: [] };
     case "SET_SUCCESS_MESSAGE":
       return { ...state, successMessage: action.payload };
+    case "SET_FETCHED_DOCUMENT":
+      return { ...state, fetchedDocument: action.payload };
     default:
       return state;
   }

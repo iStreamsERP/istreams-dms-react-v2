@@ -1,4 +1,3 @@
-
 //app/actions.js
 import axios from "axios";
 import { callSoapService } from "@/api/callSoapService";
@@ -47,6 +46,16 @@ export const setLoading = (isLoading) => ({
 export const setError = (error) => ({
   type: "SET_ERROR",
   payload: error,
+});
+
+export const setSuccessMessage = (message) => ({
+  type: "SET_SUCCESS_MESSAGE",
+  payload: message,
+});
+
+export const setFetchedDocument = (document) => ({
+  type: "SET_FETCHED_DOCUMENT",
+  payload: document,
 });
 
 export const clearLocalQuestions = () => ({
@@ -158,8 +167,6 @@ export const fetchQuestionsAndGenerateSummary =
         return;
       }
 
-      console.log(qaResponse);
-
       const questions = qaResponse
         .map((item) => item.QUESTION_FOR_AI?.trim().toLowerCase())
         .filter(Boolean);
@@ -221,7 +228,7 @@ export const createDocument =
       // Create SYNM_DMS_MASTER record
       const documentData = {
         REF_SEQ_NO: -1,
-        DOCUMENT_DESCRIPTION: selectedType,
+        DOC_RELATED_CATEGORY: selectedType,
         USER_NAME: userEmail,
         ENT_DATE: "",
       };
@@ -264,7 +271,6 @@ export const createDocument =
 
         await callSoapService(clientURL, "DataModel_SaveData", questionPayload);
       }
-      console.log(allQuestions);
 
       let serialCounter = 1;
       // Save to SYNM_DMS_DOC_VALUES
@@ -288,10 +294,15 @@ export const createDocument =
 
         await callSoapService(clientURL, "DataModel_SaveData", answerPayload);
       }
+      // Fetch SYNM_DMS_MASTER with refSeqNo
+      const fetchedDocument = await dispatch(
+        fetchDocsMaster(refSeqNo, clientURL)
+      );
 
       dispatch(clearLocalQuestions());
       dispatch(setAnalysisSummary([]));
       dispatch(setSuccessMessage("Document created successfully"));
+      return { refSeqNo, fetchedDocument };
     } catch (error) {
       dispatch(setError("Failed to create document"));
       console.error("Error creating document:", error);
@@ -300,8 +311,24 @@ export const createDocument =
     }
   };
 
+export const fetchDocsMaster = (refSeqNo, clientURL) => async (dispatch) => {
+  try {
+    const response = await callSoapService(clientURL, "DataModel_GetData", {
+      DataModelName: "SYNM_DMS_MASTER",
+      WhereCondition: `REF_SEQ_NO = ${refSeqNo}`,
+      Orderby: "",
+    });
+
+    dispatch(setFetchedDocument(response[0] || null));
+    return response[0] || null; // Return the fetched document
+  } catch (error) {
+    dispatch(setError("Failed to fetch docs master"));
+    console.error("Error fetching docs master:", error);
+    throw error;
+  }
+};
+
 export const setFile = (file) => ({
   type: "SET_FILE",
   payload: file,
 });
-
