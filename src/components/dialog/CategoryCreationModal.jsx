@@ -18,6 +18,7 @@ import { convertDataModelToStringData } from "@/utils/dataModelConverter";
 import { Loader2, Plus, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "../ui/textarea";
 
 export function CategoryCreationModal({ mode, selectedItem, onSuccess }) {
   const { userData } = useAuth();
@@ -30,11 +31,7 @@ export function CategoryCreationModal({ mode, selectedItem, onSuccess }) {
     CATEGORY_NAME: "",
     DISPLAY_NAME: "",
     MODULE_NAME: "",
-    IS_DEFAULT_COLUMN: "",
-    ATTACHMENT_LIMIT_IN_KB: "",
-    PATH_FOR_LAN: "",
-    PATH_FOR_REMOTE: "",
-    IS_FILE_STORAGE: "",
+    SEARCH_TAGS: "",
   };
 
   const [formData, setFormData] = useState(initialFormData);
@@ -61,8 +58,12 @@ export function CategoryCreationModal({ mode, selectedItem, onSuccess }) {
 
   const handleInputChange = (event) => {
     const { name, value } = event.target;
-    const sanitizedValue = value.replace(/[^a-zA-Z0-9\s_]/g, "");
-    setFormData((prev) => ({ ...prev, [name]: sanitizedValue }));
+    if (name === "SEARCH_TAGS") {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    } else {
+      const sanitizedValue = value.replace(/[^a-zA-Z0-9\s_]/g, "");
+      setFormData((prev) => ({ ...prev, [name]: sanitizedValue }));
+    }
   };
 
   const handleSelectChange = (name, value) => {
@@ -281,11 +282,11 @@ export function CategoryCreationModal({ mode, selectedItem, onSuccess }) {
       ) : (
         <form
           onSubmit={handleSubmit}
-          className="flex flex-col md:justify-between max-h-[80vh] md:max-h-full overflow-y-auto md:overflow-hidden"
+          className="flex flex-col md:justify-between max-h-[95vh] md:max-h-full overflow-y-auto"
         >
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Left Column - Category Form */}
-            <div className="space-y-4 col-span-1">
+            <div className="space-y-2 col-span-1 p-1">
               <div>
                 <h1 className="text-lg font-medium">
                   {mode === "edit" ? "Edit" : "Create"} Category
@@ -298,7 +299,7 @@ export function CategoryCreationModal({ mode, selectedItem, onSuccess }) {
                 </h6>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-1">
                 <Label htmlFor="CATEGORY_NAME">Category Name *</Label>
                 <Input
                   id="CATEGORY_NAME"
@@ -310,7 +311,7 @@ export function CategoryCreationModal({ mode, selectedItem, onSuccess }) {
                 />
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-1">
                 <Label htmlFor="DISPLAY_NAME">Display Name *</Label>
                 <Input
                   id="DISPLAY_NAME"
@@ -322,7 +323,7 @@ export function CategoryCreationModal({ mode, selectedItem, onSuccess }) {
                 />
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-1">
                 <Label htmlFor="MODULE_NAME">Module Name *</Label>
                 <Select
                   value={formData.MODULE_NAME}
@@ -348,10 +349,26 @@ export function CategoryCreationModal({ mode, selectedItem, onSuccess }) {
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="space-y-1">
+                <Label htmlFor="SEARCH_TAGS">Search Tags</Label>
+                <Textarea
+                  id="SEARCH_TAGS"
+                  name="SEARCH_TAGS"
+                  value={formData.SEARCH_TAGS}
+                  onChange={handleInputChange}
+                  placeholder="Enter comma-separated search tags"
+                  className="w-full min-h-[30px]"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Use commas to separate tags (e.g., invoice, bill) to
+                  enhance AI analysis.
+                </p>
+              </div>
             </div>
 
             {/* Right Column - AI Questions (Scrollable) */}
-            <div className="space-y-4 col-span-2">
+            <div className="space-y-2 col-span-2">
               <div className="flex items-center gap-4">
                 <h2 className="text-lg font-medium">User input Prompts</h2>
                 <Button
@@ -365,11 +382,11 @@ export function CategoryCreationModal({ mode, selectedItem, onSuccess }) {
                 </Button>
               </div>
 
-              <div className="space-y-4 h-full md:max-h-[400px] overflow-y-auto pr-2">
+              <div className="space-y-2 h-full md:max-h-[400px] overflow-y-auto pr-2">
                 {aiFormDataList.map((aiItem, index) => (
                   <div
                     key={aiItem.REF_SERIAL_NO}
-                    className="border rounded-lg p-4 "
+                    className="border rounded-lg p-2"
                   >
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex items-center gap-2">
@@ -388,7 +405,7 @@ export function CategoryCreationModal({ mode, selectedItem, onSuccess }) {
                       )}
                     </div>
 
-                    <div className="space-y-3">
+                    <div className="space-y-1">
                       <div>
                         <div className="flex items-center gap-2 mb-1">
                           <Label htmlFor={`refkey-${index}`}>
@@ -439,7 +456,7 @@ export function CategoryCreationModal({ mode, selectedItem, onSuccess }) {
             </div>
           </div>
 
-          <DialogFooter className="mt-6">
+          <DialogFooter className="mt-2">
             <Button
               type="submit"
               className="w-full md:w-auto"

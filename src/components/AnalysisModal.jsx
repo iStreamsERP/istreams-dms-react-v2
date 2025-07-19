@@ -9,15 +9,28 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, ClipboardCheck } from "lucide-react";
+import { useState } from "react";
 
 export default function AnalysisModal({
   isOpen,
   setIsOpen,
-  analysisQuestion,
-  setAnalysisQuestion,
   generateAnalysisSummary,
-  isGeneratingSummary
+  isGeneratingSummary,
 }) {
+  const [analysisQuestion, setAnalysisQuestion] = useState("");
+
+  const handleGenerateSummary = async () => {
+    // Split by new lines to handle multiple questions
+    const questions = analysisQuestion
+      .split("\n")
+      .map((q) => q.trim())
+      .filter((q) => q !== "");
+
+    await generateAnalysisSummary(questions);
+    setAnalysisQuestion("");
+    setIsOpen(false);
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogContent className="bg-white dark:bg-slate-800">
@@ -27,26 +40,23 @@ export default function AnalysisModal({
             Generate Analysis Summary
           </DialogTitle>
           <DialogDescription>
-            Enter your question to generate the analysis summary
+            Enter your questions (one per line) to generate the analysis summary
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="space-y-4">
           <Textarea
             value={analysisQuestion}
             onChange={(e) => setAnalysisQuestion(e.target.value)}
-            placeholder="What would you like to know about this document?"
+            placeholder="Enter your questions, one per line"
             className="min-h-[150px]"
           />
           <div className="flex justify-end gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setIsOpen(false)}
-            >
+            <Button variant="outline" onClick={() => setIsOpen(false)}>
               Cancel
             </Button>
             <Button
-              onClick={generateAnalysisSummary}
+              onClick={handleGenerateSummary}
               disabled={isGeneratingSummary || !analysisQuestion.trim()}
             >
               {isGeneratingSummary ? (

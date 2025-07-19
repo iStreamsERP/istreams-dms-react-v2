@@ -1,4 +1,3 @@
-// components/DocumentPreview.jsx
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "./ui/button";
@@ -7,10 +6,16 @@ export default function DocumentPreview({
   file,
   previewUrl,
   activeTab,
-  translatedContent,
+  documentAnalysis,
   isLoadingTranslation,
 }) {
-  if (!file) return null;
+  if (!file || !previewUrl) {
+    return (
+      <div className="p-4 text-center text-gray-700 dark:text-slate-300">
+        No file selected for preview. Please upload a file.
+      </div>
+    );
+  }
 
   const mimeType = file.type;
 
@@ -23,8 +28,9 @@ export default function DocumentPreview({
       return (
         <iframe
           src={previewUrl}
-          className="w-full h-full"
+          className="w-full h-full min-h-[500px]"
           title="PDF Preview"
+          onError={() => console.error("Failed to load PDF")}
         />
       );
     }
@@ -32,7 +38,7 @@ export default function DocumentPreview({
     return (
       <div className="p-4 text-center">
         <p className="text-gray-700 dark:text-slate-300 mb-2">
-          Preview not supported for this file type.
+          Preview not supported for this file type ({mimeType}). Supported types: Images (JPEG, PNG), PDF.
         </p>
         <a
           href={previewUrl}
@@ -54,9 +60,9 @@ export default function DocumentPreview({
             <Loader2 className="w-8 h-8 text-cyan-500 dark:text-cyan-400 animate-spin" />
             <span className="ml-2">Translating document...</span>
           </div>
-        ) : translatedContent ? (
+        ) : documentAnalysis?.translatedResponse ? (
           <pre className="whitespace-pre-wrap font-sans">
-            {translatedContent}
+            {documentAnalysis.translatedResponse}
           </pre>
         ) : (
           <div className="text-gray-500 dark:text-slate-400 italic text-center py-8">
@@ -73,7 +79,8 @@ export default function DocumentPreview({
 const ImagePreview = ({ previewUrl }) => {
   const [zoom, setZoom] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
-  
+  const [error, setError] = useState(null);
+
   const handleZoom = (e) => {
     e.preventDefault();
     const delta = e.deltaY * -0.01;
@@ -86,24 +93,33 @@ const ImagePreview = ({ previewUrl }) => {
   };
 
   return (
-    <div 
+    <div
       className="w-full h-full overflow-hidden relative"
       onWheel={handleZoom}
     >
-      <div className="absolute bottom-4 right-4 z-10 flex gap-2">
-        <Button variant="outline" onClick={resetZoom}>
-          Reset Zoom
-        </Button>
-        <div className="bg-white/80 px-3 py-1 rounded-md text-xs">
-          Zoom: {Math.round(zoom * 100)}%
+      {error ? (
+        <div className="p-4 text-center text-red-500">
+          Failed to load image: {error}
         </div>
-      </div>
-      <img
-        src={previewUrl}
-        alt="Preview"
-        className="w-full h-full object-contain"
-        style={{ transform: `scale(${zoom})` }}
-      />
+      ) : (
+        <>
+          <div className="absolute bottom-4 right-4 z-10 flex gap-2">
+            <Button variant="outline" onClick={resetZoom}>
+              Reset Zoom
+            </Button>
+            <div className="bg-white/80 px-3 py-1 rounded-md text-xs">
+              Zoom: {Math.round(zoom * 100)}%
+            </div>
+          </div>
+          <img
+            src={previewUrl}
+            alt="Preview"
+            className="w-full h-full object-contain"
+            style={{ transform: `scale(${zoom})` }}
+            onError={() => setError("Unable to load image")}
+          />
+        </>
+      )}
     </div>
   );
 };

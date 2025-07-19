@@ -62,30 +62,15 @@ const DocumentFormModal = ({
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [categoryList, setCategoryList] = useState([]);
-  // const [dmsMasterData, setDmsMasterData] = useState([]);
-
   const [existingDocs, setExistingDocs] = useState([]);
   const [isLoadingDocs, setIsLoadingDocs] = useState(false);
   const [isReadOnly, setIsReadOnly] = useState(false);
-
   const [showRejectModal, setShowRejectModal] = useState(false);
-
   const [dynamicFields, setDynamicFields] = useState([]);
   const [isLoadingDynamicFields, setIsLoadingDynamicFields] = useState(false);
-
-  const [vendorData, setVendorData] = useState({
-    list: [],
-    selectedVendor: null,
-  });
-
-  const [clientData, setClientData] = useState({
-    list: [],
-    selectedClient: null,
-  });
-
   const [currentPreviewUrl, setCurrentPreviewUrl] = useState(null);
 
-  // Set the input fields based on the document mode
+  // Set read-only based on document mode
   useEffect(() => {
     if (docMode === "view" || docMode === "verify") {
       setIsReadOnly(true);
@@ -94,6 +79,7 @@ const DocumentFormModal = ({
     }
   }, [docMode]);
 
+  // Populate form with selected document data
   useEffect(() => {
     if (selectedDocument && selectedDocument.REF_SEQ_NO !== -1) {
       const convertedExpiryDate = convertServiceDate(
@@ -105,27 +91,26 @@ const DocumentFormModal = ({
         ...selectedDocument,
         EXPIRY_DATE: convertedExpiryDate,
       }));
+    } else {
+      setFormData(initialFormState);
     }
   }, [selectedDocument, userData.userName]);
 
+  // Fetch category list on component mount
   useEffect(() => {
     fetchCategoryList();
-    // fetchDmsMasterDataModel();
   }, []);
 
-  // Fetch category list on component mount
   const fetchCategoryList = async () => {
     try {
       const payload = {
         UserName: userData.userName,
       };
-
       const response = await callSoapService(
         userData.clientURL,
         "DMS_Get_Allowed_DocCategories",
         payload
       );
-
       setCategoryList(response || []);
     } catch (err) {
       toast({
@@ -136,6 +121,11 @@ const DocumentFormModal = ({
     }
   };
 
+
+  console.log(selectedDocument);
+  
+
+  // Fetch existing documents
   useEffect(() => {
     fetchExistingDocument();
   }, [selectedDocument?.REF_SEQ_NO, userData.userEmail]);
@@ -149,13 +139,11 @@ const DocumentFormModal = ({
         WhereCondition: `REF_SEQ_NO = ${selectedDocument.REF_SEQ_NO}`,
         Orderby: "",
       };
-
       const response = await callSoapService(
         userData.clientURL,
         "DataModel_GetData",
         payload
       );
-
       setExistingDocs(response || []);
     } catch (err) {
       toast({
@@ -168,16 +156,32 @@ const DocumentFormModal = ({
     }
   };
 
+  // Fetch dynamic fields from SYNM_DMS_DOC_VALUES based on selected category
   useEffect(() => {
-    loadInitialDynamicFields();
-  }, [selectedDocument?.DOC_RELATED_CATEGORY]);
-
-  const loadInitialDynamicFields = async () => {
-    if (selectedDocument?.DOC_RELATED_CATEGORY) {
+    const fetchDynamicFields = async () => {
+      if (!formData.DOC_RELATED_CATEGORY) {
+        setDynamicFields([]);
+        return;
+      }
       try {
         setIsLoadingDynamicFields(true);
+        let sqlQuery;
+
+        // Case 1: New document (selectedDocument is undefined or REF_SEQ_NO is undefined or -1)
+        if (
+          !selectedDocument ||
+          selectedDocument.REF_SEQ_NO === undefined ||
+          selectedDocument.REF_SEQ_NO === -1
+        ) {
+          // Fetch REF_KEY from SYNM_DMS_DOC_CATG_QA for the selected category
+          sqlQuery = `SELECT DISTINCT REF_KEY FROM SYNM_DMS_DOC_CATG_QA WHERE CATEGORY_NAME = '${formData.DOC_RELATED_CATEGORY}'`;
+        } else {
+          // Case 2: Existing document with a valid REF_SEQ_NO
+          sqlQuery = `SELECT REF_KEY, REF_VALUE FROM SYNM_DMS_DOC_VALUES WHERE CATEGORY_NAME = '${formData.DOC_RELATED_CATEGORY}' AND REF_SEQ_NO = ${selectedDocument.REF_SEQ_NO}`;
+        }
+
         const payload = {
-          SQLQuery: `SELECT INCLUDE_CUSTOM_COLUMNS FROM SYNM_DMS_DOC_CATEGORIES WHERE CATEGORY_NAME = '${selectedDocument.DOC_RELATED_CATEGORY}'`,
+          SQLQuery: sqlQuery,
         };
 
         const response = await callSoapService(
@@ -186,157 +190,58 @@ const DocumentFormModal = ({
           payload
         );
 
-        const commaText = response[0]?.INCLUDE_CUSTOM_COLUMNS || "";
-        const fields = commaText
-          .split(",")
-          .map((col) => col.trim())
-          .filter((col) => col !== "")
-          .map((col) => ({
-            COLUMN_NAME: col,
-            COLUMN_LABEL: col
-              .replace(/_/g, " ")
-              .replace(/\b\w/g, (c) => c.toUpperCase()),
-            INPUT_TYPE: "text",
-            REQUIRED: true,
-          }));
+        const fields = (response || []).map((item) => ({
+          COLUMN_NAME: item.REF_KEY,
+          COLUMN_LABEL: item.REF_KEY.replace(/_/g, " ").replace(/\b\w/g, (c) =>
+            c.toUpperCase()
+          ),
+          INPUT_TYPE: "text",
+          REQUIRED: true,
+          VALUE:
+            !selectedDocument ||
+            selectedDocument.REF_SEQ_NO === undefined ||
+            selectedDocument.REF_SEQ_NO === -1
+              ? ""
+              : item.REF_VALUE || "",
+        }));
 
         setDynamicFields(fields);
-
         setFormData((prev) => ({
           ...prev,
-          ...dynamicFields.reduce(
+          ...fields.reduce(
             (acc, field) => ({
               ...acc,
-              [field.COLUMN_NAME]: selectedDocument[field.COLUMN_NAME] || "",
+              [field.COLUMN_NAME]:
+                selectedDocument?.[field.COLUMN_NAME] || field.VALUE || "",
             }),
             {}
           ),
         }));
       } catch (error) {
-        console.error("Error loading initial dynamic fields:", error);
+        console.error("Error fetching dynamic fields:", error);
         setDynamicFields([]);
+        toast({
+          title: "Error",
+          description: "Failed to load dynamic fields.",
+          variant: "destructive",
+        });
       } finally {
         setIsLoadingDynamicFields(false);
       }
-    }
-  };
+    };
 
-  const fetchVendorData = useCallback(async () => {
-    try {
-      const payload = {
-        SQLQuery: `SELECT VENDOR_ID, VENDOR_NAME FROM VENDOR_MASTER`,
-      };
+    fetchDynamicFields();
+  }, [
+    formData.DOC_RELATED_CATEGORY,
+    selectedDocument,
+    userData.clientURL,
+    toast,
+  ]);
 
-      const response = await callSoapService(
-        userData.clientURL,
-        "DataModel_GetDataFrom_Query",
-        payload
-      );
-
-      setVendorData({
-        list: response || [],
-        selectedVendor: null,
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error,
-        variant: "destructive",
-      });
-    }
-  }, [userData.userEmail, userData.clientURL, toast]);
-
-  const fetchClientData = useCallback(async () => {
-    try {
-      const payload = {
-        SQLQuery: `SELECT CLIENT_ID, CLIENT_NAME FROM CLIENT_MASTER`,
-      };
-
-      const response = await callSoapService(
-        userData.clientURL,
-        "DataModel_GetDataFrom_Query",
-        payload
-      );
-
-      setClientData({
-        list: response || [],
-        selectedVendor: null,
-      });
-    } catch (error) {
-      toast({
-        title: "Failed to ",
-        description: error,
-        variant: "destructive",
-      });
-    }
-  }, [userData.userEmail, userData.clientURL, toast]);
-
-  useEffect(() => {
-    const hasVendorField = dynamicFields.some(
-      (f) =>
-        f.COLUMN_NAME === "X_VENDOR_ID" || f.COLUMN_NAME === "X_VENDOR_NAME"
-    );
-    const hasClientField = dynamicFields.some(
-      (f) =>
-        f.COLUMN_NAME === "X_CLIENT_ID" || f.COLUMN_NAME === "X_CLIENT_NAME"
-    );
-
-    if (hasVendorField) fetchVendorData();
-    if (hasClientField) fetchClientData();
-  }, [dynamicFields, fetchVendorData, fetchClientData]);
-
-  const handleCategoryChange = async (e) => {
+  const handleCategoryChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     setErrors((prev) => ({ ...prev, [name]: "" }));
-
-    try {
-      const payload = {
-        SQLQuery: `SELECT INCLUDE_CUSTOM_COLUMNS FROM SYNM_DMS_DOC_CATEGORIES WHERE CATEGORY_NAME = '${value}'`,
-      };
-
-      const response = await callSoapService(
-        userData.clientURL,
-        "DataModel_GetDataFrom_Query",
-        payload
-      );
-
-      const raw = Array.isArray(response) ? response : response?.Data || [];
-      const commaText = raw[0]?.INCLUDE_CUSTOM_COLUMNS || "";
-
-      const fields = commaText
-        .split(",")
-        .map((col) => col.trim())
-        .filter((col) => col !== "")
-        .map((col) => {
-          const cleanCol = col.replace(/^X_/, ""); // Remove 'X_' prefix
-          const label = cleanCol
-            .toLowerCase() // Convert everything to lowercase
-            .replace(/_/g, " ") // Replace underscores with spaces
-            .replace(/\b\w/g, (c) => c.toUpperCase()); // Capitalize first letter of each word
-
-          return {
-            COLUMN_NAME: col,
-            COLUMN_LABEL: label,
-            INPUT_TYPE: "text",
-            REQUIRED: true,
-          };
-        });
-
-      setDynamicFields(fields);
-
-      setFormData((prev) => ({
-        ...prev,
-        // Preserve existing dynamic field values that are being replaced
-        ...fields.reduce((acc, field) => {
-          acc[field.COLUMN_NAME] = prev[field.COLUMN_NAME] || "";
-          return acc;
-        }, {}),
-      }));
-    } catch (error) {
-      console.error("Error fetching category-specific fields:", error);
-      setDynamicFields([]);
-    }
   };
 
   // Validate required fields
@@ -350,72 +255,12 @@ const DocumentFormModal = ({
       newErrors.DOC_RELATED_TO = "Related To is required";
     if (!formData.DOC_RELATED_CATEGORY.trim())
       newErrors.DOC_RELATED_CATEGORY = "Related Category is required";
-    // dynamicFields.forEach((field) => {
-    //   if (field.REQUIRED && !formData[field.COLUMN_NAME]?.trim()) {
-    //     newErrors[field.COLUMN_NAME] = `${field.COLUMN_LABEL} is required`;
-    //   }
-    // });
     return newErrors;
   };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-
-    setFormData((prev) => {
-      // start with whatever field just changed
-      const next = { ...prev, [name]: value };
-
-      // if it’s a vendor field, find that vendor and sync both ID+NAME
-      if (name === "X_VENDOR_ID" || name === "X_VENDOR_NAME") {
-        const selectedVendor =
-          name === "X_VENDOR_ID"
-            ? vendorData.list.find((v) => v.VENDOR_ID === Number(value))
-            : vendorData.list.find((v) => v.VENDOR_NAME === value);
-
-        next.X_VENDOR_ID = selectedVendor?.VENDOR_ID?.toString() || "";
-        next.X_VENDOR_NAME = selectedVendor?.VENDOR_NAME || "";
-      }
-
-      // if it’s a client field, do the same for client
-      if (name === "X_CLIENT_ID" || name === "X_CLIENT_NAME") {
-        const selectedClient =
-          name === "X_CLIENT_ID"
-            ? clientData.list.find((c) => c.CLIENT_ID === Number(value))
-            : clientData.list.find((c) => c.CLIENT_NAME === value);
-
-        next.X_CLIENT_ID = selectedClient?.CLIENT_ID?.toString() || "";
-        next.X_CLIENT_NAME = selectedClient?.CLIENT_NAME || "";
-      }
-
-      return next;
-    });
-
-    // also keep your vendorData.selectedVendor / clientData.selectedClient in sync
-    if (name === "X_VENDOR_ID" || name === "X_VENDOR_NAME") {
-      const selectedVendor =
-        name === "X_VENDOR_ID"
-          ? vendorData.list.find((v) => v.VENDOR_ID === Number(value))
-          : vendorData.list.find((v) => v.VENDOR_NAME === value);
-
-      setVendorData((prev) => ({
-        ...prev,
-        selectedVendor: selectedVendor || null,
-      }));
-    }
-
-    if (name === "X_CLIENT_ID" || name === "X_CLIENT_NAME") {
-      const selectedClient =
-        name === "X_CLIENT_ID"
-          ? clientData.list.find((c) => c.CLIENT_ID === Number(value))
-          : clientData.list.find((c) => c.CLIENT_NAME === value);
-
-      setClientData((prev) => ({
-        ...prev,
-        selectedClient: selectedClient || null,
-      }));
-    }
-
-    // clear any validation error
+    setFormData((prev) => ({ ...prev, [name]: value }));
     setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
@@ -426,18 +271,14 @@ const DocumentFormModal = ({
         WhereCondition: `REF_SEQ_NO = ${selectedDocs.REF_SEQ_NO} AND SERIAL_NO = ${selectedDocs.SERIAL_NO}`,
         Orderby: "",
       };
-
       const response = await callSoapService(
         userData.clientURL,
         "DataModel_GetData",
         payload
       );
-
       if (!response?.length) {
         throw new Error("No documents found.");
       }
-
-      // Since only one document is expected, take the first result.
       const doc = response[0];
       if (Array.isArray(doc.DOC_DATA)) {
         const blob = new Blob([new Uint8Array(doc.DOC_DATA)], {
@@ -463,7 +304,6 @@ const DocumentFormModal = ({
   };
 
   const handlePreview = useCallback((doc) => {
-    // Convert DOC_DATA to Blob URL
     const byteArray = new Uint8Array(doc.DOC_DATA);
     const mimeType =
       {
@@ -475,11 +315,10 @@ const DocumentFormModal = ({
         ppt: "application/vnd.ms-powerpoint",
         xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         xls: "application/vnd.ms-excel",
-        docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        docx: "applicationsqapplication/vnd.openxmlformats-officedocument.wordprocessingml.document",
         doc: "application/msword",
         webp: "image/webp",
       }[doc.DOC_EXT.toLowerCase()] || "application/octet-stream";
-
     const blob = new Blob([byteArray], { type: mimeType });
     const url = URL.createObjectURL(blob);
     setCurrentPreviewUrl(url);
@@ -491,26 +330,28 @@ const DocumentFormModal = ({
         USER_NAME: userData.userName,
         REF_SEQ_NO: selectedDocument.REF_SEQ_NO,
       };
-
       const response = await callSoapService(
         userData.clientURL,
         "DMS_Update_VerifiedBy",
         payload
       );
-
       if (response === "SUCCESS") {
         onSuccess(selectedDocument.REF_SEQ_NO, userData.userName);
       }
     } catch (error) {
       console.error("Verification failed:", error);
+      toast({
+        title: "Error",
+        description: "Verification failed.",
+        variant: "destructive",
+      });
     }
   };
 
-  const handleReject = async () => {
+  const handleReject = () => {
     setShowRejectModal(true);
   };
 
-  // Once the RejectModal is mounted, open it automatically
   useEffect(() => {
     if (showRejectModal && rejectModalRef.current) {
       rejectModalRef.current.showModal();
@@ -519,10 +360,8 @@ const DocumentFormModal = ({
 
   const canCurrentUserEdit = (doc) => {
     if (!doc) return "";
-
     if (doc?.USER_NAME !== userData.userName)
-      return "Access Denied:This document is created by another user.";
-
+      return "Access Denied: This document is created by another user.";
     const status = doc?.DOCUMENT_STATUS?.toUpperCase();
     if (status === "VERIFIED")
       return "Access Denied: Document is verified and approved.";
@@ -537,51 +376,42 @@ const DocumentFormModal = ({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     const editError = canCurrentUserEdit(selectedDocument);
     if (editError) {
       alert(editError);
       return;
     }
-
     const formErrors = validateForm();
     if (Object.keys(formErrors).length > 0) {
       setErrors(formErrors);
       return;
     }
     setIsSubmitting(true);
-
     try {
       const convertedDataModel = convertDataModelToStringData(
         "SYNM_DMS_MASTER",
         formData
       );
-
       const payload = {
         UserName: userData.userEmail,
         DModelData: convertedDataModel,
       };
-
       const response = await callSoapService(
         userData.clientURL,
         "DataModel_SaveData",
         payload
       );
-
-      // Reset form but retain the next reference number
       toast({
         title: "Success",
         description: response,
       });
-
       if (onUploadSuccess) onUploadSuccess();
-
       formModalRef.current?.close();
       setFormData(initialFormState);
     } catch (error) {
       toast({
         title: "Error",
-        description: error,
+        description: error.message || "Failed to save document.",
         variant: "destructive",
       });
     } finally {
@@ -602,7 +432,6 @@ const DocumentFormModal = ({
           aria-hidden="true"
           style={{ isolation: "isolate" }}
         />
-
         <div className="fixed inset-0 flex items-center justify-center p-4 z-50">
           <div className="bg-white shadow-xl dark:bg-slate-950 text-gray-900 dark:text-gray-100 p-6 rounded-lg w-full max-w-5xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between gap-2">
@@ -612,7 +441,6 @@ const DocumentFormModal = ({
                   {formData.REF_SEQ_NO === -1 ? "(New)" : formData.REF_SEQ_NO}
                 </span>
               </h3>
-
               <button
                 className="text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
                 onClick={() => formModalRef.current.close()}
@@ -621,16 +449,14 @@ const DocumentFormModal = ({
                 <X className="h-4 w-4" />
               </button>
             </div>
-
             <Separator className="my-4" />
-
             <form
               onSubmit={handleSubmit}
               id="document-form"
               name="document-form"
             >
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Left Side - Document Form */}
+                {/* Left Side - Document Form and Others Details */}
                 <div className="col-span-3 lg:col-span-2">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Document Number */}
@@ -657,7 +483,6 @@ const DocumentFormModal = ({
                         </p>
                       )}
                     </div>
-
                     {/* Document Name */}
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-sm">
@@ -681,25 +506,18 @@ const DocumentFormModal = ({
                         </p>
                       )}
                     </div>
-
                     {/* Related To */}
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-sm">
                         <Link className="h-4 w-4 text-gray-600" />
                         <Label htmlFor="DOC_RELATED_TO">Related To</Label>
                       </div>
-
                       <select
                         name="DOC_RELATED_TO"
                         value={formData.DOC_RELATED_TO}
                         onChange={handleChange}
                         disabled={isReadOnly}
-                        className="w-full rounded-md border border-gray-300 p-2 text-sm
-            focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-            dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100
-            dark:focus:ring-blue-400 dark:focus:border-blue-600
-            transition-colors disabled:opacity-50 disabled:cursor-not-allowed
-            dark:disabled:text-gray-400"
+                        className="w-full rounded-md border border-gray-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:focus:ring-blue-400 dark:focus:border-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed dark:disabled:text-gray-400"
                       >
                         <option
                           value=""
@@ -733,14 +551,12 @@ const DocumentFormModal = ({
                           </option>
                         </optgroup>
                       </select>
-
                       {errors.DOC_RELATED_TO && (
                         <p className="text-red-500 text-sm">
                           {errors.DOC_RELATED_TO}
                         </p>
                       )}
                     </div>
-
                     {/* Related Category */}
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-sm">
@@ -749,18 +565,12 @@ const DocumentFormModal = ({
                           Related Category
                         </label>
                       </div>
-
                       <select
                         name="DOC_RELATED_CATEGORY"
                         value={formData.DOC_RELATED_CATEGORY}
                         onChange={handleCategoryChange}
                         disabled={isReadOnly}
-                        className="w-full rounded-md border border-gray-300 p-2 text-sm
-            focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-            dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100
-            dark:focus:ring-blue-400 dark:focus:border-blue-600
-            transition-colors disabled:opacity-50 disabled:cursor-not-allowed
-            dark:disabled:text-gray-400"
+                        className="w-full rounded-md border border-gray-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:focus:ring-blue-400 dark:focus:border-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed dark:disabled:text-gray-400"
                       >
                         <option
                           value=""
@@ -789,119 +599,12 @@ const DocumentFormModal = ({
                           )}
                         </optgroup>
                       </select>
-
                       {errors.DOC_RELATED_CATEGORY && (
                         <p className="text-red-500 text-sm">
                           {errors.DOC_RELATED_CATEGORY}
                         </p>
                       )}
                     </div>
-
-                    {isLoadingDynamicFields ? (
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                    ) : (
-                      dynamicFields.map((field) => {
-                        if (
-                          field.COLUMN_NAME === "X_VENDOR_ID" ||
-                          field.COLUMN_NAME === "X_CLIENT_ID"
-                        ) {
-                          return null;
-                        } else if (field.COLUMN_NAME === "X_VENDOR_NAME") {
-                          return (
-                            <div key={field.COLUMN_NAME} className="space-y-2">
-                              <div className="flex items-center gap-2 text-sm">
-                                <FileText className="h-4 w-4 text-gray-600" />
-                                <Label htmlFor={field.COLUMN_NAME}>
-                                  {field.COLUMN_LABEL}
-                                  {field.REQUIRED && (
-                                    <span className="text-red-500 ml-1">*</span>
-                                  )}
-                                </Label>
-                              </div>
-                              <select
-                                name={field.COLUMN_NAME}
-                                id={field.COLUMN_NAME}
-                                value={formData[field.COLUMN_NAME] || ""}
-                                onChange={handleChange}
-                                disabled={isReadOnly}
-                                className="w-full rounded-md border border-gray-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
-                              >
-                                <option value="">
-                                  Select {field.COLUMN_LABEL}
-                                </option>
-                                {vendorData.list.map((vendor, index) => (
-                                  <option
-                                    key={`${vendor.VENDOR_ID}-${index}`}
-                                    value={vendor.VENDOR_NAME}
-                                  >
-                                    {vendor.VENDOR_NAME}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                          );
-                        } else if (field.COLUMN_NAME === "X_CLIENT_NAME") {
-                          return (
-                            <div key={field.COLUMN_NAME} className="space-y-2">
-                              <div className="flex items-center gap-2 text-sm">
-                                <FileText className="h-4 w-4 text-gray-600" />
-                                <Label htmlFor={field.COLUMN_NAME}>
-                                  {field.COLUMN_LABEL}
-                                  {field.REQUIRED && (
-                                    <span className="text-red-500 ml-1">*</span>
-                                  )}
-                                </Label>
-                              </div>
-                              <select
-                                name={field.COLUMN_NAME}
-                                id={field.COLUMN_NAME}
-                                value={formData[field.COLUMN_NAME] || ""}
-                                onChange={handleChange}
-                                disabled={isReadOnly}
-                                className="w-full rounded-md border border-gray-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
-                              >
-                                <option value="">
-                                  Select {field.COLUMN_LABEL}
-                                </option>
-                                {clientData.list.map((client, index) => (
-                                  <option
-                                    key={`${client.CLIENT_NAME}-${index}`}
-                                    value={client.CLIENT_NAME}
-                                  >
-                                    {client.CLIENT_NAME}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                          );
-                        } else {
-                          return (
-                            <div key={field.COLUMN_NAME} className="space-y-2">
-                              <div className="flex items-center gap-2 text-sm">
-                                <FileText className="h-4 w-4 text-gray-600" />
-                                <Label htmlFor={field.COLUMN_NAME}>
-                                  {field.COLUMN_LABEL}
-                                  {field.REQUIRED && (
-                                    <span className="text-red-500 ml-1">*</span>
-                                  )}
-                                </Label>
-                              </div>
-                              <Input
-                                type={field.INPUT_TYPE}
-                                name={field.COLUMN_NAME}
-                                id={field.COLUMN_NAME}
-                                placeholder={`Enter ${field.COLUMN_LABEL}`}
-                                value={formData[field.COLUMN_NAME] || ""}
-                                onChange={handleChange}
-                                readOnly={isReadOnly}
-                                required={field.REQUIRED}
-                              />
-                            </div>
-                          );
-                        }
-                      })
-                    )}
-
                     {/* Expiry Date */}
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-sm">
@@ -918,7 +621,6 @@ const DocumentFormModal = ({
                         readOnly={isReadOnly}
                       />
                     </div>
-
                     {/* Document Reference For */}
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-sm">
@@ -937,7 +639,6 @@ const DocumentFormModal = ({
                         readOnly={isReadOnly}
                       />
                     </div>
-
                     {/* Document Tags */}
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-sm">
@@ -956,7 +657,6 @@ const DocumentFormModal = ({
                         readOnly={isReadOnly}
                       />
                     </div>
-
                     {/* Remarks */}
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-sm">
@@ -972,8 +672,86 @@ const DocumentFormModal = ({
                         readOnly={isReadOnly}
                       />
                     </div>
+                    {/* Others Details Section Moved to Left Side */}
+                    <div className="col-span-2 space-y-4">
+                      <h2 className="text-lg font-medium mb-2">
+                        Others Details:
+                      </h2>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="flex items-center justify-between gap-3 w-full">
+                          <div className="flex items-center gap-1 text-gray-500">
+                            <UserRound className="h-4 w-4" />
+                            <label className="text-sm">Uploader Name</label>
+                          </div>
+                          <p className="text-sm font-medium">
+                            {formData.REF_SEQ_NO === -1
+                              ? userData.userName
+                              : selectedDocument.USER_NAME}
+                          </p>
+                        </div>
+                        <div className="flex items-center justify-between gap-3 w-full">
+                          <div className="flex items-center gap-1 text-gray-500">
+                            <LocateFixed className="h-4 w-4" />
+                            <label className="text-sm">
+                              Document Received From
+                            </label>
+                          </div>
+                          <Input
+                            type="text"
+                            name="DOC_SOURCE_FROM"
+                            id="DOC_SOURCE_FROM"
+                            placeholder="Enter source"
+                            value={formData.DOC_SOURCE_FROM}
+                            onChange={handleChange}
+                            readOnly={isReadOnly}
+                          />
+                        </div>
+                        <div className="flex items-center justify-between gap-3 w-full">
+                          <div className="flex items-center gap-1 text-gray-500">
+                            <LocateFixed className="h-4 w-4" />
+                            <label className="text-sm">Verified by</label>
+                          </div>
+                          <p className="text-sm font-medium">
+                            {formData.VERIFIED_BY}
+                          </p>
+                        </div>
+                        <div className="flex items-center justify-between gap-3 w-full">
+                          <div className="flex items-center gap-1 text-gray-500">
+                            <Clock3 className="h-4 w-4" />
+                            <label className="text-sm">Verified date</label>
+                          </div>
+                          <p className="text-sm font-medium">
+                            {convertServiceDate(formData.VERIFIED_DATE)}
+                          </p>
+                        </div>
+                        <div className="flex items-center justify-between gap-3 w-full">
+                          <div className="flex items-center gap-1 text-gray-500">
+                            <LocateFixed className="h-4 w-4" />
+                            <label className="text-sm">Reference Task ID</label>
+                          </div>
+                          <p className="text-sm font-medium">
+                            {formData.REF_TASK_ID}
+                          </p>
+                        </div>
+                        <div className="flex items-center justify-between gap-3 w-full">
+                          <div className="flex items-center gap-1 text-gray-500">
+                            <Loader className="h-4 w-4" />
+                            <label className="text-sm whitespace-nowrap">
+                              Document Status
+                            </label>
+                          </div>
+                          {formData.DOCUMENT_STATUS && (
+                            <p
+                              className="text-xs font-medium truncate w-full whitespace-nowrap"
+                              title={formData.DOCUMENT_STATUS}
+                            >
+                              {formData.DOCUMENT_STATUS}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </div>
-
                   {!docMode && (
                     <div className="mt-4 flex justify-end">
                       <Button type="submit" disabled={isSubmitting}>
@@ -987,158 +765,108 @@ const DocumentFormModal = ({
                     </div>
                   )}
                 </div>
-
-                {/* Right Side - Activity Section */}
+                {/* Right Side - Dynamic Fields */}
                 <div className="col-span-3 lg:col-span-1 bg-slate-200 transition-colors dark:bg-slate-900 p-4 rounded-lg space-y-4">
-                  <h2 className="text-lg font-medium mb-2">Others Details:</h2>
-
-                  {/* Details remain the same but styled with Tailwind */}
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-2 text-gray-600">
-                        <UserRound className="h-4 w-4" />
-                        <span className="text-sm">Uploader Name</span>
+                  <h2 className="text-lg font-medium mb-2">Dynamic Fields:</h2>
+                  {isLoadingDynamicFields ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : dynamicFields.length > 0 ? (
+                    dynamicFields.map((field) => (
+                      <div key={field.COLUMN_NAME} className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm">
+                          <FileText className="h-4 w-4 text-gray-600" />
+                          <Label htmlFor={field.COLUMN_NAME}>
+                            {field.COLUMN_LABEL}
+                            {field.REQUIRED && (
+                              <span className="text-red-500 ml-1">*</span>
+                            )}
+                          </Label>
+                        </div>
+                        <Input
+                          type={field.INPUT_TYPE}
+                          name={field.COLUMN_NAME}
+                          id={field.COLUMN_NAME}
+                          placeholder={`Enter ${field.COLUMN_LABEL}`}
+                          value={formData[field.COLUMN_NAME] || ""}
+                          onChange={handleChange}
+                          readOnly={isReadOnly}
+                          required={field.REQUIRED}
+                        />
                       </div>
-                      <span className="text-sm font-medium">
-                        {formData.REF_SEQ_NO === -1
-                          ? userData.userName
-                          : selectedDocument.USER_NAME}
-                      </span>
+                    ))
+                  ) : (
+                    <p className="text-sm text-gray-500">
+                      No dynamic fields available for this category.
+                    </p>
+                  )}
+                  {docMode === "verify" && (
+                    <div className="flex gap-2 mt-4">
+                      <Button
+                        type="button"
+                        onClick={handleVerifyApprove}
+                        className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                      >
+                        <CircleCheckBig size={18} />
+                        Verify & Approve
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={handleReject}
+                        className="flex items-center gap-2 px-4 py-2 bg-transparent border border-red-600 text-red-600 rounded hover:bg-red-300"
+                      >
+                        <X size={18} />
+                        Reject
+                      </Button>
                     </div>
-
-                    <div className="flex items-center justify-between gap-3 w-full">
-                      <div className="flex items-center gap-1 text-gray-500">
-                        <LocateFixed className="h-4 w-4" />
-                        <label className="text-sm">
-                          Document Received From
-                        </label>
-                      </div>
-                      <p className="text-sm font-medium">
-                        {formData.DOC_SOURCE_FROM}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-3 w-full">
-                      <div className="flex items-center gap-1 text-gray-500">
-                        <LocateFixed className="h-4 w-4" />
-                        <label className="text-sm">Verified by</label>
-                      </div>
-                      <p className="text-sm font-medium">
-                        {formData.VERIFIED_BY}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-3 w-full">
-                      <div className="flex items-center gap-1 text-gray-500">
-                        <Clock3 className="h-4 w-4" />
-                        <label className="text-sm">Verified date</label>
-                      </div>
-                      <p className="text-sm font-medium">
-                        {convertServiceDate(formData.VERIFIED_DATE)}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-3 w-full">
-                      <div className="flex items-center gap-1 text-gray-500">
-                        <LocateFixed className="h-4 w-4" />
-                        <label className="text-sm">Reference Task ID</label>
-                      </div>
-
-                      <p className="text-sm font-medium">
-                        {formData.REF_TASK_ID}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-3 w-full">
-                      <div className="flex items-center gap-1 text-gray-500">
-                        <Loader className="h-4 w-4" />
-                        <label className="text-sm whitespace-nowrap">
-                          Document Status
-                        </label>
-                      </div>
-                      {formData.DOCUMENT_STATUS && (
-                        <p
-                          className="text-xs font-medium truncate w-full whitespace-nowrap"
-                          title={formData.DOCUMENT_STATUS}
-                        >
-                          {formData.DOCUMENT_STATUS}
-                        </p>
-                      )}
-                    </div>
-
-                    {docMode === "verify" && (
-                      <div className="flex gap-2 mt-4">
-                        <Button
-                          type="button"
-                          onClick={handleVerifyApprove}
-                          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-                        >
-                          <CircleCheckBig size={18} />
-                          Verify & Approve
-                        </Button>
-                        <Button
-                          type="button"
-                          onClick={handleReject}
-                          className="flex items-center gap-2 px-4 py-2 bg-transparent border border-red-600 text-red-600 rounded hover:bg-red-300"
-                        >
-                          <X size={18} />
-                          Reject
-                        </Button>
-                      </div>
-                    )}
-                  </div>
+                  )}
                 </div>
-
+                {/* Document Preview Section */}
                 {docMode === "view" || docMode === "verify" ? (
                   isLoadingDocs ? (
-                    <p className="text-sm">Loading documents...</p>
+                    <div className="col-span-3">
+                      <p className="text-sm">Loading documents...</p>
+                    </div>
                   ) : existingDocs.length > 0 ? (
                     <div className="col-span-3">
                       <Separator className="my-4" />
-
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2 ">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                         {existingDocs.map((doc) => (
                           <div
                             key={`${doc.REF_SEQ_NO}-${doc.SERIAL_NO}`}
                             className="cust-card-group p-4 bg-gray-100 dark:bg-gray-700 rounded-lg"
                           >
-                            <div>
-                              <div className="flex flex-wrap items-center justify-between gap-2">
-                                {/* Left Section - Icon + Text */}
-                                <div className="flex items-start gap-2 min-w-0">
-                                  <img
-                                    src={getFileIcon(doc.DOC_EXT)}
-                                    alt={doc.DOC_NAME}
-                                    className="w-8 h-8 flex-shrink-0"
-                                  />
-                                  <div className="flex-1 min-w-0">
-                                    <h5 className="text-sm font-medium md:truncate break-words">
-                                      {doc.DOC_NAME.length > 24
-                                        ? doc.DOC_NAME.substring(0, 23) + "..."
-                                        : doc.DOC_NAME}
-                                    </h5>
-                                    <div className="text-xs text-gray-400">
-                                      <span>Type: {doc.DOC_EXT}</span>
-                                    </div>
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <div className="flex items-start gap-2 min-w-0">
+                                <img
+                                  src={getFileIcon(doc.DOC_EXT)}
+                                  alt={doc.DOC_NAME}
+                                  className="w-8 h-8 flex-shrink-0"
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <h5 className="text-sm font-medium md:truncate break-words">
+                                    {doc.DOC_NAME.length > 24
+                                      ? doc.DOC_NAME.substring(0, 23) + "..."
+                                      : doc.DOC_NAME}
+                                  </h5>
+                                  <div className="text-xs text-gray-400">
+                                    <span>Type: {doc.DOC_EXT}</span>
                                   </div>
                                 </div>
-
-                                <div className="flex items-center gap-2">
-                                  <Button
-                                    variant="outline"
-                                    onClick={() => handlePreview(doc)}
-                                    type="button"
-                                  >
-                                    Preview
-                                  </Button>
-
-                                  <Button
-                                    onClick={() => handleViewDocs(doc)}
-                                    type="button"
-                                  >
-                                    Download
-                                  </Button>
-                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="outline"
+                                  onClick={() => handlePreview(doc)}
+                                  type="button"
+                                >
+                                  Preview
+                                </Button>
+                                <Button
+                                  onClick={() => handleViewDocs(doc)}
+                                  type="button"
+                                >
+                                  Download
+                                </Button>
                               </div>
                             </div>
                           </div>
@@ -1152,7 +880,6 @@ const DocumentFormModal = ({
                     </div>
                   )
                 ) : null}
-
                 {currentPreviewUrl && (
                   <div className="col-span-3 mt-4">
                     <div className="flex justify-between items-center mb-2">
@@ -1177,7 +904,6 @@ const DocumentFormModal = ({
           </div>
         </div>
       </dialog>
-
       {showRejectModal && (
         <RejectModal
           rejectModalRef={rejectModalRef}

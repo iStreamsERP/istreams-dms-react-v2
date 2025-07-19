@@ -383,7 +383,7 @@ const UserCreateModal = ({ user, open, onClose }) => {
   };
 
   return (
-    <DialogContent className="max-h-[80vh] w-full overflow-y-auto sm:w-[600px] sm:max-w-[600px] z-[999]">
+    <DialogContent className="max-h-[80vh] w-full overflow-y-auto sm:w-[600px] sm:max-w-[600px]">
       <DialogHeader>
         <DialogTitle>
           <div className="flex flex-row items-center gap-1">

@@ -72,9 +72,9 @@ export default function UploadArea({
         )}
       </div>
 
-      {errorMessage && (
+      {/* {errorMessage && (
         <p className="text-red-500 mt-2">{errorMessage}</p>
-      )}
+      )} */}
 
       <div className="mt-4 text-center text-cyan-700 dark:text-cyan-200 max-w-md">
         <p className="mb-1 text-xs">
