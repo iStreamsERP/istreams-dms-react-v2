@@ -1,168 +1,56 @@
-// UploadDocumentPage.jsx
 import { useTheme } from "@/components/theme-provider";
-import axios from "axios";
 import { AnimatePresence, motion } from "framer-motion";
 import { Check } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState } from "react"; // Add useState
+import { useDispatch, useSelector } from "react-redux";
 import { useOutletContext } from "react-router-dom";
-
-// Import components
-import AnalysisModal from "@/components/AnalysisModal";
 import AnalysisView from "@/components/AnalysisView";
-import ChatModal from "@/components/ChatModal";
 import PageHeader from "@/components/PageHeader";
 import UploadArea from "@/components/UploadArea";
+import {
+  uploadFile,
+  setSelectedType,
+  setDocumentAnalysis,
+  setAnalysisSummary,
+  clearLocalQuestions,
+} from "@/app/actions";
 
 export const UploadDocumentPage = () => {
   const { uploadRef } = useOutletContext();
   const { theme } = useTheme();
-  const [isUploading, setIsUploading] = useState(false);
-  const [isUploadComplete, setIsUploadComplete] = useState(false);
-  const [showAnalysis, setShowAnalysis] = useState(false);
-  const [file, setFile] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState(null);
-  const [errorMessage, setErrorMessage] = useState(null);
-  const [translatedContent, setTranslatedContent] = useState("");
-  const [isLoadingTranslation, setIsLoadingTranslation] = useState(false);
-  const [isAnalysisModalOpen, setIsAnalysisModalOpen] = useState(false);
-  const [analysisSummary, setAnalysisSummary] = useState([]);
-  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
-  const [analysisQuestion, setAnalysisQuestion] = useState("");
-  const [messages, setMessages] = useState([]);
-  const [isChatOpen, setIsChatOpen] = useState(false);
-  const [isResponseLoading, setIsResponseLoading] = useState(false);
+  const dispatch = useDispatch();
 
-  const API_URL =
-    "https://apps.istreams-erp.com:4493/api/SmartAsk/ask-from-file";
+  const documentAnalysis = useSelector((state) => state.documentAnalysis);
+  const isLoading = useSelector((state) => state.isLoading);
+  const error = useSelector((state) => state.error);
+  const file = useSelector((state) => state.file); // Retrieve file from Redux
+  const [previewUrl, setPreviewUrl] = useState(null); // State for previewUrl
 
-  const handleFileUpload = async (files) => {
-    setErrorMessage(null);
-    const selectedFile = files[0];
-    setFile(selectedFile);
-    setPreviewUrl(URL.createObjectURL(selectedFile));
-    setIsUploading(true);
-    setIsUploadComplete(false);
-    setShowAnalysis(false);
-    setAnalysisSummary([]);
-    setTranslatedContent("");
-    setMessages([]);
-
-    try {
-      const formData = new FormData();
-      formData.append("File", selectedFile);
-      formData.append(
-        "Question",
-        "If the document is not in English, translate it. If it is already in English, just reply: 'The document is in English. No translation needed"
-      );
-
-      setIsLoadingTranslation(true);
-      const translateRes = await axios.post(API_URL, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-
-      console.log(translateRes);
-
-      setTranslatedContent(translateRes.data);
-      setIsUploadComplete(true);
-      setShowAnalysis(true);
-    } catch (error) {
-      console.error("Error uploading file:", error.response.data);
-      setErrorMessage(error.response.data);
-    } finally {
-      setIsUploading(false);
-      setIsLoadingTranslation(false);
+  // Generate previewUrl when file changes
+  useEffect(() => {
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setPreviewUrl(url);
+      // Clean up URL when component unmounts or file changes
+      return () => URL.revokeObjectURL(url);
     }
-  };
+  }, [file]);
 
-  const generateAnalysisSummary = async () => {
-    if (!file || !analysisQuestion.trim()) return;
-
-    setIsGeneratingSummary(true);
-    try {
-      const formData = new FormData();
-      formData.append("File", file);
-      formData.append("Question", analysisQuestion);
-
-      const res = await axios.post(API_URL, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-
-      const summaryPoints = res.data
-        .split("\n")
-        .filter((line) => line.trim() !== "")
-        .map((line) => line.replace(/^- /, "").trim());
-
-      setAnalysisSummary(summaryPoints);
-      setIsAnalysisModalOpen(false);
-    } catch (error) {
-      console.error("Error generating summary:", error);
-    } finally {
-      setIsGeneratingSummary(false);
+  const handleFileUpload = (files) => {
+    if (!files || files.length === 0 || !(files[0] instanceof File)) {
+      dispatch(setError("Please select a valid file"));
+      return;
     }
-  };
-
-  const askQuestion = async (question) => {
-    if (!file || !question.trim()) return;
-
-    const userMessage = {
-      id: messages.length + 1,
-      text: question,
-      sender: "user",
-      timestamp: new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
-    setIsResponseLoading(true);
-
-    try {
-      const formData = new FormData();
-      formData.append("File", file);
-      formData.append("Question", question);
-
-      const res = await axios.post(API_URL, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-
-      const aiMessage = {
-        id: messages.length + 2,
-        text: res.data,
-        sender: "ai",
-        timestamp: new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-      };
-
-      setMessages((prev) => [...prev, aiMessage]);
-    } catch (error) {
-      console.error("Error asking question:", error);
-      const errorMessage = {
-        id: messages.length + 2,
-        text: "Sorry, I couldn't process your request. Please try again.",
-        sender: "ai",
-        timestamp: new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-      };
-      setMessages((prev) => [...prev, errorMessage]);
-    } finally {
-      setIsResponseLoading(false);
-    }
+    dispatch(uploadFile(files[0]));
   };
 
   const handleReset = () => {
-    setErrorMessage(null);
-    setShowAnalysis(false);
-    setIsUploadComplete(false);
-    setMessages([]);
-    setIsChatOpen(false);
-    setFile(null);
-    setAnalysisSummary([]);
-    setTranslatedContent("");
+    dispatch(setDocumentAnalysis(null));
+    dispatch(setSelectedType(""));
+    dispatch(setAnalysisSummary([]));
+    dispatch(clearLocalQuestions());
+    dispatch(setError(""));
+    setPreviewUrl(null); // Clear previewUrl on reset
   };
 
   useEffect(() => {
@@ -173,10 +61,10 @@ export const UploadDocumentPage = () => {
 
   return (
     <div className="h-[92vh] w-full bg-white dark:bg-slate-900">
-      <PageHeader showAnalysis={showAnalysis} />
+      <PageHeader showAnalysis={!!documentAnalysis} />
 
       <AnimatePresence>
-        {isUploadComplete && !showAnalysis && (
+        {documentAnalysis && !isLoading && (
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -189,44 +77,21 @@ export const UploadDocumentPage = () => {
         )}
       </AnimatePresence>
 
-      {!showAnalysis ? (
+      {!documentAnalysis ? (
         <UploadArea
           theme={theme}
-          isUploading={isUploading}
+          isUploading={isLoading}
           handleFileUpload={handleFileUpload}
-          errorMessage={errorMessage}
+          errorMessage={error}
         />
       ) : (
         <AnalysisView
           file={file}
           previewUrl={previewUrl}
-          translatedContent={translatedContent}
-          isLoadingTranslation={isLoadingTranslation}
-          analysisSummary={analysisSummary}
-          setIsAnalysisModalOpen={setIsAnalysisModalOpen}
-          messages={messages}
-          isResponseLoading={isResponseLoading}
-          askQuestion={askQuestion}
-          setIsChatOpen={setIsChatOpen}
+          documentAnalysis={documentAnalysis}
+          isLoadingTranslation={isLoading} // Adjust if you have a specific isLoadingTranslation state
         />
       )}
-
-      <AnalysisModal
-        isOpen={isAnalysisModalOpen}
-        setIsOpen={setIsAnalysisModalOpen}
-        analysisQuestion={analysisQuestion}
-        setAnalysisQuestion={setAnalysisQuestion}
-        generateAnalysisSummary={generateAnalysisSummary}
-        isGeneratingSummary={isGeneratingSummary}
-      />
-
-      <ChatModal
-        isOpen={isChatOpen}
-        setIsOpen={setIsChatOpen}
-        messages={messages}
-        isResponseLoading={isResponseLoading}
-        askQuestion={askQuestion}
-      />
     </div>
   );
 };
